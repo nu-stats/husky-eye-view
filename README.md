@@ -204,7 +204,7 @@ Choose a first-run mission, or try these in order. The GIFs show Google Photorea
 
 ![Moving from a full airport overhead down to close taxiway inspection with 3D flight models](docs/media/start-here/airport-ground-traffic-google-3d.gif)
 
-4. **Look through a public camera.** Turn on **CCTV** over Austin, Texas highways, or California. The feeds aren't webcam embeds — they project _into_ the 3D city. Cycle coverage to **VIEWSHED** and every camera draws its estimated coverage volume — where it reaches, and where it goes blind.
+4. **Look through a public camera.** Turn on **CCTV** over Austin, Texas highways, California, or Delaware (live video). The feeds aren't webcam embeds — they project _into_ the 3D city. Cycle coverage to **VIEWSHED** and every camera draws its estimated coverage volume — where it reaches, and where it goes blind.
 
 ![Diving into an Austin intersection with a live public camera projected into the 3D scene](docs/media/03-austin-cctv.gif)
 
@@ -298,7 +298,7 @@ Fifteen layers and map sources. **Thirteen have a keyless path.** Some offer add
 | 🛰️ **Satellites**           | 838-object catalog, color-coded by class with a live legend — the **DENSE** chip drops in the whole Starlink shell                                                                                                                                                                                                                                                                  | CelesTrak                               | 🟢                                                                                                  |
 | 🌍 **Earthquakes**          | Global seismic activity, last 24h                                                                                                                                                                                                                                                                                                                                                   | USGS                                    | 🟢                                                                                                  |
 | 🚗 **Traffic**              | Simulated vehicles on OSM roads. With TomTom, live flow speeds drive the simulation and congestion colors below ~8 km; individual vehicle positions are not live observations                                                                                                                                                                                                       | TomTom + OSM                            | 🟢 simulation · 🟡 live flow speeds                                                                 |
-| 📹 **CCTV Mesh**            | Public cameras projected _into_ the 3D space — US packs on by default: Austin · Texas (TxDOT) · California (Caltrans); non-US packs opt-in via `.env`: London (TfL) · Ontario (511) · Finland (Fintraffic) · British Columbia (DriveBC) · Estonia (Tallinn, Tarktee) · New South Wales (Live Traffic NSW) · Calgary. Positions are published; poses are estimated priors **you calibrate by dragging a gizmo on the camera itself** | City APIs                               | 🟢                                                                                                  |
+| 📹 **CCTV Mesh**            | Public cameras projected _into_ the 3D space — US packs on by default: Austin · Texas (TxDOT) · California (Caltrans) · Delaware (DelDOT live video); non-US packs opt-in via `.env`: London (TfL) · Ontario (511) · Finland (Fintraffic) · British Columbia (DriveBC) · Estonia (Tallinn, Tarktee) · New South Wales (Live Traffic NSW) · Calgary. Positions are published; poses are estimated priors **you calibrate by dragging a gizmo on the camera itself** | City APIs                               | 🟢                                                                                                  |
 | 📻 **Radio**                | Geolocated US radio with an **analog tuner** — drag the needle across up to 750 stations and the globe flies to each broadcaster                                                                                                                                                                                                                                                 | Radio Browser / broadcasters            | 🟢                                                                                                  |
 | 🚌 **Transit**              | Live buses, trams, metros, trains and ferries with delayed playback between reports, selected-vehicle trails, and mode-coloured DETECT labels — Boston, Austin, Minneapolis, Helsinki, the Netherlands, Norway, South East Queensland                                                                                                                                               | Operator GTFS-Realtime feeds            | 🟢                                                                                                  |
 | 🚲 **Bikeshare**            | Live station availability                                                                                                                                                                                                                                                                                                                                                           | GBFS                                    | 🟢                                                                                                  |
@@ -579,6 +579,26 @@ security add-generic-password -U -s "cesium-ion"      -a "token"   -w
 ```
 
 OpenSky can run fully anonymous (`OPENSKY_AUTH_MODE=anon`), or import OAuth credentials with `./scripts/opensky-import-client.sh /path/to/credentials.json`.
+
+</details>
+
+<details>
+<summary>Live video cameras (HLS)</summary>
+
+CCTV sources with `"feedType": "hls"` and a registered HTTP(S) `.m3u8`
+URL play through a lazily loaded hls.js decoder shared by the monitor plane
+and panel. DelDOT uses its official HTTPS HLS catalog links. Disable that
+pack with `CCTV_DELDOT_ENABLED=0`.
+
+The server allows two concurrent sessions. Each retains at most 12 segments
+and 24 MiB in memory; individual downloads are capped at 4 MiB with a ten
+second deadline. There are no segment files or ffmpeg processes. Redirects,
+off-origin references, encrypted playlists and non-MPEG-TS segments are refused.
+Each decoder has its own client lease (at most eight per session), including
+native HLS. Closing it releases only that lease; abandoned leases expire after
+15 seconds without access. The last release stops upstream work. Failed live video
+uses the existing still/Street View/synthetic fallback, which is not live video.
+RTMP-only sources are not supported by this integration.
 
 </details>
 

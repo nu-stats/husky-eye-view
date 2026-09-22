@@ -172,7 +172,14 @@ function stringOption(key, token, defaultValue) {
   });
 }
 
-function enumOption(key, token, defaultValue, values, codes) {
+function enumOption(
+  key,
+  token,
+  defaultValue,
+  values,
+  codes,
+  { absentValue = defaultValue } = {},
+) {
   const reverse = Object.fromEntries(
     Object.entries(codes).map(([name, code]) => [code, name]),
   );
@@ -180,6 +187,7 @@ function enumOption(key, token, defaultValue, values, codes) {
     key,
     token,
     defaultValue,
+    absentValue,
     normalize: (value) => normalizeEnum(values, value),
     encode: (value) => codes[value],
     decode: (value) => reverse[value] || null,
@@ -209,6 +217,52 @@ function integerOption(key, token, defaultValue) {
 }
 
 const OPTION_GROUPS = Object.freeze({
+  'weather-lightning': Object.freeze([
+    enumOption('opacity', 'o', 'strong', ['light', 'strong'], {
+      light: 'l',
+      strong: 's',
+    }),
+  ]),
+  'weather-radar': Object.freeze([
+    enumOption('opacity', 'o', 'strong', ['light', 'strong'], {
+      light: 'l',
+      strong: 's',
+    }),
+  ]),
+  'weather-satellite': Object.freeze([
+    enumOption('infrared', 'i', 'filtered', ['filtered', 'full'], {
+      filtered: 'f',
+      full: 'a',
+    }),
+    enumOption('opacity', 'o', 'strong', ['light', 'strong'], {
+      light: 'l',
+      strong: 's',
+    }),
+    enumOption(
+      'product',
+      'p',
+      'clouds-regional',
+      ['clouds', 'clouds-regional'],
+      { clouds: 'g', 'clouds-regional': 'r' },
+    ),
+  ]),
+  wind: Object.freeze([
+    enumOption('model', 'm', 'gfs', ['gfs', 'ifs'], { gfs: 'g', ifs: 'i' }),
+    enumOption(
+      'overlay',
+      'o',
+      'none',
+      ['none', 'speed', 'temperature', 'pressure'],
+      { none: 'n', speed: 's', temperature: 't', pressure: 'p' },
+      { absentValue: 'speed' },
+    ),
+    enumOption('units', 'u', 'km/h', ['km/h', 'm/s', 'mph'], {
+      'km/h': 'k',
+      'm/s': 'm',
+      mph: 'i',
+    }),
+    booleanOption('paused', 'p', false),
+  ]),
   flights: Object.freeze([
     // Owner directive 2026-08-22: the fleet's 3D models are DEFAULT-ON in
     // PROXIMITY mode. Proximity is itself the altitude/count gate — models only

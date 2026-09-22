@@ -54,7 +54,10 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     // map's data, as CSV, Excel, Stata, SPSS or R, or sent to a box).
     // 2026-10-13: merge_and_export converts a file too, and writes shapefiles;
     // later, its wording on one row per tract / county and mixed-level files.
-    '55e5219f3e266549631e4a86550e21782782934146605079762a5529dfb6a333',
+    // 2026-10-13 (God's Eye View weather release): next_satellite_pass, the
+    // analyst layers satellites / data centers / dams, and their wording (the
+    // layer enums, weather layers included, are excluded above).
+    '368552e97be0a56067afaa2047f050b6f2997b1dc966eb450f53326497f7427a',
   );
 });
 
@@ -123,4 +126,40 @@ test('metadata cannot add tools, fields, types or enum values', () => {
     { fly_to_location: { description: { nested: 'invalid' } } },
   ])
     assert.throws(() => createActionTools(descriptions), TypeError);
+});
+
+test('all legacy action arguments are byte-identical after removing the deliberate additions', () => {
+  // God's Eye View's weather release (merged 2026-10-13) adds one tool,
+  // three analyst layers and five weather layers; without them, every other
+  // argument is exactly Husky Eye View's before the merge.
+  const WEATHER_LAYERS = [
+    'wind',
+    'weather-radar',
+    'weather-satellite',
+    'weather-lightning',
+    'weather-cyclones',
+  ];
+  const legacy = structuredClone(GEV_ACTION_SCHEMAS).filter(
+    (tool) => tool.name !== 'next_satellite_pass',
+  );
+  const layers = legacy.find((tool) => tool.name === 'analyst_query').parameters
+    .properties.layers.items;
+  layers.enum = layers.enum.filter(
+    (key) => !['satellites', 'local-datacenters', 'local-dams'].includes(key),
+  );
+  const strip = (node) => {
+    if (Array.isArray(node)) node.forEach(strip);
+    else if (node && typeof node === 'object')
+      for (const [key, value] of Object.entries(node)) {
+        if (key === 'enum' && Array.isArray(value))
+          node.enum = value.filter((v) => !WEATHER_LAYERS.includes(v));
+        else strip(value);
+      }
+  };
+  strip(legacy);
+  // GEV_ACTION_SCHEMAS of Husky Eye View main at 4e59a8f1.
+  assert.equal(
+    createHash('sha256').update(JSON.stringify(legacy)).digest('hex'),
+    'da9863887e980bd7dde9fb4e3d808c2d552289e03868c20caa258c7cf9375b04',
+  );
 });

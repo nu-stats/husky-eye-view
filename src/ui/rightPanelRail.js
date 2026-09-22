@@ -50,6 +50,8 @@ const ROW_PROPERTIES = [
   '--bottom-rail-width',
 ];
 
+const pendingCollapseRetries = new WeakSet();
+
 /**
  * Measure and place one bottom menu row for one synchronous layout pass.
  * The caller owns scheduling, obstacle selection and persistence.
@@ -79,8 +81,8 @@ export function layoutBottomPanelRow({
   if (!stack) return;
   const heightVar = `--${side}-stack-max-height`;
 
-  const panels = [...stack.children].filter((panel) =>
-    panel.matches('[data-panel-id]'),
+  const panels = [...stack.children].filter(
+    (panel) => panel.matches('[data-panel-id]') && !panel.hidden,
   );
   // Side by side, panels never compete for height, so none is collapsed to
   // make room and every launcher stays in reach. Release anything an older

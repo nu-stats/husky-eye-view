@@ -461,6 +461,21 @@ test('natural height includes visible content, margins and wrapper chrome, exclu
   );
 });
 
+// God's Eye View's focus-hysteresis, collapse-retry and measuring-pass rail
+// tests (its weather release) are not carried over: Husky Eye View's
+// bottom-row rail (rightPanelRail.js) replaced that layout.
+
+for (const variant of ['minimal', 'full']) {
+  test(`right rail does not retry collapse that the ${variant} HUD immediately restores`, () => {
+    const f = fixture('right', { hud: { visible: true, variant } });
+    f.expand(f.first, 900);
+    f.expand(f.second, 900);
+    for (let pass = 0; pass < 10; pass++) f.run();
+    assert.equal(f.retries(), 0);
+    assert.equal(f.first.classList.contains('collapsed'), false);
+    assert.equal(f.second.classList.contains('collapsed'), false);
+  });
+}
 // ── Narrow-screen rail overflow pin ──────────────────────────────────────────
 // At ≤720px both panel stacks become scroll containers (overflow-y: auto),
 // which also makes their overflow-x compute to auto. Each panel's decorative

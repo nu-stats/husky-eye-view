@@ -46,6 +46,7 @@ const RESEARCH_DATA_GROUP = 'Restricted Research Data';
 const MIAMI_GROUP = 'City Study: Miami-Dade Homicides';
 // 'Fly, Drone & Walk' again once Walking View returns (layerPanel.js).
 const VIEWS_GROUP = 'Fly & Drone';
+const WEATHER_GROUP = 'Weather';
 
 /** One line under each Data Layers group heading: what it holds, and how. */
 export const LAYER_GROUP_NOTES = Object.freeze({
@@ -64,6 +65,8 @@ export const LAYER_GROUP_NOTES = Object.freeze({
     'Compare cities, rank areas, and run statistics on any layer.',
   [VIEWS_GROUP]: 'Ride a helicopter or fly a drone.',
   'Live Feeds': 'Real-time data across the United States.',
+  [WEATHER_GROUP]:
+    'Wind forecasts, radar, satellite clouds, lightning and hurricane advisories, on one weather clock.',
 });
 
 /** @type {ReadonlyArray<LayerManifestEntry>} */
@@ -621,6 +624,63 @@ export const LAYER_MANIFEST = Object.freeze(
       group: 'Live Feeds',
       extra: true,
       aliases: ['space mission', 'space missions', 'missions'],
+    },
+
+    // ---- Weather (from God's Eye View, 2026-10) ----------------------------
+    // Own tokens: God's Eye View's weather tokens (k, v, o, l, y) are Husky
+    // Eye View research layers here.
+    {
+      id: 'wind',
+      token: 'wn',
+      disposition: 'enabled+options',
+      optionOwner: 'wind',
+      group: WEATHER_GROUP,
+      aliases: ['wind', 'winds', 'wind map', 'wind forecast'],
+    },
+    {
+      id: 'weather-radar',
+      token: 'wr',
+      disposition: 'enabled+options',
+      optionOwner: 'weather-radar',
+      group: WEATHER_GROUP,
+      label: 'Weather Radar',
+      aliases: ['radar', 'weather radar', 'rain', 'precipitation'],
+    },
+    {
+      id: 'weather-satellite',
+      token: 'ws',
+      disposition: 'enabled+options',
+      optionOwner: 'weather-satellite',
+      group: WEATHER_GROUP,
+      label: 'Satellite Clouds',
+      aliases: [
+        'clouds',
+        'cloud cover',
+        'satellite clouds',
+        'weather satellite',
+      ],
+    },
+    {
+      id: 'weather-lightning',
+      token: 'wl',
+      disposition: 'enabled+options',
+      optionOwner: 'weather-lightning',
+      group: WEATHER_GROUP,
+      label: 'Lightning',
+      aliases: ['lightning', 'lightning strikes'],
+    },
+    {
+      id: 'weather-cyclones',
+      token: 'cy',
+      group: WEATHER_GROUP,
+      label: 'Hurricanes & Cyclones',
+      aliases: [
+        'cyclones',
+        'hurricanes',
+        'tropical storms',
+        'typhoons',
+        'storm tracks',
+      ],
     },
 
     // ---- Infrastructure ----------------------------------------------------

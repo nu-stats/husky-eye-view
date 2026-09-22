@@ -20,7 +20,12 @@ import {
   geoidHeight,
 } from './data/geoid.js';
 import { getBasemapLabelContext } from './voice/gevActions.js';
-import { isHudSummaryUnconfigured } from './hudSummaryResponse.js';
+import {
+  hudSummaryMatchesProvenance,
+  hudSummaryLayerContext,
+  hudTelemetryProvenanceTag,
+  isHudSummaryUnconfigured,
+} from './hudSummaryResponse.js';
 
 /** Color palettes keyed by shader mode; applied as CSS custom properties. */
 const HUD_COLORS = {
@@ -533,7 +538,12 @@ export class IntelHUD {
     // NEAR the nearest catalogued POI at metro range; otherwise the lat/lon sector.
     const localityTag = composeLocalityTag(nearest, m.latDeg, m.lonDeg);
 
-    return `${band} ${localityTag} | ${region} | ALT ${altTag} | WINDOW ${winTag} | SUN ${m.sunEl.toFixed(0)}° | ${localTag}`;
+    // A feed that is stale or degraded says so on the status line.
+    const provenance = hudTelemetryProvenanceTag(
+      this._dataManager?.getAll?.() || [],
+    );
+    const line = `${band} ${localityTag} | ${region} | ALT ${altTag} | WINDOW ${winTag} | SUN ${m.sunEl.toFixed(0)}° | ${localTag}`;
+    return provenance ? `${line} | ${provenance}` : line;
   }
 
   /**
@@ -618,7 +628,12 @@ export class IntelHUD {
       if (!response.ok || !data?.summary) {
         throw new Error(data?.error || `HTTP ${response.status}`);
       }
-      this._setSummaryText(data.summary, animate);
+      this._setSummaryText(
+        hudSummaryMatchesProvenance(data.summary, context.feedProvenance)
+          ? data.summary
+          : fallbackText,
+        animate,
+      );
     } catch (error) {
       if (error?.name !== 'AbortError') {
         console.warn('[HUD] AI summary unavailable:', error);
@@ -659,6 +674,7 @@ export class IntelHUD {
       streetLabels: labels.streetLabels,
       nearbyPlaceLabels: labels.nearbyPlaceLabels,
       enabledLayerLabels: enabledLayers,
+      ...hudSummaryLayerContext(this._dataManager?.getAll?.() || []),
     };
   }
 
@@ -788,7 +804,12 @@ export class IntelHUD {
     this._dataManager = dataManager || null;
     if (typeof this._dataManager?.subscribe === 'function') {
       this._dataManagerUnsubscribe = this._dataManager.subscribe((change) => {
-        if (change?.type === 'visibility') this._markSummaryDirty();
+        if (
+          ['visibility', 'refresh-transition', 'refresh-cancelled'].includes(
+            change?.type,
+          )
+        )
+          this._markSummaryDirty();
       });
     }
     this._markSummaryDirty();

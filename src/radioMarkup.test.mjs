@@ -53,15 +53,17 @@ function realtimeTools() {
   return GEV_REALTIME_TOOLS;
 }
 
-test('Realtime schema exposes the authoritative 41-tool inventory', () => {
+test('Realtime schema exposes the authoritative 42-tool inventory', () => {
   const tools = realtimeTools();
-  assert.equal(tools.length, 41);
+  assert.equal(tools.length, 42);
   const names = tools.map((tool) => tool.name);
-  assert.equal(new Set(names).size, 41, 'tool names are unique');
+  assert.equal(new Set(names).size, 42, 'tool names are unique');
   assert.ok(names.includes('set_context_mode'));
   assert.ok(names.includes('control_cockpit'));
   assert.ok(names.includes('select_nearest_aircraft'));
   assert.ok(names.includes('control_radio'));
+  assert.ok(names.includes('next_satellite_pass'));
+  assert.ok(names.includes('next_iss_pass'));
   // Every tool closes its parameter object: an open schema lets the model
   // invent arguments the runner silently drops.
   for (const tool of tools) {
@@ -307,11 +309,14 @@ test('no unchanged Realtime tool definition drifts silently', () => {
     'open_in_excel',
     // New tool (2026-10-10): Merge & Export.
     'merge_and_export',
+    'analyst_query',
+    'next_iss_pass',
+    'next_satellite_pass',
   ]);
   const unchanged = realtimeTools()
     .filter((tool) => !TOUCHED.has(tool.name))
     .sort((a, b) => a.name.localeCompare(b.name));
-  assert.equal(unchanged.length, 21);
+  assert.equal(unchanged.length, 19);
   // The full tool payload (wording included) is pinned once, in
   // src/voice/actionSchemas.test.mjs; this file no longer keeps a second copy.
 });

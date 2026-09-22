@@ -15,6 +15,7 @@ How to read this:
 
 | Source                                                                | Used for                                                                                                                            | License / terms                                                                                                                                                                                                                                                                                                                                       | Attribution                                                                                                                                 |
 | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **NOAA GFS (wind)** | Global 10 m wind, optional 2 m temperature and mean sea-level pressure for Wind | U.S. public domain (NOAA); keyless via NOAA Open Data on AWS | "NOAA Global Forecast System (GFS)" (courtesy; not an endorsement) |
 | **OpenStreetMap ALPR camera locations** (including DeFlock community mapping) | Optional mapped automatic license-plate-reader camera layer | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/); commercial use permitted with applicable attribution and database share-alike obligations | [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright); [DeFlock](https://deflock.org) community mapping |
 | **Google Map Tiles API** (Photorealistic 3D Tiles) + Places/Geocoding | The 3D globe, voice scene context, and on-demand nearby installation search                                                         | Google Maps Platform ToS (proprietary, your own key + billing)                                                                                                                                                                                                                                                                                        | "Google" / "Google Maps" logo — **shown in-app**, required                                                                                  |
 | **OpenSky Network**                                                   | Primary worldwide live-flight snapshot                                                                                              | Non-commercial research/education license                                                                                                                                                                                                                                                                                                             | Schäfer et al., _"Bringing Up OpenSky"_, IPSN 2014 + opensky-network.org                                                                    |
@@ -41,6 +42,7 @@ How to read this:
 | **Stadt Warendorf webcam**                                            | Webcam frames, Marktplatz / Historisches Rathaus (`config/cctv_sources.warendorf.json`)                                             | Public municipal webcam data                                                                                                                                                                                                                                                                                                                          | "Stadt Warendorf — webcam.warendorf.de" (courtesy); mount and heading derived from OSM geometry, "© OpenStreetMap contributors" (ODbL)      |
 | **Live Traffic NSW (Transport for NSW)**                              | CCTV camera catalog + frames, New South Wales                                                                                       | [CC BY 4.0](https://opendata.transport.nsw.gov.au/) — attribution REQUIRED                                                                                                                                                                                                                                                                            | "Live Traffic NSW — Transport for NSW"                                                                                                      |
 | **Caltrans (cwwp2.dot.ca.gov)**                                       | CCTV camera catalogs + frames, California districts                                                                                 | Public Caltrans traffic camera data                                                                                                                                                                                                                                                                                                                   | "Caltrans — cwwp2.dot.ca.gov" (courtesy)                                                                                                    |
+| **DelDOT (video.deldot.gov)**                                         | CCTV camera catalog + live HTTPS HLS video, Delaware                                                                                 | Public DelDOT traffic camera streams via the [DelDOT traffic map](https://deldot.gov/map/)                                                                                                                                                                                                                                                            |"DelDOT — Delaware Department of Transportation" (courtesy)                                                                                 |
 | **TfL Open Data (JamCams)**                                           | CCTV camera catalog + frames, London                                                                                                | [TfL Open Data terms](https://tfl.gov.uk/info-for/open-data-users/) — attribution REQUIRED                                                                                                                                                                                                                                                            | "Powered by TfL Open Data. Contains OS data © Crown copyright and database rights"                                                          |
 | **Ontario 511**                                                       | CCTV camera catalog + frames, Ontario highways including Kitchener-area routes                                                      | [Open Government Licence – Ontario](https://www.ontario.ca/page/open-government-licence-ontario)                                                                                                                                                                                                                                                      | "Ontario 511" plus Open Government Licence - Ontario                                                                                        |
 | **Fintraffic / Digitraffic (weathercams)**                            | CCTV camera catalog + frames, Finland                                                                                               | [CC BY 4.0](https://www.digitraffic.fi/en/terms-of-service/) — attribution REQUIRED                                                                                                                                                                                                                                                                   | "Fintraffic / digitraffic.fi, license CC BY 4.0"                                                                                            |
@@ -67,6 +69,7 @@ How to read this:
 - **Launch Library 2.** `/api/launches` makes a server-side rolling-30-day query against the supported v2.3 detailed launch endpoint, caches successful responses for 15 minutes in memory and on disk, and serves the last successful response during a throttle or transient outage. Anonymous access is limited to 15 calls/hour; deployments can provide `LL2_API_TOKEN` for authenticated access. The Space Devs' published terms permit using and sharing the API data in any form, ask users not to forward it without adding value, disclaim complete accuracy, and encourage—but do not require—attribution. This app keeps a courtesy credit. Payload and stage/recovery records are shown only when supplied. Failed launches expose their source status and never receive fallback orbit geometry or a live/estimated marker. LL2 supplies launch context and event timing, not continuous ascent telemetry or live orbital state.
 - **TfL JamCams.** The camera list comes from the keyless `api.tfl.gov.uk` endpoint (an optional `TFL_APP_KEY` raises its rate limit); frames come from TfL's public S3 bucket. The "Powered by TfL Open Data" attribution is required by TfL's terms and is registered in the Data attribution popover.
 - **Ontario 511 CCTV.** The camera list comes from the keyless `511on.ca/api/v2/get/cameras` endpoint; frames are server-registered still images under `511on.ca/map/Cctv/`. The source is live-fetched at runtime and attributed under the Open Government Licence - Ontario.
+- **DelDOT live video cameras.** The keyless `tmc.deldot.gov/json/videocamera.json` catalog supplies active cameras and official `https://video.deldot.gov/live/…/playlist.m3u8` links. The local server transiently buffers bounded MPEG-TS segments in memory and deletes them on session release or idle expiry. No recordings are retained. `CCTV_DELDOT_ENABLED=0` disables the pack. Public availability is not a blanket redistribution license; deployment beyond personal local viewing needs confirmation of applicable DelDOT terms.
 - **Fintraffic weathercams.** The camera list is one keyless GeoJSON request to `tie.digitraffic.fi/api/weathercam/v1/stations` (809 stations / 2,275 presets), sent with the `Digitraffic-User: gods-eye-view` header the service asks clients to identify themselves with and with gzip; frames are stills on `weathercam.digitraffic.fi`, refreshed on each station's 600 s collection interval, which is also the client's ambient-still refresh cadence for this pack (the active camera keeps the usual 10-second refresh). One preset (a fixed camera view) is one camera; stations not `GATHERING` and presets not `inCollection` are dropped. Attribution is required by the CC BY 4.0 licence and is registered in the Data attribution popover. `CCTV_FINTRAFFIC_ENABLED=0` is the kill switch.
 - **DriveBC highway cameras.** The camera list comes from the keyless `https://www.drivebc.ca/api/webcams/` endpoint served by the DriveBC.ca site ([bcgov/DriveBC.ca](https://github.com/bcgov/DriveBC.ca)); frames come from `https://www.drivebc.ca/images/<id>.jpg`, built from the numeric camera id. DataBC's [DriveBC HighwayCams](https://catalogue.data.gov.bc.ca/dataset/bc-highwaycams) catalogue entry publishes the same cameras under the Open Government Licence – British Columbia, but its CSV still lists the retired `images.drivebc.ca` frame URLs, which now return a placeholder. The licence's attribution statement is required and is registered in the Data attribution popover. By default the 250 cameras nearest Vancouver and Victoria load; `CCTV_DRIVEBC_MAX_SOURCES` changes the cap and `CCTV_DRIVEBC_ENABLED=0` turns the pack off. Some cameras in the feed are supplied by partners (TransLink, the City of Vancouver, the City of Surrey, Parks Canada / Alberta Motor Association and others); the feed's per-camera credit is carried onto the camera record and shown beside the provider in the CCTV panel.
 - **TxDOT ITS cameras.** The catalog comes from the keyless `its.txdot.gov/its/DistrictIts/GetCctvStatusListByDistrict` endpoint, one call per district. Frames come from the per-camera `GetCctvSnapshotByIcdId` endpoint, which answers JSON carrying a base64 JPEG rather than an image body; the proxy decodes it only for responses from the official TxDOT origin and validates the JPEG header before serving. Only cameras reporting `Device Online` are registered. Districts default to Austin and San Antonio (`CCTV_TXDOT_DISTRICTS`; 25 codes exist statewide); `CCTV_TXDOT_MAX_SOURCES` caps the pack and `CCTV_TXDOT_ENABLED=0` turns it off. Frames are fetched live at request time and are never stored or redistributed.
@@ -153,6 +156,42 @@ transaction quota. Requires a free `FIRMS_MAP_KEY`
 (https://firms.modaps.eosdis.nasa.gov/api/map_key/); the layer is empty without it.
 The former bundled 2026-05-25 snapshot was removed 2026-07-16.
 
+### ECMWF IFS wind
+
+Wind also offers ECMWF IFS 10 m forecasts from the keyless [ECMWF Open Data](https://www.ecmwf.int/en/forecasts/datasets/open-data) service. The proxy reads its JSON Lines inventory and byte-range fetches 10u/10v GRIB messages, optionally adding 2t (2 m temperature) or msl (mean sea-level pressure) from the same run and forecast time. It resamples these fields to the approximately 1° display grid. Data is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The [ECMWF Terms of Use](https://apps.ecmwf.int/datasets/licences/general/) also apply. In-app attribution identifies this service as based on ECMWF data and products, links the CC BY 4.0 licence, identifies resampling and animation as modifications, and retains the required ECMWF liability disclaimer. Both model issue time and the selected forecast valid time appear in the layer row. These are model forecasts, not observations.
+
+### NOAA GFS wind
+
+The optional **Wind** layer animates the global 10 m wind field from NOAA's
+Global Forecast System (GFS). The `/api/wind` server-side proxy selects the
+latest available 0.25° cycle, reads its `.idx` inventory, byte-range fetches only
+the `UGRD`/`VGRD` 10 m GRIB2 messages, optionally adding `TMP` at 2 m or
+`PRMSL` at mean sea level from the same run and forecast time. It decodes the
+selected messages with ecCodes (WASM), resamples to a compact grid (1° by
+default), and serves a manifest plus Float32 U/V and optional scalar values. It is keyless, cached
+per cycle for an hour, and is a **forecast, not an observation**: the particles
+show model flow, not measured wind. The renderer bakes bounded curves through
+the sampled field and animates their phase on the GPU, with a canvas fallback.
+Any display lift is a visual aid and does not change the forecast's 10 m level.
+NOAA GFS data is U.S. public domain; the credit above is a courtesy and does not
+imply endorsement.
+
+For both models, optional temperature is normalized from K to °C and pressure
+from Pa to hPa before delivery. A missing, malformed or timed-out companion field
+does not discard valid wind: the manifest marks that field unavailable, and the
+UI retains wind without inventing scalar values. The proxy caches by model and
+requested field, with bounded current/previous grids and shared in-flight loads.
+Wind speed shading is computed locally from U/V and needs no companion download.
+The legend and map-center reading explain units and forecast validity; the
+animation is a visual flow through one forecast, not advancing forecast time.
+Optional globe relief uses existing terrain vertex normals for view lighting;
+without those normals it shades global globe curvature only, not local terrain
+relief. Neither mode represents measured sunlight or a new elevation source.
+This Wind prototype adds no cloud-volume or radar data. Mapped.earth's public
+bundles were studied for rendering ideas, but
+no code or assets were reused and no application licence granting reuse was
+found. Its presentation is not a weather-data source for this implementation.
+
 ### Natural Earth physical regions (`natural_earth/`)
 
 Curated from the **Natural Earth 10m physical vectors** (https://www.naturalearthdata.com/ —
@@ -220,5 +259,93 @@ Douglas-Peucker simplification, 6-decimal rounding).
 ---
 
 ## In-app attribution
+
+The required Google Maps / Cesium credit renders on the on-globe credit line (`#cesium-credits`, bottom-left) and must stay visible — including in clean-view and recording modes (the whole line, logo + "Google Maps" + the "Data attribution" link, stays on screen; only the GEV panels/HUD fade). The layer-specific credits (adsb.lol, TeleGeography, OSM datacenters/dams/roads, NASA FIRMS, CelesTrak, USGS, City of Austin, Fintraffic, GBFS, Radio Browser, OpenSky, AISStream) are registered into the expandable **"Data attribution"** popover on that credit line via `viewer.creditDisplay.addStaticCredit(new Cesium.Credit(html, /* showOnScreen */ false))` — see `src/data/dataCredits.js`. When you add a new data source, add its license and attribution to this file **and** append an entry to `DATA_CREDITS` in `src/data/dataCredits.js` so it surfaces in the app.
+
+### Observed weather: NOAA nowCOAST
+
+The Weather section provides keyless, observed **MRMS radar reflectivity** for the
+contiguous United States and **infrared satellite imagery**. Fixed upstream WMS
+services: `https://nowcoast.noaa.gov/geoserver/observations/weather_radar/ows` and
+`https://nowcoast.noaa.gov/geoserver/observations/satellite/ows`.
+
+- `conus_base_reflectivity_mosaic`: approximately 1 km, usually 4-minute updates.
+  dBZ measures radar reflectivity, not rainfall rate, probability or future rain.
+  Coverage gaps do not mean no precipitation. The numeric legend follows NOAA's
+  `weather_radar_base_reflectivity` style.
+- `goes_longwave_imagery`: GOES-19/18 Band 14, approximately 2 km, 5-minute updates,
+  regional North America. Filtered infrared softly dims pixels with a linear
+  brightness ramp from 0.40 to 0.70; Full infrared retains source alpha. This
+  is a display filter, not a cloud mask or measured cloud volume.
+- `global_longwave_imagery_mosaic`: approximately 3 km, hourly, nominal 60°S–60°N
+  coverage and typically 2–3-hour latency. It is slower global context.
+
+The UI displays the exact advertised observation time separately from acquisition;
+latest means the newest available observation, not zero-delay real time. Up to 13
+recent advertised frames can be replayed as history. No nowcast is synthesized.
+Tiles use WMS 1.1.1 EPSG:4326 longitude/latitude bounds; Cesium's geographic 2×1
+root grid is capped at level 6 for radar and regional GOES. Global infrared uses
+one fixed 2048×1024 geographic image on both hosts: the source's request-dependent
+contrast otherwise creates brightness seams between tiles. The browser decodes
+and filters it once, then crops 256 px tiles bounded to the manifest extent at
+maximum level 3. This broad context view has a coarser display resolution than
+its 3 km source. No browser reprojection is used. Browser imagery owns a displayed
+frame and a staging frame, retaining the outgoing layer for one render after
+admission; the proxy has an 8-request
+concurrency budget, 12-second deadline, 1 MiB tile / 4 MiB global PNG caps and a shared 16 MiB/128-image cache.
+Metadata refreshes every two minutes with explicitly stale last-good fallback.
+No key, new dependency, image reprojection job, or full-disk image download is needed.
+
+Credit: NOAA nowCOAST, NWS/OAR MRMS, NESDIS GOES and global satellite partners.
+[NOAA disclaimer](https://oceanservice.noaa.gov/disclaimer.html).
+Community context: [#85](https://github.com/bilawalsidhu/gods-eye-view/issues/85),
+[#588 radar](https://github.com/bilawalsidhu/gods-eye-view/pull/588), and
+[#457 clouds](https://github.com/bilawalsidhu/gods-eye-view/pull/457).
+This implementation is original; those contributions have not been merged here.
+
+
+### Weather: NHC/CPHC cyclone advisories
+
+- **Sources:** [NHC current tropical cyclone status](https://www.nhc.noaa.gov/CurrentStorms.json) and
+  [NOAA tropical weather summary GIS](https://mapservices.weather.noaa.gov/tropical/rest/services/tropical/NHC_tropical_weather_summary/MapServer).
+- **Rights/credit:** NOAA/NWS National Hurricane Center / Central Pacific Hurricane Center;
+  [NWS public-data terms](https://www.weather.gov/disclaimer). Fetch official products at runtime;
+  no bundled advisory archive and no NOAA endorsement implied.
+- **Coverage/meaning:** Atlantic and eastern/central North Pacific, not global cyclone coverage.
+  Status position time and advisory issue time remain separate. Forecast track, points and cone
+  require matching advisory numbers across all GIS parts. Cone means uncertainty in the
+  forecast center track, not storm size or a complete hazard boundary.
+- **Delivery:** keyless same-origin `/api/cyclones`, five-minute singleflight cache,
+  fixed upstream endpoints, bounded bodies/geometry/deadline, explicit unavailable/stale states.
+  Direct status fetching is unsuitable in browsers because NHC does not advertise CORS.
+
+### Weather: observed lightning density
+
+- **Source:** [NOAA nowCOAST lightning detection WMS](https://nowcoast.noaa.gov/geoserver/observations/lightning_detection/ows),
+  fixed `ldn_lightning_strike_density` layer and `lightning_density` style.
+- **Rights/credit:** NOAA/NWS nowCOAST; derived from Vaisala NLDN/GLD360.
+  [Official product description and public distribution terms](https://ocean.weather.gov/lightning/lightning_pdd.php)
+  permit distribution of this NOAA Level-5 derived product, not raw Vaisala detections.
+- **Meaning:** 15-minute accumulated density on an approximately 8 km grid;
+  source color scale is strikes per km² per minute ×10³. Not individual GLM optical flashes,
+  a live ground-strike counter, an all-clear indication, or global coverage.
+- **Coverage:** 110°E across the Pacific/Americas to 0°, 25°S–80°N. Display exact advertised
+  observations; ten-minute metadata refresh, source-matched colors, bounded shared imagery cache.
+
+### Community weather prior art
+
+The weather design builds on Gustavo Beneduzi's retained GFS/ECMWF contribution
+commits ([#459](https://github.com/bilawalsidhu/gods-eye-view/pull/459),
+[#464](https://github.com/bilawalsidhu/gods-eye-view/pull/464)). Related community
+proposals informed the observed-weather experience: Sandiv D's on-demand radar
+and imagery controls ([#588](https://github.com/bilawalsidhu/gods-eye-view/pull/588));
+Gustavo Beneduzi's GOES and GLM source work
+([#457](https://github.com/bilawalsidhu/gods-eye-view/pull/457),
+[#458](https://github.com/bilawalsidhu/gods-eye-view/pull/458)); and HadiMuhammed's
+NOAA hazard provenance and freshness work
+([#414](https://github.com/bilawalsidhu/gods-eye-view/pull/414)).
+The fixed nowCOAST imagery and NHC advisory implementations are original maintainer
+work; this acknowledgement does not represent merging those four PRs or equate
+NOAA density imagery with the raw GLM product.
 
 The required Google Maps / Cesium credit renders on the on-globe credit line (`#cesium-credits`, bottom-left) and must stay visible — including in clean-view and recording modes (the whole line, logo + "Google Maps" + the "Data attribution" link, stays on screen; only the GEV panels/HUD fade). The layer-specific credits (adsb.lol, adsbdb, TeleGeography, OSM datacenters/dams/roads, NASA FIRMS, CelesTrak, USGS, City of Austin, Fintraffic, GBFS, Radio Browser, OpenSky, AISStream) are registered into the expandable **"Data attribution"** popover on that credit line via `viewer.creditDisplay.addStaticCredit(new Cesium.Credit(html, /* showOnScreen */ false))` — see `src/data/dataCredits.js`. When you add a new data source, add its license and attribution to this file **and** append an entry to `DATA_CREDITS` in `src/data/dataCredits.js` so it surfaces in the app.

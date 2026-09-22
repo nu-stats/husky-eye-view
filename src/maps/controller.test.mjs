@@ -465,3 +465,26 @@ test('a terrain fallback keeps the map and tells the user why', async () => {
   assert.deepEqual(errors, [warning]);
   env.controller.destroy();
 });
+
+test('imagery host tileset follows supplied, owned and globe map sources', async () => {
+  const supplied = { show: true };
+  const owned = { show: false };
+  const registry = {
+    defaultId: 'supplied',
+    sources: [
+      { descriptor: descriptor('supplied'), tileset: supplied },
+      { descriptor: descriptor('owned'), createTileset: async () => owned },
+      { descriptor: descriptor('globe'), imagery: async () => ({}) },
+    ],
+  };
+  const { controller } = fixture(registry);
+  assert.equal(controller.getImageryHostTileset(), supplied);
+  await controller.setStack('owned');
+  assert.equal(controller.getImageryHostTileset(), owned);
+  await controller.setStack('globe');
+  assert.equal(controller.getImageryHostTileset(), null);
+  await controller.setStack('supplied');
+  assert.equal(controller.getImageryHostTileset(), supplied);
+  controller.destroy();
+  assert.equal(controller.getImageryHostTileset(), null);
+});

@@ -206,6 +206,7 @@ const RECOGNIZED = new Set([
   '#right-context-rail',
   '#right-context-rail.layout-focus',
   '#right-context-rail.bottom-row',
+  '#right-context-rail[data-rail-measuring]',
   // tray
   '#command-dock .dock-popover-content',
   '#command-dock #location-bar .dock-popover-content',
@@ -401,22 +402,28 @@ test('the model refuses every cascade construct it cannot resolve', () => {
       complaints.push(`nested media queries on "${part}": ${rule.media.join(' && ')}`);
     }
     for (const decl of guarded) {
-      if (decl.important) complaints.push(`!important on ${decl.prop} of "${part}"`);
+      // Measurement is synchronous and restored before returning or painting.
+      // Only these two exact declarations earn the exemption tested below.
+      const railMeasurement = part === '#right-context-rail[data-rail-measuring]'
+        && ((decl.prop === 'height' && decl.value === 'auto')
+          || (decl.prop === 'max-height' && decl.value === 'none'));
+      if (decl.important && !railMeasurement) complaints.push(`!important on ${decl.prop} of "${part}"`);
       if (decl.prop === 'inset' || decl.prop === 'margin' || decl.prop === 'all'
         || decl.prop.startsWith('inset-') || decl.prop.startsWith('margin-block')) {
         complaints.push(`shorthand ${decl.prop} on "${part}" — the model reads longhands only`);
       }
       if (decl.prop === 'height' || decl.prop === 'max-height') {
         // A capped height can override `bottom` and invalidate the measured
-        // dock/credit constants. Three exemptions, each earned by a test below:
+        // dock/credit constants. Exemptions are each earned by a test below:
         // the rail's own max-height (resolved to `none` across the whole
-        // modelled band by the rail clearance test), and `.layout-focus` and
+        // modelled band by the rail clearance test), `.layout-focus` and
         // `.bottom-row` (both proven inapplicable at <=720px by the
-        // mobile-mode test).
+        // mobile-mode test), plus synchronous measurement, which is removed
+        // before any paint.
         const railOwn = part === '#right-context-rail' && decl.prop === 'max-height';
         const railFocus = part === '#right-context-rail.layout-focus';
         const railRow = part === '#right-context-rail.bottom-row';
-        if (!railOwn && !railFocus && !railRow) complaints.push(`${decl.prop}: ${decl.value} on "${part}"`);
+        if (!railOwn && !railFocus && !railRow && !railMeasurement) complaints.push(`${decl.prop}: ${decl.value} on "${part}"`);
       }
       if (decl.prop === 'transform' && /translateY|translate3d|matrix|scale\(/.test(decl.value)) {
         const identity = decl.value === 'translateY(0) scale(1)';
@@ -498,6 +505,9 @@ test('the full-width rail cannot inherit a height that overrides its floor', () 
   assert.match(mobileBranch, /stack\.classList\.remove\('bottom-row'\)/);
   assert.match(mobileBranch, /removeIfSet\(stack, heightVar\)/);
 });
+
+// God's Eye View's "measurement cannot persist" pin is not carried over: Husky
+// Eye View's bottom-row rail does not use a data-rail-measuring pass.
 
 // ── Clearance ───────────────────────────────────────────────────────────────
 

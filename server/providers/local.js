@@ -27,6 +27,9 @@ import { stataProxy } from './stata.js';
 import { rProxy } from './r.js';
 import { spssProxy } from './spss.js';
 import { excelProxy } from './excel.js';
+import { weatherProxy } from './weather.js';
+import { cycloneProxy } from './cyclones.js';
+import { windProxy } from './wind.js';
 
 /** Construct the local provider plugins in their established order. */
 function localProviderPlugins() {
@@ -59,6 +62,9 @@ function localProviderPlugins() {
     rProxy(),
     spssProxy(),
     excelProxy(),
+    windProxy(),
+    weatherProxy(),
+    cycloneProxy(),
     keySetupEndpoint(),
   ];
 }

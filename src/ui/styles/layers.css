@@ -447,6 +447,7 @@
 }
 #right-context-rail > #pp-toggles,
 #right-context-rail > #cctv-panel,
+#right-context-rail > #weather-panel,
 #right-context-rail > #global-context-panel {
   position: relative;
   inset: auto;
@@ -457,7 +458,8 @@
   width: var(--panel-expanded-width);
   pointer-events: auto;
 }
-#right-context-rail #cctv-panel {
+#right-context-rail #cctv-panel,
+#right-context-rail #weather-panel {
   width: var(--panel-expanded-width);
   pointer-events: auto;
 }
@@ -468,7 +470,14 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(170, 170, 170, 0.4) transparent;
 }
-#right-context-rail #cctv-panel.collapsed {
+#right-context-rail > #weather-panel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 1;
+  min-height: 0;
+}
+#right-context-rail #cctv-panel.collapsed,
+#right-context-rail #weather-panel.collapsed {
   width: var(--right-display-collapsed-width);
   margin-left: auto;
 }
@@ -481,6 +490,7 @@
 }
 #right-context-rail > #pp-toggles.collapsed .pp-header-row,
 #right-context-rail #cctv-panel.collapsed .cctv-panel-inner,
+#right-context-rail #weather-panel.collapsed .weather-panel-inner,
 #right-context-rail
   #global-context-panel.collapsed
   .global-context-panel-inner {
@@ -536,6 +546,7 @@
 }
 #right-context-rail.layout-focus > #pp-toggles:not(.collapsed),
 #right-context-rail.layout-focus > #cctv-panel:not(.collapsed),
+#right-context-rail.layout-focus > #weather-panel:not(.collapsed),
 #right-context-rail.layout-focus > #global-context-panel:not(.collapsed) {
   flex: 0 1 var(--right-panel-allocated-height);
   height: var(--right-panel-allocated-height);
@@ -548,6 +559,9 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(170, 170, 170, 0.4) transparent;
 }
+#right-context-rail.layout-focus
+  > #weather-panel:not(.collapsed)
+  .weather-panel-inner,
 #right-context-rail.layout-focus
   > #cctv-panel:not(.collapsed)
   .cctv-panel-inner,
@@ -572,6 +586,40 @@
 #right-context-rail.layout-focus .space-mission-roster-list {
   flex: 1 1 auto;
   max-height: none;
+}
+/* Synchronous intrinsic measurement, independent of focus and allocation.
+   This attribute is not observed by the rail's layout scheduler. */
+#right-context-rail[data-rail-measuring] {
+  height: auto !important;
+  max-height: none !important;
+  transition: none !important;
+}
+#right-context-rail[data-rail-measuring] > [data-panel-id]:not([hidden]) {
+  --right-panel-allocated-height: initial !important;
+  flex: 0 0 auto !important;
+  height: auto !important;
+  max-height: none !important;
+  transition: none !important;
+}
+#right-context-rail[data-rail-measuring]
+  > [data-panel-id].collapsed:not([hidden]) {
+  display: block !important;
+}
+#right-context-rail[data-rail-measuring]
+  > [data-panel-id]:not(.collapsed)
+  > .cctv-panel-inner,
+#right-context-rail[data-rail-measuring]
+  > [data-panel-id]:not(.collapsed)
+  > .weather-panel-inner,
+#right-context-rail[data-rail-measuring]
+  > [data-panel-id]:not(.collapsed)
+  > .global-context-panel-inner {
+  height: auto !important;
+  max-height: none !important;
+}
+#right-context-rail[data-rail-measuring] [data-rail-scroller],
+#right-context-rail[data-rail-measuring] .space-mission-roster-list {
+  max-height: none !important;
 }
 #space-mission-panel {
   width: 100%;
@@ -1580,7 +1628,12 @@
   pointer-events: none;
 }
 #right-context-rail.bottom-row
-  > [data-panel-id]:is(#pp-toggles, #cctv-panel, #global-context-panel),
+  > [data-panel-id]:is(
+    #pp-toggles,
+    #cctv-panel,
+    #weather-panel,
+    #global-context-panel
+  ),
 #left-panel-stack.bottom-row
   > [data-panel-id]:is(#data-panel, #analysis-panel, #scene-panel) {
   position: absolute;
@@ -1598,9 +1651,12 @@
   pointer-events: auto;
 }
 #right-context-rail.bottom-row
-  > [data-panel-id]:is(#pp-toggles, #cctv-panel, #global-context-panel):not(
-    .collapsed
-  ),
+  > [data-panel-id]:is(
+    #pp-toggles,
+    #cctv-panel,
+    #weather-panel,
+    #global-context-panel
+  ):not(.collapsed),
 #left-panel-stack.bottom-row
   > [data-panel-id]:is(#data-panel, #analysis-panel, #scene-panel):not(
     .collapsed
@@ -1733,4 +1789,18 @@ body.data-panel-top
   .data-panel-inner {
   max-height: calc(100vh - 290px);
   overflow: hidden;
+}
+
+body.ui-clean-view #right-context-rail,
+body.recording-mode #right-context-rail,
+body.ui-clean-view #right-context-rail > [data-panel-id],
+body.recording-mode #right-context-rail > [data-panel-id] {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+@media (max-width: 720px) {
+  #right-context-rail #weather-panel.collapsed {
+    width: 100%;
+  }
 }
