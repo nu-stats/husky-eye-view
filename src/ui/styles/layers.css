@@ -414,6 +414,10 @@
 
 /* Selected-only, provenance-first proximity results. This is intentionally a
    contextual panel, not a radar/engagement display. */
+/* Recent Imagery opens above the bottom row; its day strip scrolls inside. */
+#recent-imagery-panel {
+  --panel-expanded-width: 420px;
+}
 #global-context-panel {
   --panel-expanded-width: 330px;
   width: var(--panel-expanded-width);
@@ -448,6 +452,7 @@
 #right-context-rail > #pp-toggles,
 #right-context-rail > #cctv-panel,
 #right-context-rail > #weather-panel,
+#right-context-rail > #recent-imagery-panel,
 #right-context-rail > #global-context-panel {
   position: relative;
   inset: auto;
@@ -459,7 +464,8 @@
   pointer-events: auto;
 }
 #right-context-rail #cctv-panel,
-#right-context-rail #weather-panel {
+#right-context-rail #weather-panel,
+#right-context-rail #recent-imagery-panel {
   width: var(--panel-expanded-width);
   pointer-events: auto;
 }
@@ -470,14 +476,16 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(170, 170, 170, 0.4) transparent;
 }
-#right-context-rail > #weather-panel {
+#right-context-rail > #weather-panel,
+#right-context-rail > #recent-imagery-panel:not(.collapsed) {
   display: flex;
   flex-direction: column;
   flex-shrink: 1;
   min-height: 0;
 }
 #right-context-rail #cctv-panel.collapsed,
-#right-context-rail #weather-panel.collapsed {
+#right-context-rail #weather-panel.collapsed,
+#right-context-rail #recent-imagery-panel.collapsed {
   width: var(--right-display-collapsed-width);
   margin-left: auto;
 }
@@ -491,6 +499,7 @@
 #right-context-rail > #pp-toggles.collapsed .pp-header-row,
 #right-context-rail #cctv-panel.collapsed .cctv-panel-inner,
 #right-context-rail #weather-panel.collapsed .weather-panel-inner,
+#right-context-rail #recent-imagery-panel.collapsed .recent-imagery-panel-inner,
 #right-context-rail
   #global-context-panel.collapsed
   .global-context-panel-inner {
@@ -547,6 +556,7 @@
 #right-context-rail.layout-focus > #pp-toggles:not(.collapsed),
 #right-context-rail.layout-focus > #cctv-panel:not(.collapsed),
 #right-context-rail.layout-focus > #weather-panel:not(.collapsed),
+#right-context-rail.layout-focus > #recent-imagery-panel:not(.collapsed),
 #right-context-rail.layout-focus > #global-context-panel:not(.collapsed) {
   flex: 0 1 var(--right-panel-allocated-height);
   height: var(--right-panel-allocated-height);
@@ -565,6 +575,9 @@
 #right-context-rail.layout-focus
   > #cctv-panel:not(.collapsed)
   .cctv-panel-inner,
+#right-context-rail.layout-focus
+  > #recent-imagery-panel:not(.collapsed)
+  .recent-imagery-panel-inner,
 #right-context-rail.layout-focus
   > #global-context-panel:not(.collapsed)
   .global-context-panel-inner {
@@ -611,6 +624,9 @@
 #right-context-rail[data-rail-measuring]
   > [data-panel-id]:not(.collapsed)
   > .weather-panel-inner,
+#right-context-rail[data-rail-measuring]
+  > [data-panel-id]:not(.collapsed)
+  > .recent-imagery-panel-inner,
 #right-context-rail[data-rail-measuring]
   > [data-panel-id]:not(.collapsed)
   > .global-context-panel-inner {
@@ -1632,6 +1648,7 @@
     #pp-toggles,
     #cctv-panel,
     #weather-panel,
+    #recent-imagery-panel,
     #global-context-panel
   ),
 #left-panel-stack.bottom-row
@@ -1655,6 +1672,7 @@
     #pp-toggles,
     #cctv-panel,
     #weather-panel,
+    #recent-imagery-panel,
     #global-context-panel
   ):not(.collapsed),
 #left-panel-stack.bottom-row
@@ -1665,6 +1683,12 @@
   width: var(--panel-expanded-width);
   min-width: 0;
   z-index: 2;
+}
+/* A closed launcher never covers an open popup nudged over its slot, whatever
+   stacking order a click on it left behind (an inline z-index). */
+#right-context-rail.bottom-row > [data-panel-id].collapsed,
+#left-panel-stack.bottom-row > [data-panel-id].collapsed {
+  z-index: 1 !important;
 }
 #left-panel-stack.bottom-row > #data-panel:not(.collapsed) .data-panel-inner,
 #left-panel-stack.bottom-row
@@ -1800,7 +1824,8 @@ body.recording-mode #right-context-rail > [data-panel-id] {
   pointer-events: none !important;
 }
 @media (max-width: 720px) {
-  #right-context-rail #weather-panel.collapsed {
+  #right-context-rail #weather-panel.collapsed,
+  #right-context-rail #recent-imagery-panel.collapsed {
     width: 100%;
   }
 }

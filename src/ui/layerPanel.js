@@ -214,6 +214,8 @@ export class LayerPanel {
     this._groups = new Map();
     this._onSignature = '';
     this._cancelRowControlsRefresh = null;
+    this._recentImageryFactory = null;
+    this._recentImageryPanel = null;
   }
   mount(container) {
     if (this._destroyed) return;
@@ -229,7 +231,28 @@ export class LayerPanel {
       // The WEATHER launcher opens when clicked, like the bottom row's others.
       openOnFirstAppearance: false,
     });
+    this._mountRecentImagery();
     this._renderToggles();
+  }
+  /**
+   * Host the Recent Imagery readout in its rail body, like the weather
+   * readout. The application supplies the factory once the layer, viewer and
+   * box tool exist; a remount rebuilds the readout in place.
+   * @param {((container: HTMLElement) => { destroy: () => void } | null) | null} factory
+   */
+  attachRecentImagery(factory) {
+    if (this._destroyed) return;
+    this._recentImageryFactory = typeof factory === 'function' ? factory : null;
+    this._mountRecentImagery();
+  }
+  _mountRecentImagery() {
+    this._recentImageryPanel?.destroy();
+    this._recentImageryPanel = null;
+    const container = this._toggleContainer?.ownerDocument?.getElementById?.(
+      'recent-imagery-panel-body',
+    );
+    if (container && this._recentImageryFactory)
+      this._recentImageryPanel = this._recentImageryFactory(container) || null;
   }
   _bind(element, type, listener) {
     element.addEventListener(type, listener);
@@ -249,6 +272,9 @@ export class LayerPanel {
     this._onBadge = null;
     this._weatherPanel?.destroy();
     this._weatherPanel = null;
+    this._recentImageryPanel?.destroy();
+    this._recentImageryPanel = null;
+    this._recentImageryFactory = null;
     this._toggleContainer = null;
   }
 

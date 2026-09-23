@@ -565,3 +565,28 @@ test('narrow-screen rails pin every hosted panel glow inside its panel box', () 
     );
   }
 });
+
+test('right layout ignores a hidden panel: no lane, no gap, no auto-collapse', () => {
+  const f = fixture('right');
+  const imagery = element('recent-imagery-panel', { height: 0 });
+  imagery.hidden = true;
+  imagery.scrollHeight = 0;
+  imagery.rect.height = 0;
+  f.stack.children.push(imagery);
+  imagery.parentElement = f.stack;
+  // A tall panel expands (Husky Eye View keeps its bottom-row layout, where
+  // God's Eye View switches to focus mode): the hidden sibling is not among
+  // the panels the layout collapses, and it counts for nothing.
+  f.expand(f.first, 900);
+  f.run();
+  assert.equal(f.stack.dataset.layoutMode, 'bottom');
+  assert.equal(imagery.classList.contains('collapsed'), false);
+  assert.equal(imagery.classList.contains('layout-auto-collapsed'), false);
+  assert.equal(
+    imagery.style.getPropertyValue('--right-panel-allocated-height'),
+    '',
+  );
+  assert.equal(imagery.getAttribute('aria-hidden'), undefined);
+  // (God's Eye View's focus-mode half of this test does not apply: the
+  // bottom row never collapses its neighbours.)
+});

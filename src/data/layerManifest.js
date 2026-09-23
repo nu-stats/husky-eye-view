@@ -585,6 +585,23 @@ export const LAYER_MANIFEST = Object.freeze(
       aliases: ['cctv', 'cameras'],
     },
     {
+      // God's Eye View #716; its share token there is '1', a research layer here.
+      id: 'recent-imagery',
+      token: 'ri',
+      disposition: 'enabled+options',
+      optionOwner: 'recent-imagery',
+      group: 'Live Feeds',
+      label: 'Recent Imagery',
+      aliases: [
+        'recent imagery',
+        'satellite imagery',
+        'satellite images',
+        'landsat',
+        'sentinel',
+        'before and after',
+      ],
+    },
+    {
       id: 'alpr-cameras',
       token: 'p',
       group: 'Live Feeds',

@@ -151,6 +151,8 @@
   "src/keylessGeocoder.js",
   "src/standalone/placeSearch.js",
   "src/ui/panelDisclosure.js",
+  "src/ui/imagerySplit.js",
+  "src/ui/imagerySplit.test.mjs",
   "src/ui/surfaceKeyboard.js",
   "src/ui/surfaceKeyboard.test.mjs",
   "src/ui/panelRails.js",
@@ -685,6 +687,7 @@
   "src/maps/catalog.js",
   "src/maps/controller.js",
   "src/maps/controller.test.mjs",
+  "src/maps/imageryComparison.js",
   "src/maps/credits.js",
   "src/maps/defaultSources.js",
   "src/maps/google3d.js",
@@ -971,5 +974,15 @@
   "src/layers/traffic/motion.test.mjs",
   "scripts/qa-journey-recorder.mjs",
   "scripts/qa-alpr-journey.mjs",
-  "scripts/qa-context-arrivals.mjs"
+  "scripts/qa-context-arrivals.mjs",
+  "src/layers/recentImagery/model.test.mjs",
+  "src/layers/recentImagery/catalog.test.mjs",
+  "src/maps/imageryHost.test.mjs",
+  "src/layers/recentImagery/rendering.test.mjs",
+  "src/layers/recentImagery/thumbnails.test.mjs",
+  "src/layers/recentImagery/index.test.mjs",
+  "src/ui/imageryBoxTool.test.mjs",
+  "src/ui/recentImagery.test.mjs",
+  "src/layers/recentImagery/testDoubles.mjs",
+  "scripts/qa-recent-imagery.mjs"
 ]

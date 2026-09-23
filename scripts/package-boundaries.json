@@ -772,7 +772,8 @@
       "src/ui/styles/voice-cost.css",
       "src/ui/styles/first-run.css",
       "src/ui/styles/provider-settings.css",
-      "src/ui/styles/weather.css"
+      "src/ui/styles/weather.css",
+      "src/ui/styles/recent-imagery.css"
     ],
     "external": []
   },
@@ -999,6 +1000,18 @@
       "src/layers/earthquakes/model.js",
       "src/layers/earthquakes/source.js",
       "src/layers/earthquakes/records.js"
+    ],
+    "external": ["cesium"]
+  },
+  "recent-imagery": {
+    "exports": ["./layers/recent-imagery"],
+    "modules": [
+      "src/layers/recentImagery/index.js",
+      "src/layers/recentImagery/model.js",
+      "src/layers/recentImagery/catalog.js",
+      "src/layers/recentImagery/rendering.js",
+      "src/layers/recentImagery/thumbnails.js",
+      "src/maps/imageryHost.js"
     ],
     "external": ["cesium"]
   },
@@ -1353,6 +1366,7 @@
       "src/maps/availability.js",
       "src/maps/catalog.js",
       "src/maps/controller.js",
+      "src/maps/imageryComparison.js",
       "src/maps/credits.js",
       "src/maps/defaultSources.js",
       "src/maps/google3d.js",
@@ -1361,7 +1375,8 @@
       "src/maps/terrain.js",
       "src/maps/terrainRetry.js",
       "src/keySetupCore.mjs",
-      "src/localRequestGate.mjs"
+      "src/localRequestGate.mjs",
+      "src/maps/imageryHost.js"
     ],
     "external": ["cesium"]
   },
@@ -1422,6 +1437,7 @@
       "src/scenes/nepalEvidencePack.js",
       "src/data/bhoteKoshiEvent.js",
       "src/debugLog.js",
+      "src/ui/imagerySplit.js",
       "src/data/bhoteKoshiEmbeddedMedia.js",
       "src/data/bhoteKoshiLocator.js",
       "src/data/bhoteKoshiIncidentPlaces.js",
@@ -1841,6 +1857,7 @@
       "src/maps/availability.js",
       "src/maps/catalog.js",
       "src/maps/controller.js",
+      "src/maps/imageryComparison.js",
       "src/maps/credits.js",
       "src/maps/defaultSources.js",
       "src/maps/google3d.js",
@@ -2173,7 +2190,16 @@
       "src/sources/requestDeadline.js",
       "src/data/local_data/osm_military_names/names.json",
       "src/layers/installations/namedMarkers.js",
-      "src/data/infrastructureOverlayEntry.js"
+      "src/data/infrastructureOverlayEntry.js",
+      "src/app/layers/recentImagery.js",
+      "src/layers/recentImagery/index.js",
+      "src/layers/recentImagery/model.js",
+      "src/layers/recentImagery/catalog.js",
+      "src/layers/recentImagery/rendering.js",
+      "src/layers/recentImagery/thumbnails.js",
+      "src/maps/imageryHost.js",
+      "src/ui/recentImagery.js",
+      "src/ui/imageryBoxTool.js"
     ],
     "external": [
       "hls.js",
@@ -2195,6 +2221,8 @@
     "modules": [
       "src/data/bhoteKoshiEvent.js",
       "src/debugLog.js",
+      "src/ui/imagerySplit.js",
+      "src/maps/imageryComparison.js",
       "src/data/bhoteKoshiEmbeddedMedia.js",
       "src/data/bhoteKoshiLocator.js",
       "src/data/bhoteKoshiIncidentPlaces.js",
@@ -2647,7 +2675,14 @@
       "src/sources/requestDeadline.js",
       "src/data/local_data/osm_military_names/names.json",
       "src/layers/installations/namedMarkers.js",
-      "src/data/infrastructureOverlayEntry.js"
+      "src/data/infrastructureOverlayEntry.js",
+      "src/app/layers/recentImagery.js",
+      "src/layers/recentImagery/index.js",
+      "src/layers/recentImagery/model.js",
+      "src/layers/recentImagery/catalog.js",
+      "src/layers/recentImagery/rendering.js",
+      "src/layers/recentImagery/thumbnails.js",
+      "src/maps/imageryHost.js"
     ],
     "external": [
       "hls.js",

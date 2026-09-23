@@ -196,8 +196,8 @@ function encode(state) {
 
 test('production registry is exact, canonical, and rejects incomplete contracts', async () => {
   assert.equal(validateLayerStateRegistry(), true);
-  assert.equal(REGISTERED_LAYER_IDS.length, 81);
-  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 81);
+  assert.equal(REGISTERED_LAYER_IDS.length, 82);
+  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 82);
   assert.ok(REGISTERED_LAYER_IDS.includes('transit'));
   assert.deepEqual(REGISTERED_LAYER_IDS, [...REGISTERED_LAYER_IDS].sort());
   assert.throws(
@@ -413,7 +413,7 @@ test('compact URL omits absent-meaning option state and still resolves to it', (
   // this is the ledger of what an OMITTED token means, so changing any of these
   // fails HERE and forces the change to be acknowledged.
   //
-  // Note this is the absent-meaning ledger, NOT the default ledger — the two
+  // Note this is the absent-meaning ledger, NOT the default ledger â€” the two
   // diverged for `models3d` on 2026-08-22. Its default moved to `true`, but an
   // omitted `e` still means `false` because that is what schema v2 has always
   // meant to the links already in the wild, so `false` is what belongs in a
@@ -442,9 +442,9 @@ test('compact URL omits absent-meaning option state and still resolves to it', (
   assert.deepEqual(roundTrip.options.satellites.selectedSatTrackingId, null);
 });
 
-test('a fresh boot starts 3D aircraft ON in proximity — codec, both layers, and the rail agree', async () => {
+test('a fresh boot starts 3D aircraft ON in proximity â€” codec, both layers, and the rail agree', async () => {
   // Owner directive 2026-08-22: the DISPLAY-rail 3D toggle defaults ON with mode
-  // `proximity`, because proximity is itself the budget — models materialize only
+  // `proximity`, because proximity is itself the budget â€” models materialize only
   // below the fleet altitude ceiling and only for the nearest MODEL_MAX in view,
   // so "on" costs nothing at globe scale and `all` stays a deliberate opt-in.
   //
@@ -486,7 +486,7 @@ test('a fresh boot starts 3D aircraft ON in proximity — codec, both layers, an
   assert.deepEqual(
     paramsCalls,
     [],
-    'a fresh boot restores nothing — which is exactly why the module initializers below must match',
+    'a fresh boot restores nothing â€” which is exactly why the module initializers below must match',
   );
   coordinator.destroy();
 
@@ -523,7 +523,7 @@ test('a fresh boot starts 3D aircraft ON in proximity — codec, both layers, an
   assert.match(
     html,
     /class="pp-toggle-btn active" id="models3d-toggle" aria-pressed="true"/,
-    'index.html: the 3D button paints lit on first paint, before ui.js runs — and says so',
+    'index.html: the 3D button paints lit on first paint, before ui.js runs â€” and says so',
   );
   assert.match(
     ui,
@@ -545,7 +545,7 @@ test('a fresh boot starts 3D aircraft ON in proximity — codec, both layers, an
 test('a v2 link written before the flip still means what its author saw: 3D OFF', () => {
   // The regression this pins, caught in review: schema v2 shipped with 3D OFF as
   // the OMITTED default, so every link already in the wild says "off" by saying
-  // nothing. Moving the default without moving the codec turned all of them ON —
+  // nothing. Moving the default without moving the codec turned all of them ON â€”
   // the same omission meaning two different things inside one schema version.
   //
   // `v=2&l=f` is the canonical parent-era link. It must decode OFF forever.
@@ -579,7 +579,7 @@ test('a v2 link written before the flip still means what its author saw: 3D OFF'
 
 test('the new default is written EXPLICITLY, so no omission is ambiguous', () => {
   // Because an absent `e` is pinned to the historical OFF above, the new ON
-  // default cannot ride in on the omission — it has to be emitted. This is the
+  // default cannot ride in on the omission â€” it has to be emitted. This is the
   // other half of the same invariant: break it and fresh ON links silently become
   // OFF links for their recipients.
   const on = createDefaultLayerState();
@@ -601,7 +601,7 @@ test('the new default is written EXPLICITLY, so no omission is ambiguous', () =>
     true,
   );
 
-  // And OFF is the omission, matching what v2 already meant — one meaning, one
+  // And OFF is the omission, matching what v2 already meant â€” one meaning, one
   // encoding, across both eras.
   const off = createDefaultLayerState();
   off.enabledLayerIds = ['flights'];
@@ -628,7 +628,7 @@ test('the new default is written EXPLICITLY, so no omission is ambiguous', () =>
 
 test('a share link that carries 3D OFF still restores OFF at both aircraft layers', async () => {
   // The 2026-08-22 default governs FRESH sessions only. It must never overwrite a
-  // choice a link states — and after the codec fix above, OFF is stated by the
+  // choice a link states â€” and after the codec fix above, OFF is stated by the
   // absent token, which is what v2 always meant.
   const state = createDefaultLayerState();
   state.enabledLayerIds = ['flights', 'military'];
@@ -643,7 +643,7 @@ test('a share link that carries 3D OFF still restores OFF at both aircraft layer
   );
   assert.equal(decoded.options.flights.models3dMode, 'proximity');
 
-  // And the restore really pushes OFF at both aircraft layers — `military`
+  // And the restore really pushes OFF at both aircraft layers â€” `military`
   // mirrors the `flights` option owner, so one shared link disarms both.
   const calls = { flights: [], military: [] };
   const manager = productionManager({
@@ -1614,7 +1614,7 @@ test('feed failure is not misreported as target absence and malformed time never
   });
   await coordinator.start({ shareLayerState: state, shareCreatedAtMs: null });
   const pending = await coordinator.restoreShareTrackingSelection();
-  // A partial catalog is a "not here YET" too — hold it, do not announce.
+  // A partial catalog is a "not here YET" too â€” hold it, do not announce.
   assert.equal(pending.classification, 'pending');
   assert.equal(statuses.length, 1);
   assert.equal(statuses[0].classification, 'pending');
@@ -2119,7 +2119,7 @@ test('an oversized enabled-layer field fails closed instead of decoding a prefix
 //
 // Aborting only the restore controller was a no-op by the time the watch
 // existed (the controller has already settled), so the orphaned timer went on
-// to announce "Shared … unavailable" at its deadline — a verdict about work
+// to announce "Shared â€¦ unavailable" at its deadline â€” a verdict about work
 // nothing was attempting any more. Both paths below cancel the module latch in
 // production: an explicit parameter replacement, and the owner layer going
 // away (at any origin, including a programmatic disable).
@@ -2198,8 +2198,18 @@ test('wind appearance shares round trip while old links retain weather defaults'
     paused: false,
   });
   const legacy = decodeLayerStateParams(new URLSearchParams('v=2&l=k'));
-  assert.equal(legacy.options.wind.overlay, 'speed', 'old links retain their authored field');
-  assert.equal(decodeLayerStateParams(new URLSearchParams(encode(createDefaultLayerState()))).options.wind.overlay, 'none', 'new default is encoded explicitly');
+  assert.equal(
+    legacy.options.wind.overlay,
+    'speed',
+    'old links retain their authored field',
+  );
+  assert.equal(
+    decodeLayerStateParams(
+      new URLSearchParams(encode(createDefaultLayerState())),
+    ).options.wind.overlay,
+    'none',
+    'new default is encoded explicitly',
+  );
   const old = normalizeLayerState({ options: { wind: { model: 'ifs' } } });
   assert.deepEqual(old.options.wind, { ...defaults, model: 'ifs' });
   const invalid = normalizeLayerState({
@@ -2216,7 +2226,13 @@ test('wind appearance shares round trip while old links retain weather defaults'
 });
 
 test('observed weather round trips product and opacity without persisting historical playback', () => {
-  const state = normalizeLayerState({ enabledLayerIds: ['weather-radar', 'weather-satellite'], options: { 'weather-radar': { opacity: 'light', play: true }, 'weather-satellite': { product: 'clouds', opacity: 'light', step: -1 } } });
+  const state = normalizeLayerState({
+    enabledLayerIds: ['weather-radar', 'weather-satellite'],
+    options: {
+      'weather-radar': { opacity: 'light', play: true },
+      'weather-satellite': { product: 'clouds', opacity: 'light', step: -1 },
+    },
+  });
   const params = new URLSearchParams(encode(state));
   const decoded = decodeLayerStateParams(params);
   assert.deepEqual(decoded, state);
@@ -2226,14 +2242,204 @@ test('observed weather round trips product and opacity without persisting histor
 
 test('satellite infrared display mode round trips and invalid or absent values use filtered', () => {
   for (const infrared of ['full', 'filtered', undefined, 'invalid']) {
-    const state = normalizeLayerState({ enabledLayerIds: ['weather-satellite'], options: {
-      'weather-satellite': { infrared, product: 'clouds', step: -1, play: true },
-    } });
-    assert.deepEqual(decodeLayerStateParams(new URLSearchParams(encode(state))), state);
-    assert.equal(state.options['weather-satellite'].infrared, infrared === 'full' ? 'full' : 'filtered');
-    assert.equal(Object.hasOwn(state.options['weather-satellite'], 'step'), false);
-    assert.equal(Object.hasOwn(state.options['weather-satellite'], 'play'), false);
+    const state = normalizeLayerState({
+      enabledLayerIds: ['weather-satellite'],
+      options: {
+        'weather-satellite': {
+          infrared,
+          product: 'clouds',
+          step: -1,
+          play: true,
+        },
+      },
+    });
+    assert.deepEqual(
+      decodeLayerStateParams(new URLSearchParams(encode(state))),
+      state,
+    );
+    assert.equal(
+      state.options['weather-satellite'].infrared,
+      infrared === 'full' ? 'full' : 'filtered',
+    );
+    assert.equal(
+      Object.hasOwn(state.options['weather-satellite'], 'step'),
+      false,
+    );
+    assert.equal(
+      Object.hasOwn(state.options['weather-satellite'], 'play'),
+      false,
+    );
   }
+});
+
+// Recent Imagery (`ri`): the box travels as four integers at degrees Ã— 100000,
+// the two days as product letter + compact date, the split as a percent.
+const imageryOptions = (lo) =>
+  decodeLayerStateParams(
+    new URLSearchParams([
+      ['v', '2'],
+      ['l', 'ri'],
+      ['lo', lo],
+    ]),
+  ).options['recent-imagery'];
+
+test('recent-imagery box, days, mode, split and overview toggle round-trip under token ri (upstream: 1); defaults stay out of the URL', () => {
+  const entry = LAYER_STATE_REGISTRY.find((row) => row.id === 'recent-imagery');
+  assert.deepEqual(
+    [entry.token, entry.disposition, entry.optionOwner],
+    ['ri', 'enabled+options', 'recent-imagery'],
+  );
+  assert.deepEqual(createDefaultLayerState().options['recent-imagery'], {
+    west: null,
+    south: null,
+    east: null,
+    north: null,
+    a: null,
+    b: null,
+    mode: 0,
+    split: 50,
+    viirs: false,
+  });
+  const state = createDefaultLayerState();
+  state.enabledLayerIds = ['recent-imagery', 'flights'];
+  state.options['recent-imagery'] = {
+    west: -9781235,
+    south: -3020000,
+    east: -9770000,
+    north: 3040000,
+    a: 'S30:2026-09-18',
+    b: 'L30:2026-09-10',
+    mode: 2,
+    split: 37,
+    viirs: true,
+  };
+  const encoded = encode(state);
+  assert.ok(
+    encoded.includes(
+      'ri.w.-9781235_ri.s.-3020000_ri.e.-9770000_ri.n.3040000_ri.a.S20260918_ri.b.L20260910_ri.m.2_ri.p.37_ri.v.1',
+    ),
+    encoded,
+  );
+  const decoded = decodeLayerStateParams(new URLSearchParams(encoded));
+  assert.deepEqual(
+    decoded.options['recent-imagery'],
+    state.options['recent-imagery'],
+  );
+  assert.deepEqual(decoded.options.flights, state.options.flights);
+  const bare = createDefaultLayerState();
+  bare.enabledLayerIds = ['recent-imagery'];
+  assert.doesNotMatch(
+    new URLSearchParams(encode(bare)).get('lo') || '',
+    /(^|_)ri\./,
+  );
+  // The codec is calendar-only: a link decodes the same whenever it is opened.
+  assert.equal(imageryOptions('ri.a.L19991231').a, 'L30:1999-12-31');
+  assert.equal(imageryOptions('ri.b.V20991231').b, 'VIIRS:2099-12-31');
+});
+
+test('recent-imagery rejects impossible days and out-of-range edges instead of rolling or clamping them', () => {
+  for (const bad of [
+    'S20260230',
+    'L20261301',
+    'S20260900',
+    'X20260918',
+    's20260918',
+    'S2026091',
+    'S30:2026-09-18',
+  ])
+    assert.equal(imageryOptions(`ri.a.${bad}`).a, null, bad);
+  assert.equal(
+    imageryOptions('ri.b.S20240229').b,
+    'S30:2024-02-29',
+    'a real leap day',
+  );
+  assert.equal(imageryOptions('ri.b.S20230229').b, null);
+  const mixed = imageryOptions('ri.a.S20260230_ri.b.V20260921_ri.p.80');
+  assert.deepEqual(
+    [mixed.a, mixed.b, mixed.split],
+    [null, 'VIIRS:2026-09-21', 80],
+  );
+  for (const bad of [
+    'ri.w.18000001',
+    'ri.n.8505111',
+    'ri.s.-8505111',
+    'ri.w.1.5',
+    'ri.w.abc',
+    'ri.w.1234567890',
+  ]) {
+    const field = { w: 'west', s: 'south', n: 'north' }[bad.split('.')[1]];
+    assert.equal(imageryOptions(bad)[field], null, bad);
+  }
+  assert.equal(imageryOptions('ri.w.18000000').west, 18000000);
+  assert.equal(imageryOptions('ri.p.101').split, 50);
+  assert.equal(imageryOptions('ri.m.1').mode, 1);
+  for (const bad of ['ri.m.3', 'ri.m.-1', 'ri.m.x'])
+    assert.equal(imageryOptions(bad).mode, 0, bad);
+  assert.deepEqual(
+    normalizeLayerState({
+      enabledLayerIds: ['recent-imagery'],
+      options: {
+        'recent-imagery': {
+          a: 'S30:2026-02-30',
+          b: ' L30:2026-09-10 ',
+          split: 150,
+          west: 'abc',
+          north: -8505110,
+        },
+      },
+    }).options['recent-imagery'],
+    {
+      west: null,
+      south: null,
+      east: null,
+      north: -8505110,
+      a: null,
+      b: 'L30:2026-09-10',
+      mode: 0,
+      split: 50,
+      viirs: false,
+    },
+  );
+  // An oversized payload fails closed at the shared 512-character cap.
+  const long = 'ri.a.S20260918_'.repeat(40);
+  assert.ok(imageryOptions(long.slice(0, 512)));
+  assert.equal(
+    decodeLayerStateParams(
+      new URLSearchParams([
+        ['v', '2'],
+        ['l', 'ri'],
+        ['lo', long.slice(0, 513)],
+      ]),
+    ),
+    null,
+  );
+});
+
+test('the recent-imagery split is share-link only: never stored locally, and a stored value reads as the default', () => {
+  const state = createDefaultLayerState();
+  state.enabledLayerIds = ['recent-imagery'];
+  state.options['recent-imagery'] = {
+    a: 'S30:2026-09-18',
+    split: 8,
+    viirs: true,
+  };
+  assert.ok(encode(state).includes('ri.p.8'));
+  const stored = JSON.parse(serializeStoredLayerState(state)).o[
+    'recent-imagery'
+  ];
+  assert.deepEqual(
+    [stored.split, stored.a, stored.viirs],
+    [50, 'S30:2026-09-18', true],
+  );
+  const previous = JSON.stringify({
+    v: 2,
+    l: ['recent-imagery'],
+    o: { 'recent-imagery': { split: 8 } },
+  });
+  assert.equal(
+    parseStoredLayerState(previous).options['recent-imagery'].split,
+    50,
+  );
 });
 
 test("God's Eye View's weather and fire layers take Husky Eye View's own tokens", () => {
