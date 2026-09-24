@@ -56,8 +56,9 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     // later, its wording on one row per tract / county and mixed-level files.
     // 2026-10-13 (God's Eye View weather release): next_satellite_pass, the
     // analyst layers satellites / data centers / dams, and their wording (the
-    // layer enums, weather layers included, are excluded above).
-    '368552e97be0a56067afaa2047f050b6f2997b1dc966eb450f53326497f7427a',
+    // layer enums, weather layers included, are excluded above). Then the
+    // fire release: Fire Perimeters among the analyst layers.
+    'e748bcc7e9584e9fe701d9a5cc1c060923554fc4a9fff4718e4bf7ae588946be',
   );
 });
 
@@ -129,15 +130,17 @@ test('metadata cannot add tools, fields, types or enum values', () => {
 });
 
 test('all legacy action arguments are byte-identical after removing the deliberate additions', () => {
-  // God's Eye View's weather release (merged 2026-10-13) adds one tool,
-  // three analyst layers and five weather layers; without them, every other
-  // argument is exactly Husky Eye View's before the merge.
+  // God's Eye View's weather and fire releases (merged 2026-10-13) add one
+  // tool, three analyst layers, five weather layers and Fire Perimeters;
+  // without them, every other argument is exactly Husky Eye View's before
+  // the merge.
   const WEATHER_LAYERS = [
     'wind',
     'weather-radar',
     'weather-satellite',
     'weather-lightning',
     'weather-cyclones',
+    'fire-perimeters',
   ];
   const legacy = structuredClone(GEV_ACTION_SCHEMAS).filter(
     (tool) => tool.name !== 'next_satellite_pass',
@@ -145,7 +148,13 @@ test('all legacy action arguments are byte-identical after removing the delibera
   const layers = legacy.find((tool) => tool.name === 'analyst_query').parameters
     .properties.layers.items;
   layers.enum = layers.enum.filter(
-    (key) => !['satellites', 'local-datacenters', 'local-dams'].includes(key),
+    (key) =>
+      ![
+        'satellites',
+        'local-datacenters',
+        'local-dams',
+        'fire-perimeters',
+      ].includes(key),
   );
   const strip = (node) => {
     if (Array.isArray(node)) node.forEach(strip);

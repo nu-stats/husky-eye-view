@@ -28,6 +28,7 @@ import { rProxy } from './r.js';
 import { spssProxy } from './spss.js';
 import { excelProxy } from './excel.js';
 import { weatherProxy } from './weather.js';
+import { firePerimetersProxy } from './firePerimeters.js';
 import { cycloneProxy } from './cyclones.js';
 import { windProxy } from './wind.js';
 
@@ -65,6 +66,7 @@ function localProviderPlugins() {
     windProxy(),
     weatherProxy(),
     cycloneProxy(),
+    firePerimetersProxy(),
     keySetupEndpoint(),
   ];
 }

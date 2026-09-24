@@ -805,6 +805,7 @@ const schemas = [
               'satellites',
               'local-datacenters',
               'local-dams',
+              'fire-perimeters',
             ],
           },
         },

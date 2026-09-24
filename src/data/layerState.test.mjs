@@ -196,8 +196,8 @@ function encode(state) {
 
 test('production registry is exact, canonical, and rejects incomplete contracts', async () => {
   assert.equal(validateLayerStateRegistry(), true);
-  assert.equal(REGISTERED_LAYER_IDS.length, 80);
-  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 80);
+  assert.equal(REGISTERED_LAYER_IDS.length, 81);
+  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 81);
   assert.ok(REGISTERED_LAYER_IDS.includes('transit'));
   assert.deepEqual(REGISTERED_LAYER_IDS, [...REGISTERED_LAYER_IDS].sort());
   assert.throws(
@@ -2234,4 +2234,16 @@ test('satellite infrared display mode round trips and invalid or absent values u
     assert.equal(Object.hasOwn(state.options['weather-satellite'], 'step'), false);
     assert.equal(Object.hasOwn(state.options['weather-satellite'], 'play'), false);
   }
+});
+
+test("God's Eye View's weather and fire layers take Husky Eye View's own tokens", () => {
+  // Their God's Eye View tokens (k v o l y 2) are research layers here.
+  const token = (id) => LAYER_STATE_REGISTRY.find((row) => row.id === id).token;
+  assert.deepEqual(
+    ['wind', 'weather-radar', 'weather-satellite', 'weather-lightning', 'weather-cyclones', 'fire-perimeters'].map(token),
+    ['wn', 'wr', 'ws', 'wl', 'cy', 'fp'],
+  );
+  const decoded = decodeLayerStateParams(new URLSearchParams('v=2&l=fp.wn.2'));
+  assert.deepEqual(decoded.enabledLayerIds, ['fire-perimeters', 'local-county-life-expectancy', 'wind'].sort());
+  assert.deepEqual(decodeLayerStateParams(new URLSearchParams(encode(decoded))), decoded);
 });

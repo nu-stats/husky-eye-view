@@ -23,6 +23,7 @@ import { createApplicationAlpr } from './layers/alprCameras.js';
 import { createApplicationAwareness } from './layers/militaryAwareness.js';
 import { createApplicationFirms } from './layers/firms.js';
 import { createApplicationEarthquakes } from './layers/earthquakes.js';
+import { createApplicationFirePerimeters } from './layers/perimeters.js';
 import { createApplicationCables } from './layers/submarineCables.js';
 import { createInfrastructureLayers } from '../data/infrastructure.js';
 import { createSplatCapturesLayer } from '../data/splatCaptures.js';
@@ -55,6 +56,7 @@ const SOURCE_METHODS = Object.freeze({
   weather: ['getSnapshot'],
   cyclones: ['getSnapshot'],
   earthquakes: ['getSnapshot'],
+  'fire-perimeters': ['getSnapshot'],
   cables: ['fetch'],
 });
 
@@ -131,6 +133,9 @@ export function createApplicationCatalog({
         military,
         lowflyers,
         createApplicationEarthquakes({ source: sources.earthquakes }),
+        createApplicationFirePerimeters({
+          source: sources['fire-perimeters'],
+        }),
         createApplicationAlpr({ surface, source: sources.alpr }),
         satellites,
         createApplicationLaunches({ source: sources.launches, satellites }),

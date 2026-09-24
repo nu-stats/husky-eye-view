@@ -609,6 +609,21 @@ export const LAYER_MANIFEST = Object.freeze(
       live: true,
       aliases: ['firms', 'fires', 'active fires'],
     },
+    // From God's Eye View (2026-10): its token '2' is a life expectancy
+    // layer here.
+    {
+      id: 'fire-perimeters',
+      token: 'fp',
+      group: 'Live Feeds',
+      label: 'Fire Perimeters',
+      aliases: [
+        'fire perimeters',
+        'wildfire perimeters',
+        'wildfires',
+        'fire outlines',
+        'containment',
+      ],
+    },
     {
       id: 'satellites',
       token: 's',
