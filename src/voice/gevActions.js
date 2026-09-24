@@ -4628,6 +4628,7 @@ async function runAnalystQuery(
     return {
       ok: false,
       action: 'analyst_query',
+      ...(result.code ? { code: result.code } : {}),
       error: result.error,
       coverage: result.coverage,
     };
