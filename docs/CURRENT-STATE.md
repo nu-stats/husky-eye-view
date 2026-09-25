@@ -777,10 +777,12 @@ their `configured: false` response.
 
 CCTV media waits at most 15 seconds for upstream response headers and returns
 504 on timeout. Its timer stops when headers arrive, so live bodies can continue
-streaming; body idle deadlines are separate from this header deadline. Error
-responses are cancelled. Buffered snapshots have a 16 MiB streaming cap; an
-oversized image remains an upstream miss and uses the normal fallback chain.
-The existing declared media size ceiling remains 64 MiB.
+streaming; a separate 30-second idle deadline then bounds the gap between
+upstream chunks and releases a body that has gone silent. A response that is
+still waiting to drain reschedules that deadline, so a slow client does not read
+as a stalled upstream. Error responses are cancelled. Buffered snapshots have a
+16 MiB streaming cap; an oversized image remains an upstream miss and uses the
+normal fallback chain. The existing declared media size ceiling remains 64 MiB.
 
 ## GBFS upstream bounds
 
