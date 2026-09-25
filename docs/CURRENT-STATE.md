@@ -665,6 +665,25 @@ snapshots, lifecycle actions and row descriptors. Remount and teardown remove
 listeners and row subscriptions; obsolete completions do not repaint old rows.
 The clear control presents busy state while its existing action owns the transaction.
 
+## Model atmosphere on Apple Metal
+
+Cesium's per-vertex model atmosphere is kept out of the pipeline on devices
+whose driver cannot link it. `AtmosphereStageVS` binds shader `out` parameters
+directly to varyings, which ANGLE's Metal backend rejects at link time, tearing
+down the render loop on iPadOS and iOS. `ModelSceneGraph.configurePipeline`
+attaches that stage only when `fog.enabled && fog.renderable`, so the viewer
+clears `scene.fog.renderable` and leaves `fog.enabled` — and the fog density
+that drives 3D Tiles screen-space-error scaling — intact. Sky atmosphere and the
+ground-atmosphere fragment path route through locals and are unaffected.
+Affected devices lose distance fog on 3D tiles and on globe basemaps (Esri,
+Bing, keyless), since the globe fog shader uses the same `renderable` flag.
+The probe releases its throwaway WebGL2 context immediately.
+
+Detection is a WebGL2 link probe of the same out-parameter/varying pattern, so a
+future driver fix restores the effect with no code change; iOS/iPadOS platform
+detection is the backstop for when no probe context can be created. Applied
+during viewer construction, before any tile builds a draw command.
+
 ## Map Source control ownership
 
 Map Source controls own chip listeners, source-state subscriptions and selection
