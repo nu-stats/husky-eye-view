@@ -20,21 +20,35 @@ import path from 'node:path';
 const OVERPASS_USER_AGENT =
   'husky-eye-view/0.2 (+https://github.com/nu-stats/husky-eye-view)';
 
-/**
- * Overpass API mirrors, in the order they are started. The fastest healthy
- * one (lz4, measured 2026-10-07) goes first; a mirror that has not answered
- * within OVERPASS_STAGGER_MS is joined by the next (see transport.js).
- */
-const OVERPASS_UPSTREAMS = [
-  'https://lz4.overpass-api.de/api/interpreter',
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-  // Community full-planet instance (privateforge nonprofit) — added 2026-07-30
-  // when all three mirrors above refused this IP (likely a dev-traffic rate
-  // ban; refused connections fail in ms, so healthy mirrors above still win).
-  // Verified: planet coverage (Texas query), CORS *, ~5-20 s cold latency.
-  'https://overpass.private.coffee/api/interpreter',
-];
+/** Parse only operator-supplied HTTP(S) endpoints; private instances are allowed. */
+function parseOverpassUpstreams(raw) {
+  const endpoints = [];
+  for (const token of String(raw || '').split(',')) {
+    try {
+      const url = new URL(token.trim());
+      if (
+        !['http:', 'https:'].includes(url.protocol) ||
+        !url.hostname ||
+        url.hash
+      )
+        continue;
+      if (!endpoints.includes(url.href)) endpoints.push(url.href);
+    } catch {
+      // Invalid configuration never becomes an upstream or appears in logs.
+    }
+  }
+  return endpoints.slice(0, 8);
+}
+
+let upstreamMemo = { raw: null, endpoints: [] };
+
+/** Resolve after environment loading. Public Overpass instances are not used by default. */
+function resolveOverpassUpstreams() {
+  const raw = process.env.OVERPASS_UPSTREAMS || '';
+  if (upstreamMemo.raw !== raw)
+    upstreamMemo = { raw, endpoints: parseOverpassUpstreams(raw) };
+  return [...upstreamMemo.endpoints];
+}
 
 /**
  * TTL for FRESH cached Overpass responses (ms). Road geometry is static for
@@ -63,14 +77,6 @@ const OVERPASS_DISK_DIR = path.join(process.cwd(), '.gev-cache', 'overpass');
 
 /** Per-upstream fetch timeout (ms). */
 const OVERPASS_TIMEOUT_MS = 22000;
-
-/**
- * How long a mirror may stay silent before the next one is started too
- * (ms). Mirrors used to be tried strictly one after another, so two silent
- * mirrors cost 44 s before a healthy one was even asked. A mirror that fails
- * outright starts the next at once.
- */
-const OVERPASS_STAGGER_MS = 3000;
 
 /** Max entries in the Overpass response cache (LRU-like, oldest evicted first). */
 const OVERPASS_CACHE_MAX_ENTRIES = 120;
@@ -158,8 +164,8 @@ export {
   OVERPASS_SIMPLIFY_MIN_POINTS,
   OVERPASS_SIMPLIFY_TOLERANCE_DEG,
   OVERPASS_MAX_RESPONSE_BYTES,
-  OVERPASS_UPSTREAMS,
+  parseOverpassUpstreams,
+  resolveOverpassUpstreams,
   OVERPASS_USER_AGENT,
   OVERPASS_TIMEOUT_MS,
-  OVERPASS_STAGGER_MS,
 };

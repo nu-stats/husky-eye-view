@@ -9,7 +9,6 @@ import {
   HEAT_JAM_BASE_ALPHA,
   HEAT_LINE_SLOW_WIDTH,
   TRAFFIC_TIMING_ENABLED,
-  MAX_DOTS,
 } from './policy.js';
 import { debugLog } from '../../debugLog.js';
 
@@ -162,7 +161,7 @@ export function createRendering({
   }
 
   /**
-   * Clear existing dots and re-spawn them for the given road set and altitude.
+   * Reconcile road populations without respawning retained dots.
    *
    * When zoomed out (>5 km), only major road types are rendered to reduce clutter.
    * Dot budgets are allocated fairly across visible roads via `allocateRoadDotBudgets`.
@@ -173,14 +172,20 @@ export function createRendering({
    * @param {Object|null} [trace=null] - Development-only correlated load trace.
    */
 
-  function renderRoadsForAltitude(roads, altitude, label, trace = null) {
+  function renderRoadsForAltitude(
+    roads,
+    altitude,
+    label,
+    trace = null,
+    replace = true,
+  ) {
     const state =
       TRAFFIC_TIMING_ENABLED && trace
         ? parts.timing.trafficTimingRenderState(trace, label)
         : null;
     const renderId = state ? ++trace.renderSequence : null;
-    parts.animation.clearDots();
-    layerState._roads = roads;
+
+    layerState._lastPaintStage = label;
     layerState._lastRenderAltitude = altitude;
 
     // At high altitude, drop minor roads to reduce visual noise
@@ -225,18 +230,13 @@ export function createRendering({
           visibleRoadCount: filteredRoads.length,
         })
       : null;
-    const roadBudgets = parts.model.allocateRoadDotBudgets(
-      filteredRoads,
-      altitude,
-      MAX_DOTS,
-    );
-    for (let i = 0; i < filteredRoads.length; i++) {
-      const road = filteredRoads[i];
-      const budget = roadBudgets[i] || 0;
-      if (budget <= 0) continue;
-      parts.animation.spawnDotsForRoad(road, altitude, budget);
-      if (layerState._dots.length >= MAX_DOTS) break;
-    }
+    parts.retention.reconcile(filteredRoads, altitude, replace);
+    if (layerState._dots.length && filteredRoads.some((r) => !r.directFlow))
+      services.credits?.showOsmCredit?.(layerState._viewer, 'traffic', {
+        openMapTiles: true,
+      });
+    else services.credits?.hideOsmCredit?.(layerState._viewer, 'traffic');
+    parts.model.recolorDotsInPlace(label);
 
     const renderMetrics = state
       ? {
@@ -269,7 +269,7 @@ export function createRendering({
           renderMetrics,
         )
       : null;
-    rebuildHeatLines(filteredRoads);
+    if (!label.includes('tile')) rebuildHeatLines(filteredRoads);
     if (state) {
       const heatEnd = parts.timing.trafficTimingMark(
         state,
@@ -291,7 +291,7 @@ export function createRendering({
       );
     }
 
-    layerState._count = layerState._dots.length;
+    parts.retention.refreshCounts();
     layerState._lastUpdate = Date.now();
     debugLog(
       `[Data:Traffic] ${label}: ${layerState._count} dots (roads=${roads.length}, alt=${Math.round(altitude)}m)`,

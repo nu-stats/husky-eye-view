@@ -561,6 +561,9 @@ export const LAYER_MANIFEST = Object.freeze(
     {
       id: 'traffic',
       token: 't',
+      // The road source (TomTom / OSM / Hybrid) travels in links (2026-10).
+      disposition: 'enabled+options',
+      optionOwner: 'traffic',
       group: 'Live Feeds',
       aliases: ['traffic', 'street traffic'],
     },

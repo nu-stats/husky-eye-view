@@ -217,6 +217,13 @@ function integerOption(key, token, defaultValue) {
 }
 
 const OPTION_GROUPS = Object.freeze({
+  traffic: Object.freeze([
+    enumOption('roadMode', 'r', null, ['tomtom', 'osm', 'hybrid'], {
+      tomtom: 't',
+      osm: 'o',
+      hybrid: 'h',
+    }),
+  ]),
   'weather-lightning': Object.freeze([
     enumOption('opacity', 'o', 'strong', ['light', 'strong'], {
       light: 'l',

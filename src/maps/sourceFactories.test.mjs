@@ -24,9 +24,15 @@ test('Esri uses Re:Earth without keys and preserves ion terrain when configured'
     assert.equal(esri.terrain.id, 'keyless');
     assert.equal(esri.terrain.create, createKeylessTerrain);
     await esri.terrain.create();
-    assert.deepEqual(calls, [
+    // A Resource, not a bare URL: the retry policy rides on it (terrainRetry.js).
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0] instanceof Cesium.Resource);
+    assert.equal(
+      calls[0].url,
       'https://terrain.reearth.land/cesium-mesh/ellipsoid',
-    ]);
+    );
+    assert.equal(calls[0].retryAttempts, 3);
+    assert.equal(typeof calls[0].retryCallback, 'function');
     assert.equal(
       keyless.sources.find(({ descriptor }) => descriptor.id === 'photoreal')
         .available,
@@ -139,8 +145,9 @@ test('a rejected ion token falls back to keyless terrain and names the fix for B
     );
     // Esri and OSM stay usable: terrain comes from the keyless mesh instead.
     const terrain = await esri.terrain.create();
+    // A Cesium Resource since the keyless mesh retries on 429 (God's Eye View).
     assert.equal(
-      terrain.provider.resource,
+      terrain.provider.resource.url ?? terrain.provider.resource,
       'https://terrain.reearth.land/cesium-mesh/ellipsoid',
     );
     // ...and the user is told why, with the fix.
