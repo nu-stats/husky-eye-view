@@ -1,7 +1,8 @@
 /**
  * Key setup ("POWER UP") — the pure core.
  *
- * One registry, three pure functions, zero dependencies. The dev server's
+ * One registry and pure functions; its only import is the proxy-header check
+ * shared with the other local gates (localRequestGate.mjs). The dev server's
  * /api/setup endpoints (vite.config.js) and the in-app panel (keySetup.js)
  * are both thin shells over this module, so what a key is called, what it
  * unlocks, and how a .env line is written each live in exactly one place.
@@ -10,6 +11,8 @@
  * pass environments in and write text out, which is also what makes every
  * behavior below unit-testable.
  */
+
+import { hasProxySignals } from './localRequestGate.mjs';
 
 /** Longest accepted key/token value. Real provider keys are all far shorter. */
 export const KEY_SETUP_VALUE_LIMIT = 512;
@@ -215,6 +218,24 @@ export function parseWindowsUserSid(stdout) {
   return /^(?:S-1-5-21-(?:\d+-){3}\d+|S-1-12-1-(?:\d+-){3}\d+)$/i.test(sid)
     ? sid
     : null;
+}
+
+/**
+ * Whether the launcher has sharing on. Every sharing signal the launcher
+ * recognizes (scripts/pinokio-preflight.mjs) counts, so the two sets cannot
+ * drift apart. One DELIBERATE divergence: preflight is a boot check that
+ * treats an empty PINOKIO_SHARE_VAR as sharing-on (fail closed before Start),
+ * but here an empty/unset value is the NORMAL git-clone and Pinokio state, so
+ * a bare/sentinel value is not sharing; only a real tunnel var is.
+ */
+export function isSharingEnabled(env = {}) {
+  const shareVar = String(env.PINOKIO_SHARE_VAR ?? '').trim();
+  return (
+    ['PINOKIO_SHARE_CLOUDFLARE', 'PINOKIO_SHARE_LOCAL'].some((name) =>
+      /^(1|true)$/i.test(String(env[name] || '').trim()),
+    ) ||
+    (shareVar !== '' && shareVar !== '__gev_sharing_disabled__')
+  );
 }
 
 /**

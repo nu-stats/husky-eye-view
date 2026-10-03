@@ -44,6 +44,7 @@
   "server/standalone/vite.config.js",
   "vite.config.js",
   "src/tooling/viteBuild.test.mjs",
+  "src/tooling/allowedHosts.test.mjs",
   "server/providers/common/http.js",
   "server/providers/common/query.js",
   "server/providers/aircraft/opensky.js",
@@ -65,6 +66,7 @@
   "server/providers/places/routes.js",
   "src/data/placeProviderPayloads.js",
   "src/tooling/placeProviders.test.mjs",
+  "server/providers/common/same-site.js",
   "server/providers/space.js",
   "server/providers/space/celestrak.js",
   "server/providers/space/launch-library.js",
@@ -947,5 +949,6 @@
   "scripts/qa-weather-journey.mjs",
   "scripts/qa-weather-swap.mjs",
   "scripts/qa-weather-teardown.mjs",
-  "src/layers/weather/imageryHost.test.mjs"
+  "src/layers/weather/imageryHost.test.mjs",
+  "src/costEndpointThrottle.test.mjs"
 ]

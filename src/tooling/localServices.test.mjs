@@ -356,8 +356,8 @@ test('the debug-log sink stays bounded, rate limited, and quiet about failures',
     error: 'Failed to write Realtime debug log',
   });
 
-  // The limiter is always on, unlike the opt-in one the cost-bearing routes
-  // share: 120/min per IP, far above what a voice session writes.
+  // This limiter has no opt-out, unlike the one the cost-bearing routes share:
+  // 120/min per IP, far above what a voice session writes.
   let limited = null;
   let accepted = 0;
   for (let n = 0; n < 130 && !limited; n += 1) {
@@ -378,6 +378,24 @@ test('the debug-log sink stays bounded, rate limited, and quiet about failures',
   assert.equal(lines.length, accepted);
   for (const line of lines) assert.doesNotThrow(() => JSON.parse(line));
   assert.ok(lines.every((line) => JSON.parse(line).loggedAt));
+});
+
+test('a debug-log record cannot supply its own timestamp', async (t) => {
+  const sourceRoot = root(t);
+  const handler = install(openAiRealtimeProxy({ sourceRoot })).get(
+    '/api/realtime/debug-log',
+  );
+  const before = Date.now();
+  const response = await request(handler, {
+    method: 'POST',
+    body: JSON.stringify({ loggedAt: '1999-01-01T00:00:00.000Z', note: 'x' }),
+  });
+  assert.equal(response.status, 204);
+  const file = path.join(sourceRoot, '.gev-logs/realtime-conversations.jsonl');
+  const [line] = readFileSync(file, 'utf8').split('\n').filter(Boolean);
+  const record = JSON.parse(line);
+  assert.equal(record.note, 'x');
+  assert.ok(Date.parse(record.loggedAt) >= before - 1000);
 });
 
 test('an oversized debug-log request receives the fixed error response', async (t) => {
