@@ -8,7 +8,7 @@
 // say nothing about whether a destination is framed well.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CITY_POIS, LOCATIONS } from './locations.js';
+import { CITY_POIS, LOCATIONS, LOCATION_BAR_CITY_IDS } from './locations.js';
 
 const DESTINATIONS = Object.entries(CITY_POIS);
 const REQUIRED_POI_KEYS = ['name', 'lat', 'lon', 'alt', 'pitch', 'heading'];
@@ -157,6 +157,22 @@ test('every LOCATIONS row matches the destination it names', () => {
       lat: city.pois[0].lat,
       lon: city.pois[0].lon,
     });
+  }
+});
+
+test('the Location bar lists the Northeastern campuses, each opening on campus', () => {
+  assert.equal(LOCATION_BAR_CITY_IDS[0], 'boston');
+  assert.equal(
+    new Set(LOCATION_BAR_CITY_IDS).size,
+    LOCATION_BAR_CITY_IDS.length,
+  );
+  for (const id of LOCATION_BAR_CITY_IDS) {
+    assert.ok(CITY_POIS[id], `${id} is not a destination`);
+    assert.match(
+      CITY_POIS[id].pois[0].name,
+      /Northeastern|Roux/,
+      `${id} does not open on its campus`,
+    );
   }
 });
 

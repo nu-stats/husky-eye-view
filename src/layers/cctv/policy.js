@@ -289,7 +289,7 @@ export const CAMERA_SEEDS = [
   {
     id: 'london-soho-core',
     cityId: 'london',
-    poiIndex: 2,
+    poiIndex: 3,
     label: 'Soho Core',
     offsetNorthM: 210,
     offsetEastM: 120,

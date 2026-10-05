@@ -4,6 +4,7 @@ import { LocationSearch } from './location.js';
 import {
   CITY_POIS,
   GLOBE_VIEW,
+  LOCATION_BAR_CITY_IDS,
   flyToGlobeView,
   flyToPresetLocation,
   flyToPOI,
@@ -70,6 +71,7 @@ export class StyleManager extends ApplicationShell {
       services: {
         CITY_POIS,
         GLOBE_VIEW,
+        LOCATION_BAR_CITY_IDS,
         flyToGlobeView,
         flyToNortheasternView,
         flyToPresetLocation,

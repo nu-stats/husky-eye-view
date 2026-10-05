@@ -278,6 +278,7 @@ export class StyleManager extends ShellFacade {
       readCockpit: () => this.cockpitView,
       services: {
         CITY_POIS: services.CITY_POIS,
+        LOCATION_BAR_CITY_IDS: services.LOCATION_BAR_CITY_IDS,
         searchAndFlyTo: services.searchAndFlyTo,
         LocationSearch: services.LocationSearch,
         OrbitController: services.OrbitController,

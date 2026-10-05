@@ -6,6 +6,8 @@ export class LocationControls {
   constructor({
     elements,
     cities,
+    // Which cities get a pill, in order; the rest stay reachable by id.
+    pillIds = Object.keys(cities),
     getExpandedCity,
     onCity,
     onPoi,
@@ -34,7 +36,9 @@ export class LocationControls {
     this.destroyed = false;
     this.rowGeneration = 0;
     elements.pills.replaceChildren();
-    for (const [id, city] of Object.entries(cities)) {
+    for (const id of pillIds) {
+      const city = cities[id];
+      if (!city) continue;
       const pill = doc.createElement('button');
       pill.type = 'button';
       pill.className = 'location-pill';

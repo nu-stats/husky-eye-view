@@ -796,6 +796,22 @@ Media:    Only the latest release carries the video, captions and guide PDF. The
           The README links (releases/latest/download/...) always point at the newest copy.
 
 
+-------------------------------------------------------------------------------
+STEP 49: Location bar shows Northeastern's campuses (v0.1.7)
+-------------------------------------------------------------------------------
+Done:
+  - The Location bar lists Northeastern's 14 campus cities (northeastern.edu/campuses):
+    Boston first, then Arlington, Burlington, Charlotte, London, Miami, Nahant,
+    New York, Oakland, Portland, Seattle, Silicon Valley, Toronto, Vancouver.
+  - Each city opens on its campus (addresses from each campus website); its Q-T
+    landmark buttons are nearby sights. London and New York open on the campus now
+    (St. Paul's and the Chrysler Building made room).
+  - The old cities (Austin, Tokyo, Paris, Dubai, ...) left the bar but still work by
+    voice and still place the sample CCTV cameras.
+Code:     src/locations.js (CITY_POIS campus entries, LOCATION_BAR_CITY_IDS),
+          src/ui/locationControls.js (pillIds), src/layers/cctv/policy.js.
+
+
 ===============================================================================
 WHERE THINGS STAND (October 2, 2026)
 ===============================================================================
@@ -829,7 +845,9 @@ Data exports:
             mkdb_incidents_geocoded.csv
 
 Git history on main (newest first):
-            (release)  HOLC rebuilt from Mapping Inequality, Boston included (tagged v0.1.6)
+            (release)  Location bar shows Northeastern's campuses (tagged v0.1.7)
+            caa5fea0  Keep the overview video and guide on the latest release only
+            a451d18c  HOLC rebuilt from Mapping Inequality, Boston included (tagged v0.1.6)
             371edc14  Helicopters & Low Flyers, BPD scanner, HOLC descriptions (tagged v0.1.5)
             58080c34  Cockpit LAYERS slider, one layer manifest, faster area layers (tagged v0.1.4)
             ec8639eb  Air quality, green space, research-first app, smaller data (tagged v0.1.3)
