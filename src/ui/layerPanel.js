@@ -53,6 +53,22 @@ function panelLabel(layer) {
   return PANEL_LABELS[layer.id] || layer.name;
 }
 
+// View modes listed under Helicopters & Low Flyers (src/ui/cockpitGroundView.js).
+const GROUND_VIEW_ROWS = Object.freeze([
+  Object.freeze({
+    mode: 'drone',
+    icon: '✣',
+    label: 'Drone View',
+    meta: 'Fly 30–120 m up · W/S/A/D, Q/E height',
+  }),
+  Object.freeze({
+    mode: 'walk',
+    icon: '⛶',
+    label: 'Walking View',
+    meta: 'Walk the street · W/S/A/D, drag to look',
+  }),
+]);
+
 // The years a static dataset describes (manifest `vintage`), shown in its row
 // instead of a "2m ago" refresh time that only means something for live feeds.
 const DATA_VINTAGE = Object.fromEntries(
@@ -424,6 +440,8 @@ export class LayerPanel {
       if (!layer.showInTogglePanel) continue;
       if (!layerListedInProfile(layer, showAll)) continue;
       const group = groupOf(layer);
+      if (previousGroup === RESEARCH_GROUP && group !== previousGroup)
+        this._toggleContainer.appendChild(this._buildCuratedRow());
       if (group && group !== previousGroup) {
         const heading = document.createElement('button');
         heading.type = 'button';
@@ -578,11 +596,121 @@ export class LayerPanel {
       }
 
       this._toggleContainer.appendChild(row);
+      // Walking and Drone views ride with the low flyers: a lower,
+      // user-driven look at the same layers. They are views, not data.
+      if (layer.id === 'lowflyers') {
+        for (const view of GROUND_VIEW_ROWS)
+          this._toggleContainer.appendChild(this._buildViewRow(view, group));
+      }
     }
+    if (previousGroup === RESEARCH_GROUP)
+      this._toggleContainer.appendChild(this._buildCuratedRow());
     this._toggleContainer.appendChild(empty);
     this._toggleContainer.appendChild(this._buildProfileToggle(layers));
     this._applyFilter();
     this._syncOnState(layers);
+  }
+
+  /**
+   * Research Data → Curated Flights: opens the city-comparison tour panel
+   * (src/curated/curatedPanel.js). It has its own key, so it reads LOCKED
+   * until that key is in this browser session.
+   */
+  _buildCuratedRow() {
+    const group = RESEARCH_GROUP;
+    const row = document.createElement('div');
+    row.className = 'data-toggle-row data-view-row data-curated-row';
+    row.dataset.group = group;
+    this._groups.get(group)?.rows.push({ row, label: 'curated flights' });
+    const top = document.createElement('div');
+    top.className = 'data-toggle-top';
+    const left = document.createElement('div');
+    left.className = 'data-toggle-left';
+    const icon = document.createElement('span');
+    icon.className = 'data-icon';
+    icon.textContent = '✈';
+    const name = document.createElement('span');
+    name.className = 'data-name';
+    name.textContent = 'Curated Flights';
+    left.append(icon, name);
+    const right = document.createElement('div');
+    right.className = 'data-toggle-right';
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'data-toggle-btn data-view-start';
+    open.setAttribute('aria-label', 'Open Curated Flights');
+    // LOCKED until this session holds the Curated Flights key; POWER UP's
+    // key-change event flips it without re-rendering the panel.
+    const syncLock = () => {
+      let hasKey = false;
+      try {
+        hasKey = Boolean(globalThis.sessionStorage?.getItem('hev.curatedKey'));
+      } catch {
+        hasKey = false;
+      }
+      open.textContent = hasKey ? 'OPEN' : 'LOCKED';
+      open.title = hasKey
+        ? 'Plan a tour comparing up to 3 cities'
+        : 'Curated Flights needs its own key (POWER UP)';
+    };
+    syncLock();
+    this._bind(window, 'hev:research-key-changed', syncLock);
+    this._bind(open, 'click', () =>
+      window.dispatchEvent(new CustomEvent('gev:curated-flights-open')),
+    );
+    right.appendChild(open);
+    top.append(left, right);
+    const meta = document.createElement('div');
+    meta.className = 'data-toggle-meta';
+    meta.textContent =
+      'Tour up to 3 cities · 6 layers · report, data and charts';
+    row.append(top, meta);
+    return row;
+  }
+
+  /** A row that starts a view mode (Walking / Drone) rather than a layer. */
+  _buildViewRow(view, group) {
+    const row = document.createElement('div');
+    row.className = 'data-toggle-row data-view-row';
+    row.dataset.viewMode = view.mode;
+    row.dataset.group = group;
+    this._groups.get(group)?.rows.push({
+      row,
+      label: view.label.toLowerCase(),
+    });
+    const top = document.createElement('div');
+    top.className = 'data-toggle-top';
+    const left = document.createElement('div');
+    left.className = 'data-toggle-left';
+    const icon = document.createElement('span');
+    icon.className = 'data-icon';
+    icon.textContent = view.icon;
+    const name = document.createElement('span');
+    name.className = 'data-name';
+    name.textContent = view.label;
+    left.append(icon, name);
+    const right = document.createElement('div');
+    right.className = 'data-toggle-right';
+    const start = document.createElement('button');
+    start.type = 'button';
+    start.className = 'data-toggle-btn data-view-start';
+    start.textContent = 'START';
+    start.setAttribute('aria-label', `Start ${view.label}`);
+    start.title = `${view.label}: click the map where you want to start`;
+    this._bind(start, 'click', () =>
+      window.dispatchEvent(
+        new CustomEvent('gev:ground-view-request', {
+          detail: { mode: view.mode },
+        }),
+      ),
+    );
+    right.appendChild(start);
+    top.append(left, right);
+    const meta = document.createElement('div');
+    meta.className = 'data-toggle-meta';
+    meta.textContent = view.meta;
+    row.append(top, meta);
+    return row;
   }
 
   /** "Show all layers" switch for the research profile (see layerProfile.js). */

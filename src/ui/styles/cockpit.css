@@ -818,6 +818,93 @@ body.cockpit-mode:has(#left-panel-stack > .panel-collapsible:not(.collapsed))
   font: 700 10px/1 var(--font-mono);
   text-align: right;
 }
+/* Walking / Drone views (src/ui/cockpitGroundView.js): the cockpit without
+   the aircraft's contact, briefing and route panels. */
+body.ground-view-picking #cesiumContainer canvas {
+  cursor: crosshair;
+}
+body.ground-view-mode #cockpit-context,
+body.ground-view-mode #cockpit-signal-stream,
+body.ground-view-mode #cockpit-route,
+body.ground-view-mode #tr3b-toggle,
+body.ground-view-mode .cockpit-visor-shell,
+body.ground-view-mode #cockpit-speed-rim,
+body.ground-view-mode #cockpit-altitude-rim {
+  display: none !important;
+}
+/* Snapshot and clip buttons (src/ui/cockpitCapture.js). */
+.cockpit-capture-controls {
+  display: grid;
+  grid-template-columns: 34px auto auto;
+  align-items: stretch;
+  gap: 2px;
+  margin-top: 2px;
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--cockpit-accent) 22%, transparent);
+  border-radius: 7px;
+  background: rgba(0, 7, 12, 0.46);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.28);
+  pointer-events: auto;
+}
+.cockpit-capture-controls button {
+  display: flex;
+  min-height: 31px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: rgba(0, 7, 12, 0.38);
+  color: rgba(244, 251, 255, 0.64);
+  cursor: pointer;
+}
+.cockpit-capture-controls button:hover,
+.cockpit-capture-controls button:focus-visible {
+  border-color: color-mix(in srgb, var(--cockpit-accent) 62%, transparent);
+  color: #fff;
+}
+.cockpit-capture-controls button:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+.cockpit-capture-controls .material-symbols-outlined {
+  font-size: 18px;
+}
+.cockpit-capture-controls .cockpit-snapshot-format {
+  min-width: 34px;
+  color: color-mix(in srgb, var(--cockpit-accent) 70%, #fff);
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+.cockpit-record strong {
+  min-width: 26px;
+  color: #fff;
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.cockpit-record .material-symbols-outlined {
+  color: #ff4d5e;
+}
+.cockpit-capture-controls .cockpit-record.recording {
+  border-color: #ff4d5e;
+  background: rgba(200, 16, 46, 0.28);
+  color: #fff;
+}
+.cockpit-record.recording .material-symbols-outlined {
+  animation: cockpit-record-pulse 1.2s ease-in-out infinite;
+}
+@keyframes cockpit-record-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cockpit-record.recording .material-symbols-outlined {
+    animation: none;
+  }
+}
 .cockpit-look-controls {
   display: grid;
   grid-template-columns: 30px 30px 70px 30px 30px;

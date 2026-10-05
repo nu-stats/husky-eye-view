@@ -854,6 +854,107 @@ const schemas = [
       },
     },
   },
+  // Walking / Drone views (src/ui/cockpitGroundView.js), started at the
+  // center of the current view.
+  {
+    name: 'start_ground_view',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        mode: {
+          type: 'string',
+          enum: ['walk', 'drone'],
+        },
+      },
+      required: ['mode'],
+    },
+  },
+  // Curated Flights (src/curated/): needs its own key; GVA/MKDB values also
+  // need the research key.
+  {
+    name: 'plan_curated_flight',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        cities: {
+          type: 'array',
+          items: { type: 'string' },
+          minItems: 1,
+          maxItems: 3,
+        },
+        layers: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: [
+              'life-expectancy',
+              'short-life-clusters',
+              'pm25',
+              'ozone',
+              'park-access',
+              'holc-hazardous',
+              'public-housing',
+              'trauma-centers',
+              'poverty',
+              'median-income',
+              'unemployment',
+              'bachelors',
+              'renters',
+              'black',
+              'hispanic',
+              'no-vehicle',
+              'broadband',
+              'gva-2015',
+              'mkdb',
+            ],
+          },
+          minItems: 1,
+          maxItems: 6,
+        },
+        record: {
+          type: 'boolean',
+        },
+        start: {
+          type: 'boolean',
+        },
+      },
+      required: ['cities', 'layers'],
+    },
+  },
+  {
+    name: 'control_curated_flight',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'open',
+            'status',
+            'start',
+            'pause',
+            'resume',
+            'skip',
+            'stop',
+            'download_report',
+            'download_data_csv',
+            'download_data_xlsx',
+            'download_charts_png',
+            'download_charts_jpg',
+            'download_all',
+            'show_layer',
+          ],
+        },
+        layer: {
+          type: 'string',
+        },
+      },
+      required: ['action'],
+    },
+  },
 ];
 
 function freeze(value) {

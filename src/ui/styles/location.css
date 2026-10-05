@@ -80,11 +80,8 @@
 
 .location-pills {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
-  scroll-behavior: smooth;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
 .location-pills::-webkit-scrollbar {

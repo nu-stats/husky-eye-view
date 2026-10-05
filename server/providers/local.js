@@ -22,6 +22,7 @@ import { openAiRealtimeProxy } from './openai.js';
 import { googlePlacesContextProxy } from './places.js';
 import { keySetupEndpoint } from '../standalone/key-setup.js';
 import { researchDataProxy } from './research.js';
+import { curatedFlightsProxy } from './curatedFlights.js';
 
 /** Construct the local provider plugins in their established order. */
 function localProviderPlugins() {
@@ -49,6 +50,7 @@ function localProviderPlugins() {
     openAiRealtimeProxy(),
     googlePlacesContextProxy(),
     researchDataProxy(),
+    curatedFlightsProxy(),
     keySetupEndpoint(),
   ];
 }

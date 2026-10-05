@@ -66,6 +66,25 @@ import {
   releaseLayerOpacity,
   setLayerOpacity,
 } from './cockpitLayerOpacity.js';
+import {
+  beginGroundPick,
+  cancelGroundPick,
+  enterGround,
+  enterGroundAtCenter,
+  leaveGround,
+  onGroundKey,
+  updateGround,
+} from './cockpitGroundView.js';
+import {
+  captureController,
+  describeCapture,
+  takeSnapshot,
+  toggleClip,
+  stopCapture,
+  renderCaptureState,
+  toggleSnapshotFormat,
+  syncSnapshotFormat,
+} from './cockpitCapture.js';
 import * as Cesium from 'cesium';
 
 export class CockpitViewController {
@@ -161,6 +180,21 @@ export class CockpitViewController {
     );
     this.layerOpacityPercent = null;
     this.layerOpacityTimer = null;
+    this.snapshotButton = document.getElementById('cockpit-snapshot');
+    this.snapshotFormatButton = document.getElementById(
+      'cockpit-snapshot-format',
+    );
+    this.recordButton = document.getElementById('cockpit-record');
+    this.recordIcon = document.getElementById('cockpit-record-icon');
+    this.recordTime = document.getElementById('cockpit-record-time');
+    this.viewCapture = null;
+    // Walking / Drone views (cockpitGroundView.js): null while riding an aircraft.
+    this.groundMode = null;
+    this.groundPose = null;
+    this.groundKeys = new Set();
+    this.groundPick = null;
+    this.groundSettleUntilMs = 0;
+    this.groundLastSampleMs = 0;
     this.lookTarget = { yawDeg: 0, pitchDeg: 0 };
     this.lookCurrent = { yawDeg: 0, pitchDeg: 0 };
     this.lookDrag = null;
@@ -313,6 +347,12 @@ export class CockpitViewController {
     this._listen(this.layerOpacityInput, 'change', () =>
       this.setLayerOpacity(this.layerOpacityInput.value, { immediate: true }),
     );
+    this._listen(this.snapshotButton, 'click', () => this.takeSnapshot());
+    this._listen(this.snapshotFormatButton, 'click', () =>
+      this.toggleSnapshotFormat(),
+    );
+    this.syncSnapshotFormat();
+    this._listen(this.recordButton, 'click', () => this.toggleClip());
     this._listen(viewer.scene?.canvas, 'pointerdown', (event) =>
       this.onLookPointerDown(event),
     );
@@ -373,6 +413,17 @@ export class CockpitViewController {
     });
     this._listen(window, 'resize', () => this.scheduleContextLayout());
     this._listen(document, 'keydown', (event) => this.onKeyDown(event), true);
+    this._listen(
+      document,
+      'keyup',
+      (event) => this.onGroundKey(event, false),
+      true,
+    );
+    this._listen(window, 'blur', () => this.groundKeys.clear());
+    // Data Layers → Walking View / Drone View rows ask for a start point.
+    this._listen(window, 'gev:ground-view-request', (event) =>
+      this.beginGroundPick(event?.detail?.mode),
+    );
   }
 
   _listen(target, type, handler, options) {
@@ -527,6 +578,51 @@ export class CockpitViewController {
   setLayerOpacity(percent, options) {
     return setLayerOpacity.call(this, percent, options);
   }
+  beginGroundPick(mode) {
+    return beginGroundPick.call(this, mode);
+  }
+  cancelGroundPick() {
+    return cancelGroundPick.call(this);
+  }
+  enterGround(mode, cartographic) {
+    return enterGround.call(this, mode, cartographic);
+  }
+  enterGroundAtCenter(mode) {
+    return enterGroundAtCenter.call(this, mode);
+  }
+  leaveGround() {
+    return leaveGround.call(this);
+  }
+  onGroundKey(event, down) {
+    return onGroundKey.call(this, event, down);
+  }
+  updateGround() {
+    return updateGround.call(this);
+  }
+  captureController() {
+    return captureController.call(this);
+  }
+  describeCapture() {
+    return describeCapture.call(this);
+  }
+  takeSnapshot() {
+    return takeSnapshot.call(this);
+  }
+  toggleClip() {
+    return toggleClip.call(this);
+  }
+  stopCapture() {
+    return stopCapture.call(this);
+  }
+  renderCaptureState(state) {
+    return renderCaptureState.call(this, state);
+  }
+  toggleSnapshotFormat() {
+    return toggleSnapshotFormat.call(this);
+  }
+  syncSnapshotFormat() {
+    return syncSnapshotFormat.call(this);
+  }
 
   handleSignalClick(event) {
     return handleSignalClick.call(this, event);
@@ -540,6 +636,8 @@ export class CockpitViewController {
     this.regionalBriefAbort = null;
     this.regionalBriefRequestToken += 1;
     this.stopBriefRotation();
+    this.viewCapture?.destroy();
+    this.cancelGroundPick();
     if (this.contextLayoutFrame !== null)
       cancelAnimationFrame(this.contextLayoutFrame);
     this.contextLayoutFrame = null;

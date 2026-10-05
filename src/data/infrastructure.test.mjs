@@ -171,6 +171,27 @@ test('infrastructure factory preserves identity and creates independent state wi
         name: 'Public Housing',
         source: 'HUD',
       },
+      ...[
+        ['local-acs-poverty', 'Poverty (tracts)'],
+        ['local-acs-income', 'Median Household Income (tracts)'],
+        ['local-acs-unemployment', 'Unemployment (tracts)'],
+        ['local-acs-education', "Bachelor's Degree or Higher (tracts)"],
+        ['local-acs-renters', 'Renter-Occupied Homes (tracts)'],
+        ['local-acs-black', 'Black Residents (tracts)'],
+        ['local-acs-hispanic', 'Hispanic or Latino Residents (tracts)'],
+        ['local-acs-no-vehicle', 'Households Without a Vehicle (tracts)'],
+        ['local-acs-broadband', 'Broadband at Home (tracts)'],
+      ].map(([id, name]) => ({ id, name, source: 'ACS 2020–2024' })),
+      {
+        id: 'local-internet-use',
+        name: 'Internet Use at Home',
+        source: 'Census CPS / ACS',
+      },
+      {
+        id: 'local-internet-highspeed',
+        name: 'High-Speed Internet at Home',
+        source: 'Census CPS / ACS',
+      },
       {
         id: 'local-gva-2015',
         name: 'Gun Deaths 2015 (GVA)',

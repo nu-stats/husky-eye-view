@@ -144,11 +144,17 @@
   font-size: 0.62rem;
 }
 
+/* All of Northeastern's campus cities stay in view: the pills wrap onto more
+   lines instead of hiding behind a sideways scroll. */
+#command-dock .location-city-row {
+  align-items: flex-start;
+}
+
 #command-dock .location-pills {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.3rem;
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow: visible;
 }
 
 #command-dock .location-pills::-webkit-scrollbar {

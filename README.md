@@ -8,6 +8,8 @@ _Husky Eye View is a fork of [God's Eye View](https://github.com/bilawalsidhu/go
 
 📺 **[Overview video](https://github.com/nu-stats/husky-eye-view/releases/latest/download/Husky_Eye_View_Overview.mp4)** ([captions](https://github.com/nu-stats/husky-eye-view/releases/latest/download/Husky_Eye_View_Overview.srt)) · 📘 **[User guide (PDF)](https://github.com/nu-stats/husky-eye-view/releases/latest/download/Husky_Eye_View_Guide.pdf)**: always the newest version, from the [latest release](https://github.com/nu-stats/husky-eye-view/releases/latest).
 
+**What Husky Eye View adds:** neighborhood research layers (tract life expectancy, 1930s HOLC redlining with the original area descriptions, air quality, green space, Census social and economic measures with their table numbers, internet access from 1998 to today, trauma centers, public housing, and key-locked GVA / MKDB research data); Northeastern's campus cities on the Location bar; Cockpit, helicopter, Drone and Walking views with high-resolution snapshots and clips; and **Curated Flights**, a guided comparison of up to three cities that downloads a PDF report, the data (CSV / Excel) and chart images.
+
 ### A spy-satellite simulator in your browser — then you realize the sources are public and the data is real.
 
 Photorealistic 3D globe. Live aircraft, ships, satellites, earthquakes, traffic, and public cameras. Hands-free voice control powered by a realtime AI agent.

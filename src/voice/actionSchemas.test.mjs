@@ -29,9 +29,10 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     .digest('hex');
   assert.equal(
     digest,
-    // Updated 2026-10-02: select_nearest_aircraft and control_cockpit accept the
-    // Helicopters & Low Flyers layer ('lowflyers').
-    '8ad5c396041b45691fd6d9dd72d3c3b1be0da2bbb4fc7564cf80a84206ab752c',
+    // Updated 2026-10-04: start_ground_view (Walking / Drone views) and the
+    // Curated Flights tools plan_curated_flight / control_curated_flight
+    // (layers include the ACS 2020–2024 social measures).
+    '7e00ffdfb7ac0ee43dd6f51e73ac842a24ea1128fa5f14c26a352c58cb53570d',
   );
 });
 

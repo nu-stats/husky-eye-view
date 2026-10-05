@@ -949,6 +949,22 @@ export function createGevActionRunner({
       return nextIssPass(viewer, dataManager, args);
     }
 
+    if (name === 'start_ground_view') {
+      const mode = args.mode === 'drone' ? 'drone' : 'walk';
+      const started = styleManager?.cockpitView?.enterGroundAtCenter?.(mode);
+      return started
+        ? { ok: true, action: name, mode }
+        : {
+            ok: false,
+            action: name,
+            error: 'Could not find the ground at the center of the view.',
+          };
+    }
+
+    if (name === 'plan_curated_flight' || name === 'control_curated_flight') {
+      return curatedFlightAction(styleManager?.curatedFlights, name, args);
+    }
+
     if (name === 'analyst_query') {
       analystEngine ||= createAnalystEngine(
         analystProviders(viewer, dataManager, {
@@ -2595,6 +2611,78 @@ const COMPASS_16 = [
 
 function compassDir(azDeg) {
   return COMPASS_16[Math.round((((azDeg % 360) + 360) % 360) / 22.5) % 16];
+}
+
+/**
+ * Voice access to Curated Flights (src/curated/curatedPanel.js): plan a tour
+ * from spoken cities and layers, start it, steer it, and save its outputs.
+ */
+async function curatedFlightAction(panel, name, args = {}) {
+  if (!panel) {
+    return { ok: false, action: name, error: 'Curated Flights unavailable' };
+  }
+  try {
+    if (name === 'plan_curated_flight') {
+      const plan = await panel.planFlight({
+        cities: Array.isArray(args.cities) ? args.cities : [],
+        layers: Array.isArray(args.layers) ? args.layers : [],
+        record: args.record === true,
+      });
+      if (!plan.ok) return { ok: false, action: name, problems: plan.problems };
+      let started = false;
+      if (args.start === true) {
+        await panel.start();
+        started = true;
+      } else {
+        panel.open();
+      }
+      return {
+        ok: true,
+        action: name,
+        started,
+        ...panel.status(),
+        problems: plan.problems,
+      };
+    }
+    const action = String(args.action || '');
+    if (action === 'open') {
+      await panel.open();
+      return { ok: true, action: name, ...panel.status() };
+    }
+    if (action === 'status')
+      return { ok: true, action: name, ...panel.status() };
+    if (action === 'start') {
+      await panel.start();
+      return { ok: true, action: name, started: true, ...panel.status() };
+    }
+    if (['pause', 'resume', 'skip', 'stop'].includes(action))
+      return { action: name, request: action, ...panel.control(action) };
+    if (action === 'show_layer')
+      return {
+        action: name,
+        request: action,
+        ...panel.control('show_layer', String(args.layer || '')),
+      };
+    const downloads = {
+      download_report: ['report', 'pdf'],
+      download_data_csv: ['data', 'csv'],
+      download_data_xlsx: ['data', 'xlsx'],
+      download_charts_png: ['charts', 'png'],
+      download_charts_jpg: ['charts', 'jpg'],
+      download_all: ['all', 'png'],
+    };
+    if (downloads[action]) {
+      const result = await panel.download(...downloads[action]);
+      return { action: name, request: action, ...result };
+    }
+    return { ok: false, action: name, error: `Unknown action: ${action}` };
+  } catch (error) {
+    return {
+      ok: false,
+      action: name,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 function nextIssPass(viewer, dataManager, args) {

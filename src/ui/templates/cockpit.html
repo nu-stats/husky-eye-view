@@ -124,6 +124,18 @@
           <input id="cockpit-layer-opacity" class="gev-quantitative-slider" type="range" min="20" max="95" step="5" value="70" aria-label="Map-data layer opacity in the cockpit" />
           <strong id="cockpit-layer-opacity-value" aria-hidden="true">70%</strong>
         </label>
+        <!-- Snapshot (PNG) and clip (MP4, up to 60 s) of the 3D view, saved to
+             Downloads with a caption strip and the map credits. -->
+        <div class="cockpit-capture-controls" role="group" aria-label="Snapshot and clip">
+          <button id="cockpit-snapshot" type="button" aria-label="Save a high-resolution snapshot" title="Save a high-resolution snapshot (P key)">
+            <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
+          </button>
+          <button id="cockpit-snapshot-format" class="cockpit-snapshot-format" type="button" aria-label="Snapshot format PNG. Activate for JPG." title="Snapshot format: PNG (click for JPG)">PNG</button>
+          <button id="cockpit-record" class="cockpit-record" type="button" aria-pressed="false" aria-label="Record a clip, up to 60 seconds" title="Record a clip, up to 60 s (Shift+P)">
+            <span id="cockpit-record-icon" class="material-symbols-outlined" aria-hidden="true">fiber_manual_record</span>
+            <strong id="cockpit-record-time" aria-live="polite">REC</strong>
+          </button>
+        </div>
       </div>
     </div>
     <div class="cockpit-reticle material-symbols-outlined" aria-hidden="true">my_location</div>
@@ -315,6 +327,7 @@
     <div class="cockpit-help" role="note" aria-label="Cockpit keyboard shortcuts">
       <span>WHEEL / <kbd>+</kbd> <kbd>−</kbd> ZOOM · <kbd>0</kbd> RESET</span>
       <span><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> / DRAG LOOK · <kbd>HOME</kbd> AHEAD</span>
+      <span><kbd>P</kbd> PHOTO · <kbd>SHIFT</kbd>+<kbd>P</kbd> CLIP</span>
       <span><kbd>C</kbd> / <kbd>ESC</kbd> EXIT</span>
     </div>
   </section>

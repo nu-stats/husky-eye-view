@@ -71,6 +71,8 @@ const TIER_DOTS = Object.freeze({ metered: '🔴', free: '🟡' });
  */
 export const SESSION_KEY_SLOTS = Object.freeze({
   HEV_RESEARCH_DATA_KEY: 'hev.researchKey',
+  // Curated Flights has its own key (src/curated/curatedAccess.js).
+  HEV_CURATED_FLIGHTS_KEY: 'hev.curatedKey',
 });
 export const SESSION_KEY_EVENT = 'hev:research-key-changed';
 

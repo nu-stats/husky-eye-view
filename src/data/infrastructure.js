@@ -212,6 +212,223 @@ const PARK_KINDS = Object.freeze([
 const parkKindLabel = (kind) =>
   PARK_KINDS.find((k) => k.kinds.includes(kind))?.label || 'Park';
 
+// ---- Social & Economic (US): ACS 5-year tract measures ------------------
+export const ACS_SOCIAL_VINTAGE = '2020–2024';
+const percent =
+  (digits = 1) =>
+  (value) =>
+    `${value.toFixed(digits)}%`;
+const shareBins = (cuts, colors, suffix = '%') =>
+  Object.freeze(
+    colors.map((color, i) => ({
+      label:
+        i === 0
+          ? `Under ${cuts[0]}${suffix}`
+          : i === colors.length - 1
+            ? `${cuts[i - 1]}${suffix} and over`
+            : `${cuts[i - 1]}–${cuts[i]}${suffix}`,
+      color,
+      min: i === 0 ? -Infinity : cuts[i - 1],
+      max: i === colors.length - 1 ? Infinity : cuts[i],
+    })),
+  );
+// Sequential single-hue ramps, light to dark (one hue per measure).
+const REDS = ['#fee5d9', '#fcae91', '#fb6a4a', '#de2d26', '#a50f15'];
+const GREENS = [
+  '#edf8e9',
+  '#bae4b3',
+  '#74c476',
+  '#31a354',
+  '#006d2c',
+  '#00441b',
+];
+const ORANGES = ['#feedde', '#fdbe85', '#fd8d3c', '#e6550d', '#a63603'];
+const BLUES = ['#eff3ff', '#bdd7e7', '#6baed6', '#3182bd', '#08519c'];
+const PURPLES = ['#f2f0f7', '#cbc9e2', '#9e9ac8', '#756bb1', '#54278f'];
+const BROWNS = [
+  '#fff7ec',
+  '#fee8c8',
+  '#fdbb84',
+  '#e34a33',
+  '#b30000',
+  '#7f0000',
+];
+const TEALS = [
+  '#f6eff7',
+  '#d0d1e6',
+  '#a6bddb',
+  '#67a9cf',
+  '#1c9099',
+  '#016c59',
+];
+const GREYS = ['#f7f7f7', '#cccccc', '#969696', '#636363', '#252525'];
+
+export const SOCIAL_MEASURES = Object.freeze([
+  {
+    id: 'local-acs-poverty',
+    key: 'pov',
+    name: 'Poverty (tracts)',
+    icon: '◔',
+    table: 'B17001',
+    definition: 'share of people whose income is below the poverty level.',
+    format: (v) => `${v.toFixed(1)}% of people below the poverty level`,
+    bins: shareBins([10, 20, 30, 40], REDS),
+  },
+  {
+    id: 'local-acs-income',
+    key: 'inc',
+    name: 'Median Household Income (tracts)',
+    icon: '$',
+    table: 'B19013',
+    definition: 'median household income in inflation-adjusted dollars.',
+    format: (v) =>
+      `Median household income $${Math.round(v).toLocaleString('en-US')}`,
+    bins: Object.freeze([
+      { label: 'Under $35k', color: GREENS[0], min: -Infinity, max: 35000 },
+      { label: '$35–55k', color: GREENS[1], min: 35000, max: 55000 },
+      { label: '$55–75k', color: GREENS[2], min: 55000, max: 75000 },
+      { label: '$75–100k', color: GREENS[3], min: 75000, max: 100000 },
+      { label: '$100–150k', color: GREENS[4], min: 100000, max: 150000 },
+      { label: '$150k and over', color: GREENS[5], min: 150000, max: Infinity },
+    ]),
+  },
+  {
+    id: 'local-acs-unemployment',
+    key: 'unemp',
+    name: 'Unemployment (tracts)',
+    icon: '◑',
+    table: 'B23025',
+    definition: 'unemployed share of the civilian labor force.',
+    format: (v) => `Unemployment ${v.toFixed(1)}% of the civilian labor force`,
+    bins: shareBins([3, 5, 8, 12], ORANGES),
+  },
+  {
+    id: 'local-acs-education',
+    key: 'ba',
+    name: "Bachelor's Degree or Higher (tracts)",
+    icon: '✎',
+    table: 'B15003',
+    definition:
+      "share of adults 25 and older with a bachelor's degree or higher.",
+    format: (v) =>
+      `${v.toFixed(1)}% of adults 25+ hold a bachelor's degree or higher`,
+    bins: shareBins([15, 30, 45, 60], BLUES),
+  },
+  {
+    id: 'local-acs-renters',
+    key: 'rent',
+    name: 'Renter-Occupied Homes (tracts)',
+    icon: '⌂',
+    table: 'B25003',
+    definition: 'share of occupied housing units that are renter-occupied.',
+    format: (v) => `${v.toFixed(1)}% of occupied homes are rented`,
+    bins: shareBins([20, 40, 60, 80], PURPLES),
+  },
+  {
+    id: 'local-acs-black',
+    key: 'blk',
+    name: 'Black Residents (tracts)',
+    icon: '●',
+    table: 'B03002',
+    definition:
+      'share of people who are Black or African American alone, not Hispanic or Latino.',
+    format: (v) => `${v.toFixed(1)}% Black (not Hispanic)`,
+    bins: shareBins([5, 20, 40, 60, 80], BROWNS),
+  },
+  {
+    id: 'local-acs-hispanic',
+    key: 'hisp',
+    name: 'Hispanic or Latino Residents (tracts)',
+    icon: '●',
+    table: 'B03002',
+    definition: 'share of people who are Hispanic or Latino (of any race).',
+    format: (v) => `${v.toFixed(1)}% Hispanic or Latino`,
+    bins: shareBins([5, 20, 40, 60, 80], TEALS),
+  },
+  {
+    id: 'local-acs-no-vehicle',
+    key: 'noveh',
+    name: 'Households Without a Vehicle (tracts)',
+    icon: '⊘',
+    table: 'B25044',
+    definition: 'share of occupied housing units with no vehicle available.',
+    format: (v) => `${v.toFixed(1)}% of households have no vehicle`,
+    bins: shareBins([5, 10, 20, 40], GREYS),
+  },
+  {
+    id: 'local-acs-broadband',
+    key: 'bb',
+    name: 'Broadband at Home (tracts)',
+    icon: '⌁',
+    table: 'B28002',
+    definition:
+      'share of households with a broadband internet subscription of any type.',
+    format: percent(1),
+    bins: shareBins([60, 75, 85, 92], BLUES),
+  },
+]);
+
+// ---- Internet Access (US): state CPS history + county ACS ---------------
+// Spans 1998 (about a quarter of households online) to today (about nine in
+// ten), so each survey year lands on distinguishable steps.
+const INTERNET_BINS = shareBins(
+  [25, 40, 55, 70, 85],
+  ['#d6e6f4', '#abd0e6', '#6aaed6', '#3787c0', '#105ba4', '#08306b'],
+);
+const INTERNET_SOURCE_NOTE =
+  '1998–2010: U.S. Census Bureau Current Population Survey, Computer and Internet Use Supplement, published by NTIA (Internet Use Survey, Data Explorer), share of all households; state estimates only, so each county shows its state. Latest: American Community Survey 2020–2024 5-year estimates, table B28002, county estimates.';
+export const INTERNET_MEASURES = Object.freeze([
+  {
+    id: 'local-internet-use',
+    name: 'Internet Use at Home',
+    what: 'households where someone uses the internet at home',
+    years: [
+      ...[1998, 2000, 2003, 2007, 2010].map((year) => ({
+        key: `ia${year}`,
+        label: String(year),
+        title: `${year}: state estimate (CPS)`,
+        scope: 'state',
+      })),
+      {
+        key: 'net',
+        label: '2020–24',
+        title:
+          '2020–2024: county estimate (ACS B28002, any internet subscription)',
+        scope: 'county',
+      },
+    ],
+  },
+  {
+    id: 'local-internet-highspeed',
+    name: 'High-Speed Internet at Home',
+    what: 'households with high-speed (broadband) internet at home',
+    years: [
+      ...[2000, 2003, 2010].map((year) => ({
+        key: `hs${year}`,
+        label: String(year),
+        title: `${year}: state estimate (CPS, wired high-speed service)`,
+        scope: 'state',
+      })),
+      {
+        key: 'bb',
+        label: '2020–24',
+        title: '2020–2024: county estimate (ACS B28002, broadband of any type)',
+        scope: 'county',
+      },
+    ],
+  },
+]);
+
+function internetSummary(measure, year, p) {
+  const value = p[year.key];
+  if (!Number.isFinite(value)) return `No ${year.label} estimate here.`;
+  const where =
+    year.scope === 'state'
+      ? `the state's households (CPS ${year.label}; state estimate shown for every county)`
+      : `this county's households (ACS 2020–2024, table B28002)`;
+  return `${value.toFixed(1)}% of ${where}: ${measure.what}.`;
+}
+
 function binOf(bins, value) {
   return value === null || value === undefined || !Number.isFinite(value)
     ? null
@@ -939,6 +1156,58 @@ export function createInfrastructureLayers(services) {
     services,
   );
 
+  // Social & Economic (US): ACS tract measures on the shared 2020 tract
+  // chunks (scripts/build-social-layers.mjs). Each names its Census table.
+  const socialLayers = SOCIAL_MEASURES.map((measure) =>
+    createChunkedAreaLayer(
+      {
+        id: measure.id,
+        name: measure.name,
+        baseUrl: 'context/tracts-2020/',
+        icon: measure.icon,
+        source: `ACS ${ACS_SOCIAL_VINTAGE}`,
+        sourceNote: `U.S. Census Bureau, American Community Survey ${ACS_SOCIAL_VINTAGE} 5-year estimates, table ${measure.table}: ${measure.definition} Census 2020 tract outlines.`,
+        featureSummary: (p) =>
+          Number.isFinite(p[measure.key])
+            ? `${measure.format(p[measure.key])} (ACS ${ACS_SOCIAL_VINTAGE}, table ${measure.table}).`
+            : 'No ACS estimate for this tract (too few people or households).',
+        featureColor: (p) =>
+          binOf(measure.bins, p[measure.key])?.color || NO_DATA_COLOR,
+        legend: binLegend(measure.bins, measure.key),
+      },
+      services,
+    ),
+  );
+
+  // Internet Access (US): household internet over time on county outlines.
+  // 1998–2010 come from the CPS Computer and Internet Use Supplement, which
+  // is only published by state, so every county shows its state's value; the
+  // latest years are county ACS estimates (table B28002).
+  const internetLayers = INTERNET_MEASURES.map((measure) =>
+    createChunkedAreaLayer(
+      {
+        id: measure.id,
+        name: measure.name,
+        baseUrl: 'context/county-life-expectancy/',
+        ...COUNTY_LAYER_OPTIONS,
+        icon: '⌁',
+        source: 'Census CPS / ACS',
+        sourceNote: INTERNET_SOURCE_NOTE,
+        variants: measure.years.map((year) => ({
+          id: year.key,
+          label: year.label,
+          title: year.title,
+          featureColor: (p) =>
+            binOf(INTERNET_BINS, p[year.key])?.color || NO_DATA_COLOR,
+          legend: binLegend(INTERNET_BINS, year.key),
+          featureSummary: (p) => internetSummary(measure, year, p),
+        })),
+        featureColor: () => NO_DATA_COLOR,
+      },
+      services,
+    ),
+  );
+
   return [
     datacenters,
     dams,
@@ -961,6 +1230,8 @@ export function createInfrastructureLayers(services) {
     miamiHomicideHotspots,
     traumaCenters,
     publicHousing,
+    ...socialLayers,
+    ...internetLayers,
     gva2015,
     mkdb,
     bostonNeighborhoods,

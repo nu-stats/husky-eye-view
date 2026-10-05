@@ -28,13 +28,16 @@ export function updateHud(
   forceContext = false,
 ) {
   this.lastAircraftInfo = info;
+  // Walking and Drone views reuse these instruments (speed in MPH, height
+  // above the ground) but have no route or contact context.
+  const ground = info.layerId === 'walk' || info.layerId === 'drone';
   const heading = normalizeHeading(this.heading ?? info.track ?? 0);
   if (this.callsign) {
     this.callsign.textContent =
       info.callsign || info.registration || info.icao24 || 'AIRCRAFT';
   }
   const speedKt = Number.isFinite(info.velocityMps)
-    ? info.velocityMps * 1.94384
+    ? info.velocityMps * (ground ? 2.23694 : 1.94384)
     : null;
   setCockpitRollingValue(this.speed, formatSpeedRulerTick(speedKt), speedKt, {
     immediate: forceContext,
@@ -125,7 +128,12 @@ export function updateHud(
       : '--';
     this.position.textContent = `${lat} · ${lon}`;
   }
-  if (this.aircraftMeta) {
+  if (this.aircraftMeta && ground) {
+    this.aircraftMeta.textContent =
+      info.layerId === 'walk'
+        ? 'W/S WALK · A/D TURN · Q/E EYE HEIGHT · SHIFT JOG'
+        : 'W/S FLY · A/D TURN · Q/E DOWN/UP · SHIFT FAST';
+  } else if (this.aircraftMeta) {
     const feedState = this.surfaceAcquiring
       ? 'ACQUIRING SURFACE'
       : this.surfaceFallback
@@ -143,7 +151,7 @@ export function updateHud(
           : 'COMMERCIAL';
     this.aircraftMeta.textContent = `${family} · ${feedState} · COURSE ALIGNED`;
   }
-  this.updateRoute(info);
+  if (!ground) this.updateRoute(info);
   if (
     forceContext ||
     cockpitUiUpdateDue(
@@ -155,7 +163,7 @@ export function updateHud(
     this.lastContextUpdateMs = nowMs;
     this.updateLocalPosition(info);
     this.maybeRefreshRegionalBrief(info);
-    this.updateContext(info, heading);
+    if (!ground) this.updateContext(info, heading);
   }
   if (this.hud) this.hud.dataset.layer = info.layerId || 'flights';
 }

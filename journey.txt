@@ -810,13 +810,114 @@ Done:
     voice and still place the sample CCTV cameras.
 Code:     src/locations.js (CITY_POIS campus entries, LOCATION_BAR_CITY_IDS),
           src/ui/locationControls.js (pillIds), src/layers/cctv/policy.js.
+Later:    The campus pills wrap onto several lines so all 14 show (location.css,
+          command-dock-compact.css).
+
+
+-------------------------------------------------------------------------------
+STEP 50: Snapshots and clips; Walking and Drone views
+-------------------------------------------------------------------------------
+Done:
+  - Cockpit, Drone and Walking views have a camera button (P) and REC (Shift+P).
+    Pictures are high resolution (rendered ~3000 px wide) as PNG or JPG (never
+    HEIC; the choice is remembered); clips are MP4, up to 60 s. Both carry a
+    caption strip: view, place, time, map-data layers, and the Cesium/Google
+    credits. Files go to Downloads.
+  - Data Layers -> Live Feeds -> Drone View / Walking View (under Helicopters &
+    Low Flyers): click START, then click the map. Drone hovers 30-122 m above the
+    ground; Walking keeps the eye 1.7-30 m above the street and a look-ahead probe
+    stops you at walls. W/S move, A/D turn, Q/E height, Shift faster, Esc exits.
+    Voice: start_ground_view {mode: walk|drone} starts at the center of the view.
+Code:     src/ui/viewCapture.js, captureCaption.js, cockpitCapture.js,
+          cockpitGroundView.js (the cockpit with a user-driven camera).
+
+
+-------------------------------------------------------------------------------
+STEP 51: Social & Economic and Internet Access layers
+-------------------------------------------------------------------------------
+Done:
+  - Social & Economic (US), ACS 2020-2024 5-year tracts, each naming its Census
+    table: Poverty (B17001), Median Household Income (B19013), Unemployment
+    (B23025), Bachelor's Degree or Higher (B15003), Renter-Occupied Homes (B25003),
+    Black and Hispanic or Latino residents (B03002), Households Without a Vehicle
+    (B25044), Broadband at Home (B28002).
+  - Internet Access (US): Internet Use at Home (1998, 2000, 2003, 2007, 2010) and
+    High-Speed Internet at Home (2000, 2003, 2010) from the CPS Computer and
+    Internet Use Supplement (NTIA Data Explorer; published by STATE only, so each
+    county shows its state), plus county ACS 2020-2024 (B28002). Year chips in the
+    layer row switch the view. The ACS did not ask about internet before 2013, so
+    no county figures exist for 1990-2010.
+  - Area layers can now offer "variants" (chips) in their row (chunkedAreaLayer).
+Data:     node scripts/fetch-acs-social.mjs 2024   (table-based summary files;
+                                                    the Census API now needs a key)
+          node scripts/build-social-layers.mjs     (adds the values to the shared
+                                                    tract and county chunks; run after
+                                                    build-environment-layers)
+          Sources in data/source/census/ and data/source/internet/ (not in git).
+
+
+-------------------------------------------------------------------------------
+STEP 52: Curated Flights
+-------------------------------------------------------------------------------
+Done:
+  - Data Layers -> Research Data -> Curated Flights. Its OWN key (POWER UP ->
+    CURATED FLIGHTS), separate from the research key; key file
+    Documents\HuskyEyeView-backups\curated-flights-key.txt (keep private).
+  - Up to 3 US cities of 100,000+ (342 cities, Census Vintage 2024) and up to 6 of
+    19 layers. The flight visits each city, shows each layer with a card comparing
+    city, principal county and state, then a comparison card. A floating bar
+    pauses, skips, stops, or switches to any of the tour's layers. Optional MP4.
+  - Downloads: ALL (ZIP) = report PDF + data CSV/XLSX + chart images (PNG or JPG)
+    + city views + README; or each file alone. The report has a Data sources page
+    with every Census table. Built in the browser; nothing is stored on a server.
+  - Voice: plan_curated_flight {cities, layers, record, start} and
+    control_curated_flight {open, status, start, pause, resume, skip, stop,
+    show_layer + layer, download_*}.
+  - Averages: area layers are population-weighted tract means (ACS B01003) over
+    tracts whose centroid is inside the city boundary; the principal county holds
+    most of the city's people; Census social measures are the published ACS place
+    / county / state estimates. GVA/MKDB are counted in the browser only, with the
+    research key.
+Data:     node scripts/build-curated-flights.mjs  (needs data/source/census/:
+                                                    sub-est2024.csv, places_100k.geojson,
+                                                    acs2024_social.json)
+          node scripts/lock-curated-flights.mjs   (encrypts with the real key)
+Code:     src/curated/, server/providers/curatedFlights.js.
+
+
+-------------------------------------------------------------------------------
+STEP 53: Funding notes and citation (not in git)
+-------------------------------------------------------------------------------
+  - notes/funding-opportunities-2026-10.md: mid-career-ranked funding list (local
+    only; notes/ is excluded through .git/info/exclude).
+  - notes/CITATION-draft.cff: a draft citation to finish with the authors' names.
+
+
+STEP 54: New overview video and guide (October 5, 2026)
+-------------------------------------------------------------------------------
+  - The overview video was re-cut as one story (about 6:40): start and campuses,
+    Data Layers with Social & Economic, environment with Internet Access, research
+    data (the earlier key-paste take, blended in), cockpit, helicopters, drone and
+    walking views with photo and clip, Curated Flights with the report, live feeds,
+    POWER UP. New narration uses the same voice as before.
+  - Chrome's own button tooltips, caught by the screen capture, are covered with
+    clean patches of the same spot; the white flash when the source video opens
+    is cut. Walking View was re-filmed on City Hall Plaza (the Boston Common take
+    showed trees as blobs).
+  - The user guide (50 pages) gained the campuses, Social & Economic and Internet
+    Access (6.3-6.4), Curated Flights (7.4), Drone and Walking View (8.4), photos
+    and clips (8.5), new keys, sources and glossary terms.
 
 
 ===============================================================================
-WHERE THINGS STAND (October 2, 2026)
+WHERE THINGS STAND (October 5, 2026)
 ===============================================================================
-Layers:     50. Newest: Helicopters & Low Flyers. All are on voice's list.
-            GVA and MKDB need the research key.
+Layers:     61. Newest: Social & Economic (9 ACS tract layers) and Internet Access
+            (2). All are on voice's list. GVA and MKDB need the research key.
+Views:      Cockpit (planes, helicopters), Drone View, Walking View; snapshots
+            (PNG/JPG) and clips (MP4) from each.
+Curated:    Curated Flights (own key) compares up to 3 cities on up to 6 layers, with
+            report, data and chart downloads (Step 52).
 Look:       Northeastern logo, grey interface, research groups first in Data Layers,
             research profile hides the inherited extras ("Show all layers" to see them),
             first run and Scenes start with Boston.
@@ -824,12 +925,14 @@ Needs:      A new Cesium ion token (Step 31) for Bing maps and full terrain.
 Not back:   Only the speed rewrite from Step 6 (batched drawing). Large pin layers and
             zoomed-out tract views may feel heavier.
 Cockpit:    Zoom 0.5x-8x, look-around, clickable pins, Data Layers menu works inside.
+Location:   The 14 Northeastern campus cities (Step 49).
 Live feeds: US-focused (Step 39).
 HOLC:       314 cities from Mapping Inequality, Boston included (Step 48); every card
             links to its 1930s area description.
-Media:      Overview video and guide PDF on the latest GitHub release only (v0.1.6);
-            the release-media workflow moves them to each new release.
-Tests:      All 4,294 unit tests pass. Format, import-direction and package-boundary
+Media:      Overview video, captions and guide PDF on the latest GitHub release only
+            (v0.1.8, the remade versions from Step 54); the release-media workflow
+            moves them to each new release.
+Tests:      All 4,332 unit tests pass. Format, import-direction and package-boundary
             checks are clean.
 
 Backups:    C:\Users\jstow\Documents\HuskyEyeView-backups\
@@ -845,7 +948,9 @@ Data exports:
             mkdb_incidents_geocoded.csv
 
 Git history on main (newest first):
-            (release)  Location bar shows Northeastern's campuses (tagged v0.1.7)
+            (release)  Photos and clips, Drone and Walking View, Curated Flights,
+                       Social & Economic and Internet Access layers (tagged v0.1.8)
+            46e6848f  Location bar shows Northeastern's campuses (tagged v0.1.7)
             caa5fea0  Keep the overview video and guide on the latest release only
             a451d18c  HOLC rebuilt from Mapping Inequality, Boston included (tagged v0.1.6)
             371edc14  Helicopters & Low Flyers, BPD scanner, HOLC descriptions (tagged v0.1.5)

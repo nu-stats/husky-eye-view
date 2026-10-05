@@ -153,6 +153,100 @@ export const LAYER_MANIFEST = Object.freeze(
       aliases: ['public housing', 'housing projects', 'projects'],
     },
 
+    // ---- Social & Economic (US): ACS 2020–2024 tracts --------------------
+    {
+      id: 'local-acs-poverty',
+      token: 'sp',
+      group: 'Social & Economic (US)',
+      vintage: '2020–2024',
+      aliases: ['poverty', 'poverty rate', 'below poverty'],
+    },
+    {
+      id: 'local-acs-income',
+      token: 'si',
+      group: 'Social & Economic (US)',
+      vintage: '2020–2024',
+      aliases: ['income', 'median income', 'household income'],
+    },
+    {
+      id: 'local-acs-unemployment',
+      token: 'su',
+      group: 'Social & Economic (US)',
+      vintage: '2020–2024',
+      aliases: ['unemployment', 'unemployment rate', 'jobless rate'],
+    },
+    {
+      id: 'local-acs-education',
+      token: 'se',
+      group: 'Social & Economic (US)',
+      vintage: '2020–2024',
+      aliases: [
+        'education',
+        "bachelor's degree",
+        'college degree',
+        'college educated',
+      ],
+    },
+    {
+      id: 'local-acs-renters',
+      token: 'sr',
+      group: 'Social & Economic (US)',
+      vintage: '2020–2024',
+      aliases: ['renters', 'renter occupied', 'tenure', 'rental housing'],
+    },
+    {
+      id: 'local-acs-black',
+      token: 'sb',
+      group: 'Social & Economic (US)',
+      vintage: '2020–2024',
+      aliases: ['black residents', 'black population', 'african american'],
+    },
+    {
+      id: 'local-acs-hispanic',
+      token: 'sh',
+      group: 'Social & Economic (US)',
+      vintage: '2020–2024',
+      aliases: ['hispanic residents', 'latino', 'hispanic population'],
+    },
+    {
+      id: 'local-acs-no-vehicle',
+      token: 'sv',
+      group: 'Social & Economic (US)',
+      vintage: '2020–2024',
+      aliases: [
+        'no vehicle',
+        'car free households',
+        'households without a car',
+      ],
+    },
+    {
+      id: 'local-acs-broadband',
+      token: 'sw',
+      group: 'Social & Economic (US)',
+      vintage: '2020–2024',
+      aliases: ['broadband', 'broadband tracts', 'internet subscription'],
+    },
+
+    // ---- Internet Access (US): CPS 1998–2010 (states) + ACS (counties) --
+    {
+      id: 'local-internet-use',
+      token: 'iu',
+      group: 'Internet Access (US)',
+      vintage: '1998–2024',
+      aliases: ['internet use', 'internet usage', 'internet at home'],
+    },
+    {
+      id: 'local-internet-highspeed',
+      token: 'ih',
+      group: 'Internet Access (US)',
+      vintage: '2000–2024',
+      aliases: [
+        'high speed internet',
+        'high-speed internet',
+        'broadband history',
+      ],
+    },
+
     // ---- Research Data (key-locked) ------------------------------------
     {
       id: 'local-gva-2015',

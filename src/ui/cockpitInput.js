@@ -57,10 +57,20 @@ export function onKeyDown(event) {
   }
   if (event.target?.closest?.('input, textarea, select, [contenteditable]'))
     return;
+  // Walking / Drone views: W/S move, A/D turn, Q/E down/up, Shift faster.
+  if (this.groundMode && this.onGroundKey(event, true)) return;
   const key = event.key?.toLowerCase();
   if (this.active && !event.metaKey && !event.ctrlKey && !event.altKey) {
     const zoomStep =
       key === '+' || key === '=' ? 1 : key === '-' || key === '_' ? -1 : 0;
+    // P saves a snapshot; Shift+P starts or stops a clip.
+    if (key === 'p') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (event.shiftKey) this.toggleClip();
+      else this.takeSnapshot();
+      return;
+    }
     if (zoomStep || key === '0') {
       event.preventDefault();
       event.stopImmediatePropagation();

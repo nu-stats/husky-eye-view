@@ -284,6 +284,9 @@ export function chunksInView(index, view, limit) {
  *   features whose properties pass, e.g. the significant tracts of a shared
  *   tract set.
  * @param {number} [options.fillAlpha] Area fill opacity (0–1).
+ * @param {Array<{id:string,label:string,featureColor:Function,legend?:Array,featureSummary?:Function}>} [options.variants]
+ *   Alternative views of the same areas (e.g. survey years); the layer row
+ *   shows one chip per variant and the first is shown until another is chosen.
  * @param {Function} [options.screenSpaceEventHandlerFactory] Test seam.
  * @param {object} services Shared context/overlay operations.
  */
@@ -303,6 +306,7 @@ export function createChunkedAreaLayer(
     featureSummary = null,
     featureFilter = null,
     fillAlpha = FILL_ALPHA,
+    variants = [],
     screenSpaceEventHandlerFactory = (canvas) =>
       new Cesium.ScreenSpaceEventHandler(canvas),
   },
@@ -341,6 +345,16 @@ export function createChunkedAreaLayer(
   let lastViewPose = null;
   let lastMotionCheckMs = 0;
   let rowControlsListener = null;
+  // A variant swaps the coloring, legend and card text in place.
+  let variantId = variants[0]?.id ?? null;
+  const applyVariant = (variant) => {
+    if (!variant) return;
+    variantId = variant.id;
+    featureColor = variant.featureColor;
+    if (variant.legend) legend = variant.legend;
+    if (variant.featureSummary) featureSummary = variant.featureSummary;
+  };
+  applyVariant(variants[0]);
   /**
    * chunk id -> { primitives, features } currently drawn. `primitives` are
    * the chunk's Cesium.GroundPrimitive batches (none when no area survived
@@ -906,7 +920,18 @@ export function createChunkedAreaLayer(
     }),
 
     getRowControls: () => ({
-      chips: [],
+      chips: variants.map((variant) => ({
+        id: variant.id,
+        label: variant.label,
+        title: variant.title || variant.label,
+        active: variant.id === variantId,
+        onClick: () => {
+          if (variant.id === variantId) return;
+          applyVariant(variant);
+          applyFillAlpha();
+          notifyRowControls();
+        },
+      })),
       legend: enabled
         ? legend.map((item) => ({
             label: item.label,

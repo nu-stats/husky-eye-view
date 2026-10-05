@@ -35,6 +35,9 @@ export function update() {
     return;
   }
 
+  // Walking / Drone views drive the camera from the keyboard, not an aircraft.
+  if (this.groundMode) return this.updateGround();
+
   const nowMs = performance.now();
   const info = this.readAircraftInfo();
 

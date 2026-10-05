@@ -118,6 +118,46 @@ export const ACTION_DESCRIPTIONS = {
       },
     },
   },
+  start_ground_view: {
+    description:
+      'Start Walking View (first person at street level) or Drone View (hovering 30–120 m up) at the center of the current view. The user then moves with W/A/S/D (Q/E for height) and leaves with Esc. Use only when the user asks to walk, go to street level, or fly a drone.',
+  },
+  plan_curated_flight: {
+    description:
+      'Plan (and optionally start) a Curated Flight: a guided tour comparing up to 3 US cities of 100,000+ people on up to 6 data layers, with city / county / state averages and a downloadable report. Needs the Curated Flights key (POWER UP); if locked, tell the user to enter it. Ask for missing cities or layers before calling. Read back the plan and any problems the result lists.',
+    parameters: {
+      properties: {
+        cities: {
+          description:
+            'City names as said, with the state when given ("Detroit", "Springfield, MA"). At most 3.',
+        },
+        layers: {
+          description:
+            'Layer keys: life-expectancy, short-life-clusters (low life expectancy clusters), pm25 (fine particles / air quality), ozone, park-access (parks, green space), holc-hazardous (redlining), public-housing, trauma-centers, poverty, median-income, unemployment, bachelors (college education), renters, black (Black residents), hispanic (Hispanic or Latino residents), no-vehicle, broadband (internet at home), gva-2015 (gun deaths; needs the research key), mkdb (mass killings; needs the research key). The Census measures (poverty through broadband) are ACS 2020–2024 social-structural characteristics. At most 6.',
+        },
+        record: {
+          description:
+            'True when the user wants the flight recorded as a video.',
+        },
+        start: {
+          description:
+            'True to start flying right away; false to only fill in the plan.',
+        },
+      },
+    },
+  },
+  control_curated_flight: {
+    description:
+      'Control the Curated Flights panel and the current tour: open it, read status, start the planned flight, pause, resume, skip to the next step, stop, show_layer (switch the running tour to one of its layers and pause there; give layer), or download the report (PDF), the data (CSV or XLSX), the comparison charts (PNG or JPG images in a ZIP), or download_all (one ZIP with the report, data, charts and city views).',
+    parameters: {
+      properties: {
+        layer: {
+          description:
+            'For show_layer: the layer as said, e.g. "poverty" or "life expectancy".',
+        },
+      },
+    },
+  },
   control_cockpit: {
     description:
       'Read or control Cockpit when the user explicitly requests Cockpit: establish Contacts and enter from a selected or tracked aircraft; exit; or navigate nearby Contacts with optional filters. Selecting or viewing an aircraft alone must not enter Cockpit.',

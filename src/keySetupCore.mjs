@@ -119,6 +119,16 @@ export const KEY_SETUP_KEYS = Object.freeze([
     // server's configuration, so the layers start locked in every session.
     browserSession: true,
   }),
+  Object.freeze({
+    id: 'curated-flights',
+    title: 'CURATED FLIGHTS',
+    unlocks:
+      'Curated Flights: guided city-comparison tours with a PDF report, data files and charts. A separate key from the research datasets; ask the project owner for it.',
+    getUrl: '',
+    envVars: Object.freeze(['HEV_CURATED_FLIGHTS_KEY']),
+    tier: 'free',
+    browserSession: true,
+  }),
 ]);
 
 /** Hostnames a Provider Settings request may arrive under or originate from. */

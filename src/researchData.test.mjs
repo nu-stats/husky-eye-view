@@ -172,7 +172,17 @@ test('the research key is browser-session only: the server can never save it', (
   const row = status.keys.find((key) => key.id === 'research-data');
   assert.equal(row.set, false);
   assert.equal(row.browserSession, true);
-  assert.equal(status.total, status.keys.length - 1);
+  // Both owner-issued session keys (research data, Curated Flights) are
+  // optional and never count toward "keys waiting".
+  assert.equal(
+    status.total,
+    status.keys.length - status.keys.filter((key) => key.browserSession).length,
+  );
+  assert.equal(
+    status.keys.filter((key) => key.browserSession).length,
+    2,
+    'research data and Curated Flights',
+  );
   assert.ok(!JSON.stringify(status).includes('k1'));
 });
 

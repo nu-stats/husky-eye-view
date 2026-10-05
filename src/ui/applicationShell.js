@@ -30,6 +30,7 @@ import * as Cesium from 'cesium';
 import { aircraftTrackingTarget } from '../cockpitTracking.js';
 
 import { ShellFeedback } from './shellFeedback.js';
+import { CuratedFlightsPanel } from '../curated/curatedPanel.js';
 
 import { runCctvLayerEnableTransition } from '../cctvFocusPolicy.js';
 
@@ -381,6 +382,16 @@ export class StyleManager extends ShellFacade {
       exitPanels: () => this._panelChrome.exitCockpit(),
     });
 
+    // Curated Flights (Data Layers → Research Data): city-comparison tours
+    // with report, data and chart downloads; panel and voice share it.
+    this.curatedFlights = new CuratedFlightsPanel({
+      viewer,
+      readDataManager: () => this._dataManager,
+      holdRender: services.holdContinuousRender,
+      releaseRender: services.releaseContinuousRender,
+      showToast: (message) => this._showToast(message),
+    });
+
     // Full-globe sun/moon ring. It is a crisp screen-space overlay above the
     // Cesium canvas but below the HUD/detection/readout z ladder.
     this.celestialRing = new CelestialRing(viewer, {
@@ -581,6 +592,18 @@ export class StyleManager extends ShellFacade {
       this._scheduleLeftPanelLayout({ reconsiderAutoCollapse: true });
     };
     window.addEventListener('resize', this._windowResizeHandler);
+    // Snapshot/clip saves and failures (cockpit, walking and drone views).
+    this._viewCaptureHandler = ({ detail }) => {
+      if (detail?.error) this._showToast(`Capture failed: ${detail.error}`);
+      else if (detail?.saved)
+        this._showToast(`Saved to Downloads: ${detail.saved}`);
+    };
+    window.addEventListener('gev:view-capture', this._viewCaptureHandler);
+    // Short instructions from the Walking / Drone views (and later tours).
+    this._noticeHandler = ({ detail }) => {
+      if (detail?.message) this._showToast(detail.message);
+    };
+    window.addEventListener('gev:notice', this._noticeHandler);
     // The loading-chip ticker is stopped while the tab is hidden (it can do no
     // useful work off-screen and must not hold a 60ms timer there). Resample on
     // return so the time-driven reducer catches up on real elapsed time — and
@@ -1515,12 +1538,21 @@ export class StyleManager extends ShellFacade {
     // manager doesn't inherit sensor state (review P2, 2026-08-16).
     this._visualSettings.releaseIrBoost();
     this._cockpitCoordinator.destroy();
+    this.curatedFlights?.destroy();
     this._contextControls.disconnect();
     this._layerBindings.disconnect();
 
     if (this._windowResizeHandler) {
       window.removeEventListener('resize', this._windowResizeHandler);
       this._windowResizeHandler = null;
+    }
+    if (this._viewCaptureHandler) {
+      window.removeEventListener('gev:view-capture', this._viewCaptureHandler);
+      this._viewCaptureHandler = null;
+    }
+    if (this._noticeHandler) {
+      window.removeEventListener('gev:notice', this._noticeHandler);
+      this._noticeHandler = null;
     }
     destroyTrackedReadout();
     destroyDetection();

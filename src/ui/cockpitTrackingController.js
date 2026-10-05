@@ -213,6 +213,9 @@ export function enter() {
 export function exit({ restoreTracking = true } = {}) {
   if (!this.active) return false;
   const entity = this.trackedEntity;
+  // A clip in progress ends and saves with the cockpit view it shows.
+  this.stopCapture?.();
+  this.leaveGround?.();
   this.active = false;
   this.services.releaseContinuousRender('cockpit');
   this.trackedEntity = null;
