@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import * as Cesium from 'cesium';
-import { createInfrastructureLayers } from 'gods-eye-view/infrastructure';
+import {
+  createInfrastructureLayers,
+  INTERNET_MEASURES,
+  internetSummary,
+} from 'gods-eye-view/infrastructure';
 import { createLocalGeoJsonLayer } from 'gods-eye-view/infrastructure/geojson';
 
 function services() {
@@ -184,13 +188,23 @@ test('infrastructure factory preserves identity and creates independent state wi
       ].map(([id, name]) => ({ id, name, source: 'ACS 2020–2024' })),
       {
         id: 'local-internet-use',
-        name: 'Internet Use at Home',
+        name: 'Internet Use at Home (counties)',
         source: 'Census CPS / ACS',
       },
       {
         id: 'local-internet-highspeed',
-        name: 'High-Speed Internet at Home',
+        name: 'High-Speed Internet at Home (counties)',
         source: 'Census CPS / ACS',
+      },
+      {
+        id: 'local-internet-use-tracts',
+        name: 'Internet Use at Home (tracts)',
+        source: 'Census ACS',
+      },
+      {
+        id: 'local-internet-highspeed-tracts',
+        name: 'High-Speed Internet at Home (tracts)',
+        source: 'Census ACS',
       },
       {
         id: 'local-gva-2015',
@@ -426,4 +440,34 @@ test('consumer build includes only infrastructure code and resolves assets under
       `${name} must retain the consumer base path`,
     );
   }
+});
+
+test('internet layers come by county (1998–2024) and by tract (ACS periods)', () => {
+  const byId = Object.fromEntries(INTERNET_MEASURES.map((m) => [m.id, m]));
+  assert.deepEqual(
+    byId['local-internet-use'].years.map((y) => y.label),
+    ['1998', '2000', '2003', '2007', '2010', '2013–17', '2020–24'],
+  );
+  assert.deepEqual(
+    byId['local-internet-highspeed-tracts'].years.map((y) => y.key),
+    ['bb17', 'bb'],
+  );
+  const tracts = byId['local-internet-use-tracts'];
+  assert.match(
+    internetSummary(tracts, tracts.years[0], { net17: 74.66 }),
+    /^74\.7% of this tract's households \(ACS 2013–2017, table B28002; moved from 2010 tracts by shared land area\)/,
+  );
+  assert.match(
+    internetSummary(tracts, tracts.years[1], { net: 84.4 }),
+    /this tract's households \(ACS 2020–2024, table B28002\):/,
+  );
+  const counties = byId['local-internet-use'];
+  assert.match(
+    internetSummary(counties, counties.years[0], { ia1998: 26.2 }),
+    /state estimate shown for every county/,
+  );
+  assert.equal(
+    internetSummary(counties, counties.years[5], {}),
+    'No 2013–17 estimate here.',
+  );
 });

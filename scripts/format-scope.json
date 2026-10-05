@@ -244,6 +244,7 @@
   "src/ui/cockpitGroundView.js",
   "src/ui/cockpitGroundView.test.mjs",
   "scripts/fetch-acs-social.mjs",
+  "scripts/fetch-acs-internet-2017.mjs",
   "scripts/build-social-layers.mjs",
   "src/curated/curatedPanel.js",
   "src/curated/curatedModel.js",

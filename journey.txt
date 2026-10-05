@@ -904,16 +904,34 @@ STEP 54: New overview video and guide (October 5, 2026)
     clean patches of the same spot; the white flash when the source video opens
     is cut. Walking View was re-filmed on City Hall Plaza (the Boston Common take
     showed trees as blobs).
-  - The user guide (50 pages) gained the campuses, Social & Economic and Internet
+  - (Released as v0.1.8.) The user guide (50 pages) gained the campuses, Social & Economic and Internet
     Access (6.3-6.4), Curated Flights (7.4), Drone and Walking View (8.4), photos
     and clips (8.5), new keys, sources and glossary terms.
+
+
+STEP 55: Internet Access by county and by tract (October 5, 2026)
+-------------------------------------------------------------------------------
+  - Internet Access now comes in county and tract layers, like Life Expectancy:
+    Internet Use at Home and High-Speed Internet at Home, each "(counties)" and
+    "(tracts)". 63 layers in all.
+  - Counties: 1998-2010 (CPS, state values), plus 2013-17 and 2020-24 (ACS
+    county estimates, table B28002). Tracts: 2013-17 and 2020-24 (ACS); the ACS
+    has no tract internet data before 2013. The two ACS periods do not overlap.
+  - 2013-17 was published on 2010 tracts. scripts/fetch-acs-internet-2017.mjs
+    downloads it (sequence-based summary files, B28002 in sequence 0128) and the
+    Census 2010-2020 tract relationship file; scripts/build-social-layers.mjs
+    shares each 2010 tract's households among the 2020 tracts it overlaps by
+    land area (net17 and bb17 on 83,807 tracts). The card says so.
+  - Tract layers use finer bins (60/70/80/90%), because since 2013 most places
+    are above 60%; the county layers keep 25-85% so 1998 still reads.
 
 
 ===============================================================================
 WHERE THINGS STAND (October 5, 2026)
 ===============================================================================
-Layers:     61. Newest: Social & Economic (9 ACS tract layers) and Internet Access
-            (2). All are on voice's list. GVA and MKDB need the research key.
+Layers:     63. Newest: Social & Economic (9 ACS tract layers) and Internet Access
+            (4: county and tract versions). All are on voice's list. GVA and MKDB
+            need the research key.
 Views:      Cockpit (planes, helicopters), Drone View, Walking View; snapshots
             (PNG/JPG) and clips (MP4) from each.
 Curated:    Curated Flights (own key) compares up to 3 cities on up to 6 layers, with
@@ -930,9 +948,9 @@ Live feeds: US-focused (Step 39).
 HOLC:       314 cities from Mapping Inequality, Boston included (Step 48); every card
             links to its 1930s area description.
 Media:      Overview video, captions and guide PDF on the latest GitHub release only
-            (v0.1.8, the remade versions from Step 54); the release-media workflow
-            moves them to each new release.
-Tests:      All 4,332 unit tests pass. Format, import-direction and package-boundary
+            (v0.1.9; video from Step 54, guide updated in Step 55). The release-media
+            workflow moves them to each new release.
+Tests:      All 4,333 unit tests pass. Format, import-direction and package-boundary
             checks are clean.
 
 Backups:    C:\Users\jstow\Documents\HuskyEyeView-backups\
@@ -948,7 +966,8 @@ Data exports:
             mkdb_incidents_geocoded.csv
 
 Git history on main (newest first):
-            (release)  Photos and clips, Drone and Walking View, Curated Flights,
+            (release)  Internet Access by county and by tract (tagged v0.1.9)
+            472f3fe3  Photos and clips, Drone and Walking View, Curated Flights,
                        Social & Economic and Internet Access layers (tagged v0.1.8)
             46e6848f  Location bar shows Northeastern's campuses (tagged v0.1.7)
             caa5fea0  Keep the overview video and guide on the latest release only

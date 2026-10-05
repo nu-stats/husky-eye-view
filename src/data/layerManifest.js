@@ -227,13 +227,19 @@ export const LAYER_MANIFEST = Object.freeze(
       aliases: ['broadband', 'broadband tracts', 'internet subscription'],
     },
 
-    // ---- Internet Access (US): CPS 1998–2010 (states) + ACS (counties) --
+    // ---- Internet Access (US): CPS 1998–2010 (states) + ACS (counties, tracts)
     {
       id: 'local-internet-use',
       token: 'iu',
       group: 'Internet Access (US)',
       vintage: '1998–2024',
-      aliases: ['internet use', 'internet usage', 'internet at home'],
+      aliases: [
+        'internet use',
+        'internet usage',
+        'internet at home',
+        'internet use counties',
+        'internet usage by county',
+      ],
     },
     {
       id: 'local-internet-highspeed',
@@ -244,6 +250,29 @@ export const LAYER_MANIFEST = Object.freeze(
         'high speed internet',
         'high-speed internet',
         'broadband history',
+        'high speed internet counties',
+      ],
+    },
+    {
+      id: 'local-internet-use-tracts',
+      token: 'it',
+      group: 'Internet Access (US)',
+      vintage: '2013–2024',
+      aliases: [
+        'internet use tracts',
+        'internet usage by tract',
+        'tract internet use',
+      ],
+    },
+    {
+      id: 'local-internet-highspeed-tracts',
+      token: 'ix',
+      group: 'Internet Access (US)',
+      vintage: '2013–2024',
+      aliases: [
+        'high speed internet tracts',
+        'high-speed internet by tract',
+        'tract high speed internet',
       ],
     },
 

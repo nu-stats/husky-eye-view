@@ -375,57 +375,100 @@ const INTERNET_BINS = shareBins(
   [25, 40, 55, 70, 85],
   ['#d6e6f4', '#abd0e6', '#6aaed6', '#3787c0', '#105ba4', '#08306b'],
 );
-const INTERNET_SOURCE_NOTE =
-  '1998–2010: U.S. Census Bureau Current Population Survey, Computer and Internet Use Supplement, published by NTIA (Internet Use Survey, Data Explorer), share of all households; state estimates only, so each county shows its state. Latest: American Community Survey 2020–2024 5-year estimates, table B28002, county estimates.';
+// Tracts have only the ACS years (2013 on), when most households were already
+// online, so their bins split the upper range more finely (same for both years).
+const TRACT_INTERNET_BINS = shareBins([60, 70, 80, 90], BLUES);
+const INTERNET_COUNTY_SOURCE_NOTE =
+  '1998–2010: U.S. Census Bureau Current Population Survey, Computer and Internet Use Supplement, published by NTIA (Internet Use Survey, Data Explorer), share of all households; state estimates only, so each county shows its state. 2013–2017 and 2020–2024: American Community Survey 5-year estimates, table B28002, county estimates.';
+const INTERNET_TRACT_SOURCE_NOTE =
+  'U.S. Census Bureau, American Community Survey 5-year estimates, table B28002, census tracts. 2013–2017 (the first 5-year release with internet questions) was published on 2010 tracts; its household counts are moved onto the 2020 tracts shown here in proportion to shared land area (Census 2010–2020 tract relationship file). Tract estimates carry wide margins of error. The ACS has no tract internet data before 2013; see the county layers for 1998–2010.';
+
+/** A 5-year ACS internet estimate (table B28002) at county or tract level. */
+const acsInternetYear = (key, vintage, scope, what) => ({
+  key,
+  label: `${vintage.slice(0, 5)}${vintage.slice(7)}`,
+  title: `${vintage}: ${scope} estimate (ACS B28002, ${what})`,
+  scope,
+  vintage,
+});
+
+const cpsInternetYears = (prefix, years, what) =>
+  years.map((year) => ({
+    key: `${prefix}${year}`,
+    label: String(year),
+    title: `${year}: state estimate (CPS${what ? `, ${what}` : ''})`,
+    scope: 'state',
+  }));
+
 export const INTERNET_MEASURES = Object.freeze([
   {
     id: 'local-internet-use',
-    name: 'Internet Use at Home',
+    name: 'Internet Use at Home (counties)',
     what: 'households where someone uses the internet at home',
+    geography: 'county',
     years: [
-      ...[1998, 2000, 2003, 2007, 2010].map((year) => ({
-        key: `ia${year}`,
-        label: String(year),
-        title: `${year}: state estimate (CPS)`,
-        scope: 'state',
-      })),
-      {
-        key: 'net',
-        label: '2020–24',
-        title:
-          '2020–2024: county estimate (ACS B28002, any internet subscription)',
-        scope: 'county',
-      },
+      ...cpsInternetYears('ia', [1998, 2000, 2003, 2007, 2010]),
+      acsInternetYear(
+        'net17',
+        '2013–2017',
+        'county',
+        'any internet subscription',
+      ),
+      acsInternetYear(
+        'net',
+        '2020–2024',
+        'county',
+        'any internet subscription',
+      ),
     ],
   },
   {
     id: 'local-internet-highspeed',
-    name: 'High-Speed Internet at Home',
+    name: 'High-Speed Internet at Home (counties)',
     what: 'households with high-speed (broadband) internet at home',
+    geography: 'county',
     years: [
-      ...[2000, 2003, 2010].map((year) => ({
-        key: `hs${year}`,
-        label: String(year),
-        title: `${year}: state estimate (CPS, wired high-speed service)`,
-        scope: 'state',
-      })),
-      {
-        key: 'bb',
-        label: '2020–24',
-        title: '2020–2024: county estimate (ACS B28002, broadband of any type)',
-        scope: 'county',
-      },
+      ...cpsInternetYears('hs', [2000, 2003, 2010], 'wired high-speed service'),
+      acsInternetYear('bb17', '2013–2017', 'county', 'broadband of any type'),
+      acsInternetYear('bb', '2020–2024', 'county', 'broadband of any type'),
+    ],
+  },
+  {
+    id: 'local-internet-use-tracts',
+    name: 'Internet Use at Home (tracts)',
+    what: 'households with an internet subscription of any type',
+    geography: 'tract',
+    years: [
+      acsInternetYear(
+        'net17',
+        '2013–2017',
+        'tract',
+        'any internet subscription',
+      ),
+      acsInternetYear('net', '2020–2024', 'tract', 'any internet subscription'),
+    ],
+  },
+  {
+    id: 'local-internet-highspeed-tracts',
+    name: 'High-Speed Internet at Home (tracts)',
+    what: 'households with broadband internet of any type',
+    geography: 'tract',
+    years: [
+      acsInternetYear('bb17', '2013–2017', 'tract', 'broadband of any type'),
+      acsInternetYear('bb', '2020–2024', 'tract', 'broadband of any type'),
     ],
   },
 ]);
 
-function internetSummary(measure, year, p) {
+export function internetSummary(measure, year, p) {
   const value = p[year.key];
   if (!Number.isFinite(value)) return `No ${year.label} estimate here.`;
   const where =
     year.scope === 'state'
       ? `the state's households (CPS ${year.label}; state estimate shown for every county)`
-      : `this county's households (ACS 2020–2024, table B28002)`;
+      : year.scope === 'county'
+        ? `this county's households (ACS ${year.vintage}, table B28002)`
+        : `this tract's households (ACS ${year.vintage}, table B28002${year.key.endsWith('17') ? '; moved from 2010 tracts by shared land area' : ''})`;
   return `${value.toFixed(1)}% of ${where}: ${measure.what}.`;
 }
 
@@ -1179,34 +1222,44 @@ export function createInfrastructureLayers(services) {
     ),
   );
 
-  // Internet Access (US): household internet over time on county outlines.
+  // Internet Access (US): household internet over time, by county and tract.
   // 1998–2010 come from the CPS Computer and Internet Use Supplement, which
-  // is only published by state, so every county shows its state's value; the
-  // latest years are county ACS estimates (table B28002).
-  const internetLayers = INTERNET_MEASURES.map((measure) =>
-    createChunkedAreaLayer(
+  // is only published by state, so every county shows its state's value;
+  // 2013–2017 and 2020–2024 are ACS estimates (table B28002). Tracts have the
+  // two ACS periods only.
+  const internetLayers = INTERNET_MEASURES.map((measure) => {
+    const bins =
+      measure.geography === 'tract' ? TRACT_INTERNET_BINS : INTERNET_BINS;
+    return createChunkedAreaLayer(
       {
         id: measure.id,
         name: measure.name,
-        baseUrl: 'context/county-life-expectancy/',
-        ...COUNTY_LAYER_OPTIONS,
+        ...(measure.geography === 'county'
+          ? {
+              baseUrl: 'context/county-life-expectancy/',
+              ...COUNTY_LAYER_OPTIONS,
+              source: 'Census CPS / ACS',
+              sourceNote: INTERNET_COUNTY_SOURCE_NOTE,
+            }
+          : {
+              baseUrl: 'context/tracts-2020/',
+              source: 'Census ACS',
+              sourceNote: INTERNET_TRACT_SOURCE_NOTE,
+            }),
         icon: '⌁',
-        source: 'Census CPS / ACS',
-        sourceNote: INTERNET_SOURCE_NOTE,
         variants: measure.years.map((year) => ({
           id: year.key,
           label: year.label,
           title: year.title,
-          featureColor: (p) =>
-            binOf(INTERNET_BINS, p[year.key])?.color || NO_DATA_COLOR,
-          legend: binLegend(INTERNET_BINS, year.key),
+          featureColor: (p) => binOf(bins, p[year.key])?.color || NO_DATA_COLOR,
+          legend: binLegend(bins, year.key),
           featureSummary: (p) => internetSummary(measure, year, p),
         })),
         featureColor: () => NO_DATA_COLOR,
       },
       services,
-    ),
-  );
+    );
+  });
 
   return [
     datacenters,
