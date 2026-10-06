@@ -187,10 +187,20 @@ export function createFlightSnapshotRenderer({
       } else {
         // Start where the fleet pass will draw it: the fleet renders behind
         // real time, so a fresh contact's displayed position is its fix
-        // projected back to that delayed time. Creating it at the raw fix drew
-        // it ahead until the next fleet tick snapped it back.
+        // projected back to that delayed time, and a grounded contact is then
+        // lifted onto the floor under that delayed position. Creating it at
+        // the raw fix drew it ahead until the next fleet tick snapped it back;
+        // skipping the floor started a taxiing contact low and then raised it.
+        const delayed = motion._deadReckon(icao24, new Cesium.Cartesian3());
         const displayed =
-          motion._deadReckon(icao24, new Cesium.Cartesian3()) || position;
+          (delayed &&
+            motion._floorGroundedDisplayPosition(
+              icao24,
+              flightState.records.data.get(icao24) || meta,
+              delayed,
+              rendering._modelOwnsVisual(icao24),
+            )) ||
+          position;
         const bb = flightState._billboardCollection.add({
           position: displayed,
           image: aircraftIcon(rendering._iconKind(icao24, meta.klass)),
