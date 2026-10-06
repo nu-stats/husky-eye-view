@@ -103,6 +103,16 @@ export const LAYER_ALIASES = Object.freeze({
     'internet access',
     'high speed internet',
   ],
+  // The user's own upload (present only once a file is added).
+  'my-data': [
+    'my data',
+    'my upload',
+    'my file',
+    'my layer',
+    'uploaded data',
+    'user data',
+    'our data',
+  ],
 });
 
 const STATE_NAMES = Object.freeze({
@@ -279,7 +289,14 @@ export function planFlight(
   for (const query of layers) {
     const key = findLayer(table?.layers, query);
     if (!key) {
-      problems.push(`No flight layer matches “${query}”.`);
+      const wantsUpload =
+        query === 'my-data' ||
+        LAYER_ALIASES['my-data'].includes(normalizeName(query));
+      problems.push(
+        wantsUpload
+          ? 'No file has been added yet: add your data under “Your data” in the Curated Flights panel.'
+          : `No flight layer matches “${query}”.`,
+      );
       continue;
     }
     if (resolvedLayers.includes(key)) continue;
@@ -338,8 +355,18 @@ export function scopeLabels(city) {
 export function compareSentence(layer, city, values) {
   const labels = scopeLabels(city);
   const cityValue = values?.city;
-  if (!Number.isFinite(cityValue))
-    return `${labels.city}: no ${layer.label.toLowerCase()} data for this city.`;
+  if (!Number.isFinite(cityValue)) {
+    // County- or state-level data (an upload) still compares the region.
+    const region = [
+      [values?.county, labels.county],
+      [values?.state, labels.state],
+    ]
+      .filter(([value]) => Number.isFinite(value))
+      .map(([value, label]) => `${label}: ${formatValue(layer, value)}`);
+    return region.length
+      ? `${labels.city}: no city value. ${region.join('; ')}.`
+      : `${labels.city}: no ${layer.label.toLowerCase()} data for this city.`;
+  }
   const unit = layer.unit?.startsWith('%')
     ? ' points'
     : layer.unit === 'dollars'

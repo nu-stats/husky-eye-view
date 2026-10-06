@@ -951,6 +951,14 @@ export function createGevActionRunner({
 
     if (name === 'start_ground_view') {
       const mode = args.mode === 'drone' ? 'drone' : 'walk';
+      // Walking View is switched off for now (see layerPanel.js).
+      if (mode === 'walk')
+        return {
+          ok: false,
+          action: name,
+          error:
+            'Walking View is turned off for now. Drone View (30 to 120 meters up) is available.',
+        };
       const started = styleManager?.cockpitView?.enterGroundAtCenter?.(mode);
       return started
         ? { ok: true, action: name, mode }

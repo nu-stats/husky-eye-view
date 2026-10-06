@@ -50,6 +50,7 @@ export class CuratedFlight {
     releaseRender = () => {},
     onCard = () => {},
     onState = () => {},
+    setUserLayer = () => {},
     capture = null,
     timing = FLIGHT_TIMING,
   }) {
@@ -61,6 +62,7 @@ export class CuratedFlight {
       releaseRender,
       onCard,
       onState,
+      setUserLayer,
       capture,
       timing,
     });
@@ -116,7 +118,8 @@ export class CuratedFlight {
     const locked = tour.missing.includes(key);
     for (const id of tour.layerIds)
       if (id !== layer.layerId) await this.setLayer(id, false);
-    if (!locked) await this.setLayer(layer.layerId, true);
+    if (!locked && layer.layerId) await this.setLayer(layer.layerId, true);
+    this.setUserLayer(Boolean(layer.user));
     this.onCard(this.layerCard(tour.city, key, locked));
     this.onState(
       this.state({
@@ -171,7 +174,10 @@ export class CuratedFlight {
     this.paused = false;
     this.stopRequested = false;
     this.skipRequested = false;
-    const layerIds = plan.layers.map((key) => table.layers[key].layerId);
+    // The user's upload has no map layer of its own (setUserLayer draws it).
+    const layerIds = plan.layers
+      .map((key) => table.layers[key].layerId)
+      .filter(Boolean);
     const original = new Map(
       layerIds.map((id) => [id, Boolean(this.isLayerEnabled(id))]),
     );
@@ -229,7 +235,9 @@ export class CuratedFlight {
           const locked = missing.includes(key);
           for (const id of layerIds)
             if (id !== layer.layerId) await this.setLayer(id, false);
-          if (!locked) await this.setLayer(layer.layerId, true);
+          if (!locked && layer.layerId)
+            await this.setLayer(layer.layerId, true);
+          this.setUserLayer(Boolean(layer.user));
           await this.wait(this.timing.layerLoadMs);
           this.onCard(this.layerCard(city, key, locked));
           await this.wait(this.timing.layerHoldMs);
@@ -250,6 +258,7 @@ export class CuratedFlight {
       this.stopOrbit();
       if (record) this.capture?.stopClip();
       for (const [id, on] of original) await this.setLayer(id, on);
+      this.setUserLayer(null);
       this.onCard(null);
       this.releaseRender('curated-flight');
       this.tour = null;
@@ -331,11 +340,11 @@ export function paintCard(ctx, width, height, card) {
   const pad = 28 * scale;
   const boxWidth = Math.min(width * 0.46, 860 * scale);
   ctx.save();
-  ctx.font = `600 ${30 * scale}px "Inter", "Segoe UI", sans-serif`;
+  ctx.font = `600 ${30 * scale}px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif`;
   const titleSize = 34 * scale;
   const bodySize = 24 * scale;
   const wrap = (text, size, maxWidth) => {
-    ctx.font = `400 ${size}px "Inter", "Segoe UI", sans-serif`;
+    ctx.font = `400 ${size}px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif`;
     const lines = [];
     let line = '';
     for (const word of String(text).split(/\s+/)) {
@@ -365,14 +374,14 @@ export function paintCard(ctx, width, height, card) {
   ctx.fillRect(x, y, 6 * scale, boxHeight);
   let ty = y + pad + titleSize;
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `700 ${titleSize}px "Inter", "Segoe UI", sans-serif`;
+  ctx.font = `700 ${titleSize}px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif`;
   ctx.fillText(card.title || '', x + pad, ty);
   ty += bodySize * 1.4;
   ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-  ctx.font = `500 ${bodySize * 0.9}px "Inter", "Segoe UI", sans-serif`;
+  ctx.font = `500 ${bodySize * 0.9}px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif`;
   ctx.fillText(card.subtitle || '', x + pad, ty);
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `400 ${bodySize}px "Inter", "Segoe UI", sans-serif`;
+  ctx.font = `400 ${bodySize}px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif`;
   for (const line of bodyLines) {
     ty += bodySize * 1.4;
     ctx.fillText(line, x + pad, ty);

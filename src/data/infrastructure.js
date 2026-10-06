@@ -479,6 +479,64 @@ export const INTERNET_MEASURES = Object.freeze([
   },
 ]);
 
+// ---- Internet use in five-year blocks: NTIA states and ASU counties --------
+// scripts/build-internet-history-layers.mjs averages the survey years inside
+// each block (2000–04 … 2020–24); same bins as the county layers above.
+export const INTERNET_BLOCKS = Object.freeze([2000, 2005, 2010, 2015, 2020]);
+const blockLabel = (block, last = block + 4) =>
+  `${block}–${String(last).slice(2)}`;
+/** NTIA adult (15+) measures carried by every state, main one first. */
+export const NTIA_STATE_MEASURES = Object.freeze([
+  ['use', 'use the internet (any location)'],
+  ['home', 'at home'],
+  ['work', 'at work'],
+  ['school', 'at school'],
+  ['public', 'at a library, community center or park'],
+  ['cafe', 'at a coffee shop or other business'],
+  ['travel', 'while traveling'],
+  ['other_home', "at someone else's home"],
+  ['phone', 'use a mobile phone'],
+  ['computer', 'use a desktop, laptop or tablet'],
+  ['desktop', 'use a desktop'],
+  ['laptop', 'use a laptop'],
+  ['tablet', 'use a tablet or e-reader'],
+  ['tv', 'use a smart TV or connected device'],
+  ['wearable', 'use a wearable device'],
+]);
+const NTIA_SOURCE_NOTE =
+  'NTIA Internet Use Survey (U.S. Census Bureau Current Population Survey, Computer and Internet Use Supplement), NTIA Data Explorer: persons 15 and older, state estimates. Each block averages the surveys taken in it (2000–04: 2000, 2001, 2003; 2005–09: 2007, 2009; 2010–14: 2010–2013; 2015–19: 2015, 2017, 2019; 2020–24: 2021, 2023); the standard error of a block is that of the mean of its surveys. Question wording changed over time (notably in 2015), so small shifts between blocks may reflect the survey. Census 2024 state outlines.';
+const ASU_SOURCE_NOTE =
+  'Caroline Tolbert and Karen Mossberger (2020), "U.S. Current Population Survey & American Community Survey Geographic Estimates of Internet Use, 1997-2018," Technology, Data and Society, Arizona State University: share of households with broadband at home. 2000–2012 are modeled from the CPS for the counties it identifies (missing years interpolated); 2013–2016 come from ACS 1-year estimates (counties of 65,000+), 2017–2018 from ACS 5-year estimates (all counties). Each block averages the years available in it; the data end in 2018. Counties with no estimate are grey.';
+
+/** A state's NTIA card for one block: internet use, then every other measure. */
+export function ntiaStateSummary(block, p) {
+  const value = p[`use_${block}`];
+  if (!Number.isFinite(value))
+    return `No NTIA estimate for ${p.name || 'this state'} in ${blockLabel(block)}.`;
+  const se = p[`use_${block}_se`];
+  const margin = Number.isFinite(se) ? ` (±${(1.645 * se).toFixed(1)})` : '';
+  const years = p[`use_${block}_years`];
+  const others = NTIA_STATE_MEASURES.slice(1)
+    .filter(([key]) => Number.isFinite(p[`${key}_${block}`]))
+    .map(([key, label]) => `${label} ${p[`${key}_${block}`].toFixed(1)}%`);
+  return [
+    `${blockLabel(block)}: ${value.toFixed(1)}%${margin} of adults 15+ in ${p.name || 'this state'} used the internet${years ? ` (average of the ${years.replace(/, (\d{4})$/, ' and $1')} surveys)` : ''}.`,
+    others.length ? `Adults 15+ who … ${others.join(' · ')}.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+/** A county's ASU broadband card for one block. */
+export function asuCountySummary(block, p) {
+  const value = p[`asu${block}`];
+  const label = blockLabel(block, block === 2015 ? 2018 : block + 4);
+  if (!Number.isFinite(value))
+    return `No ASU estimate for this county in ${label}.`;
+  const years = p[`asu${block}_years`];
+  return `${label}: ${value.toFixed(1)}% of households had broadband at home${years ? ` (ASU estimates, ${years})` : ''}.`;
+}
+
 export function internetSummary(measure, year, p) {
   const value = p[year.key];
   if (!Number.isFinite(value)) return `No ${year.label} estimate here.`;
@@ -650,6 +708,46 @@ export function segregationSummary(year, p) {
     SEGREGATION_GROUPS.map(value).join(' · '),
     ...(Number.isFinite(population) && population > 0
       ? [`Population: ${Math.round(population).toLocaleString('en-US')}`]
+      : []),
+  ].join('\n');
+}
+
+/**
+ * Counties and states (scripts/build-segregation-layers.mjs → seg_<key><yy>
+ * on the county and state outlines): all of an area's 2010 tracts, the same
+ * method and minimums as the cities.
+ */
+export const AREA_SEGREGATION_YEARS = Object.freeze([
+  { suffix: '00', label: '2000' },
+  { suffix: '10', label: '2010' },
+  { suffix: '24', label: '2020–24' },
+]);
+const AREA_SEGREGATION_NOTE = (scope) =>
+  `Dissimilarity index (0–100) of Black, Hispanic or Latino, and Asian residents against non-Hispanic white residents over all of each ${scope}'s census tracts (2010 tracts): Census 2000 and 2010 full counts from the ${LTDB_CITATION} ACS 2020–2024 table B03002 moved onto 2010 tracts by shared land area. An index needs at least 1,000 people in each group and 5 tracts. Computed by Husky Eye View. Colors show 2020–24; the card lists 2000, 2010 and 2020–24.`;
+
+/** An area's card: the three indices for each year, and its population. */
+export function areaSegregationSummary(p, noun = 'This area') {
+  const name = p.name || noun;
+  const cell = (key) =>
+    Number.isFinite(p[`seg_${key}`]) ? p[`seg_${key}`].toFixed(1) : 'n/a';
+  const rows = AREA_SEGREGATION_YEARS.filter((year) =>
+    SEGREGATION_GROUPS.some((g) =>
+      Number.isFinite(p[`seg_${g.key}${year.suffix}`]),
+    ),
+  ).map(
+    (year) =>
+      `${year.label}: ${SEGREGATION_GROUPS.map((g) => `${g.label} ${cell(`${g.key}${year.suffix}`)}`).join(' · ')}`,
+  );
+  if (!rows.length)
+    return `${name}: no segregation index (too few people in each group or too few tracts).`;
+  const population = p.seg_pop24;
+  return [
+    `${name} — dissimilarity index (0–100):`,
+    ...rows,
+    ...(Number.isFinite(population) && population > 0
+      ? [
+          `Population 2020–24: ${Math.round(population).toLocaleString('en-US')}`,
+        ]
       : []),
   ].join('\n');
 }
@@ -1485,6 +1583,54 @@ export function createInfrastructureLayers(services) {
     ),
   );
 
+  // Segregation by county and by state: a chip per pair of groups (2020–24
+  // colors); each card lists all three years.
+  const areaSegregationLayers = [
+    {
+      id: 'local-segregation-counties',
+      name: 'Segregation by County (2000–2024)',
+      baseUrl: 'context/county-life-expectancy/',
+      noun: 'This county',
+      scope: 'county',
+    },
+    {
+      id: 'local-segregation-states',
+      name: 'Segregation by State (2000–2024)',
+      baseUrl: 'context/states/',
+      noun: 'This state',
+      scope: 'state',
+      maxChunks: 1,
+    },
+  ].map((area) =>
+    createChunkedAreaLayer(
+      {
+        id: area.id,
+        name: area.name,
+        baseUrl: area.baseUrl,
+        ...COUNTY_LAYER_OPTIONS,
+        ...(area.maxChunks && { maxChunks: area.maxChunks }),
+        icon: '◐',
+        source: 'LTDB / ACS 2020–2024',
+        sourceNote: AREA_SEGREGATION_NOTE(area.scope),
+        fillAlpha: 0.6,
+        variants: SEGREGATION_GROUPS.map((pair) => {
+          const key = `seg_${pair.key}24`;
+          return {
+            id: pair.key,
+            label: pair.label,
+            title: `${pair.label} dissimilarity index by ${area.scope}, 2020–24`,
+            featureColor: (p) =>
+              binOf(DISSIMILARITY_BINS, p[key])?.color || NO_DATA_COLOR,
+            legend: binLegend(DISSIMILARITY_BINS, key),
+            featureSummary: (p) => areaSegregationSummary(p, area.noun),
+          };
+        }),
+        featureColor: () => NO_DATA_COLOR,
+      },
+      services,
+    ),
+  );
+
   // Enumeration districts, one layer per census; from far out, each city's
   // outline for that census.
   const enumerationDistrictLayers = ENUMERATION_DISTRICT_YEARS.map((entry) =>
@@ -1602,6 +1748,54 @@ export function createInfrastructureLayers(services) {
       services,
     );
   });
+  // Five-year blocks for comparison: NTIA adult internet use by state, and
+  // ASU household broadband by county (scripts/build-internet-history-layers.mjs).
+  const ntiaStates = createChunkedAreaLayer(
+    {
+      id: 'local-internet-ntia-states',
+      name: 'Internet Use, Adults 15+ (states, NTIA)',
+      baseUrl: 'context/states/',
+      ...COUNTY_LAYER_OPTIONS,
+      maxChunks: 1,
+      icon: '⌁',
+      source: 'NTIA Internet Use Survey',
+      sourceNote: NTIA_SOURCE_NOTE,
+      variants: INTERNET_BLOCKS.map((block) => ({
+        id: `use_${block}`,
+        label: blockLabel(block),
+        title: `${blockLabel(block)}: adults 15+ who use the internet (NTIA, state estimates)`,
+        featureColor: (p) =>
+          binOf(INTERNET_BINS, p[`use_${block}`])?.color || NO_DATA_COLOR,
+        legend: binLegend(INTERNET_BINS, `use_${block}`),
+        featureSummary: (p) => ntiaStateSummary(block, p),
+      })),
+      featureColor: () => NO_DATA_COLOR,
+    },
+    services,
+  );
+  const asuCounties = createChunkedAreaLayer(
+    {
+      id: 'local-internet-asu-counties',
+      name: 'Broadband at Home, ASU Estimates (counties)',
+      baseUrl: 'context/county-life-expectancy/',
+      ...COUNTY_LAYER_OPTIONS,
+      icon: '⌁',
+      source: 'ASU Technology, Data and Society',
+      sourceNote: ASU_SOURCE_NOTE,
+      // ASU ends in 2018: its last block is 2015–18.
+      variants: INTERNET_BLOCKS.slice(0, 4).map((block) => ({
+        id: `asu${block}`,
+        label: blockLabel(block, block === 2015 ? 2018 : block + 4),
+        title: `${blockLabel(block, block === 2015 ? 2018 : block + 4)}: households with broadband at home (ASU county estimates)`,
+        featureColor: (p) =>
+          binOf(INTERNET_BINS, p[`asu${block}`])?.color || NO_DATA_COLOR,
+        legend: binLegend(INTERNET_BINS, `asu${block}`),
+        featureSummary: (p) => asuCountySummary(block, p),
+      })),
+      featureColor: () => NO_DATA_COLOR,
+    },
+    services,
+  );
 
   return [
     datacenters,
@@ -1626,9 +1820,12 @@ export function createInfrastructureLayers(services) {
     traumaCenters,
     publicHousing,
     ...segregationLayers,
+    ...areaSegregationLayers,
     ...enumerationDistrictLayers,
     ...socialLayers,
     ...internetLayers,
+    ntiaStates,
+    asuCounties,
     gva2015,
     mkdb,
     chicagoHomicides,

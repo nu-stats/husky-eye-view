@@ -188,6 +188,16 @@ test('infrastructure factory preserves identity and creates independent state wi
         name: `Segregation ${label} (dissimilarity)`,
         source,
       })),
+      {
+        id: 'local-segregation-counties',
+        name: 'Segregation by County (2000–2024)',
+        source: 'LTDB / ACS 2020–2024',
+      },
+      {
+        id: 'local-segregation-states',
+        name: 'Segregation by State (2000–2024)',
+        source: 'LTDB / ACS 2020–2024',
+      },
       ...['1900', '1910', '1920', '1930'].map((year) => ({
         id: `local-enumeration-districts-${year}`,
         name: `Enumeration Districts ${year}`,
@@ -223,6 +233,16 @@ test('infrastructure factory preserves identity and creates independent state wi
         id: 'local-internet-highspeed-tracts',
         name: 'High-Speed Internet at Home (tracts)',
         source: 'Census ACS',
+      },
+      {
+        id: 'local-internet-ntia-states',
+        name: 'Internet Use, Adults 15+ (states, NTIA)',
+        source: 'NTIA Internet Use Survey',
+      },
+      {
+        id: 'local-internet-asu-counties',
+        name: 'Broadband at Home, ASU Estimates (counties)',
+        source: 'ASU Technology, Data and Society',
       },
       {
         id: 'local-gva-2015',

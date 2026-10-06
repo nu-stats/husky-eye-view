@@ -13,7 +13,7 @@
   background: rgba(10, 12, 16, 0.9);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
   color: var(--text-primary, #e8eaed);
-  font-family: var(--font-sans, 'Inter', sans-serif);
+  font-family: var(--font-sans);
   transform: translateX(-50%);
   backdrop-filter: blur(14px);
 }
@@ -27,12 +27,12 @@
   margin-bottom: 10px;
 }
 .curated-header strong {
-  font: 700 13px/1 var(--font-mono, monospace);
+  font: 700 13px/1 var(--font-mono);
   letter-spacing: 0.12em;
 }
 .curated-kicker {
   color: #c8102e;
-  font: 700 9px/1 var(--font-mono, monospace);
+  font: 700 9px/1 var(--font-mono);
   letter-spacing: 0.12em;
 }
 .curated-close {
@@ -66,7 +66,7 @@
 .curated-label {
   margin-top: 4px;
   color: var(--text-secondary, #b6b9be);
-  font: 700 9px/1.2 var(--font-mono, monospace);
+  font: 700 9px/1.2 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -120,7 +120,7 @@
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
   color: inherit;
-  font: 700 10px/1 var(--font-mono, monospace);
+  font: 700 10px/1 var(--font-mono);
   letter-spacing: 0.08em;
   cursor: pointer;
 }
@@ -171,7 +171,7 @@
   grid-column: 1 / -1;
   margin-top: 4px;
   color: var(--text-secondary, #b6b9be);
-  font: 700 9px/1.2 var(--font-mono, monospace);
+  font: 700 9px/1.2 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -225,4 +225,81 @@
   border-color: #c8102e;
   background: rgba(200, 16, 46, 0.32);
   color: #fff;
+}
+
+/* Your data: the upload section, the MY DATA toggle and the map legend. */
+.curated-upload {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.curated-file {
+  font-size: 11px;
+  color: inherit;
+}
+.curated-upload-info {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-secondary, #b6b9be);
+}
+.curated-upload-info:empty,
+.curated-upload-options[hidden] {
+  display: none;
+}
+.curated-upload-options {
+  display: grid;
+  gap: 6px;
+}
+.curated-upload-label {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  background: #15181d;
+  color: inherit;
+}
+.curated-upload-actions {
+  display: flex;
+  gap: 6px;
+}
+.curated-mydata.active {
+  border-color: #ffc72c;
+  background: rgba(255, 199, 44, 0.25);
+  color: #fff;
+}
+.curated-legend {
+  position: fixed;
+  right: 24px;
+  bottom: 140px;
+  z-index: 140;
+  display: grid;
+  gap: 3px;
+  max-width: 260px;
+  padding: 10px 12px;
+  border-left: 4px solid #ffc72c;
+  border-radius: 4px;
+  background: rgba(8, 10, 14, 0.82);
+  color: #fff;
+  font-size: 11px;
+}
+.curated-legend[hidden] {
+  display: none;
+}
+.curated-legend strong {
+  margin-bottom: 2px;
+  font-size: 12px;
+}
+.curated-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  border-radius: 2px;
+  vertical-align: -2px;
 }

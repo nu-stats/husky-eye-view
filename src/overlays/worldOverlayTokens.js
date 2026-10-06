@@ -16,13 +16,20 @@ export const WORLD_OVERLAY_STYLE = Object.freeze({
   detail: 'rgba(147, 161, 173, 0.92)',
   leader: 'rgba(200, 200, 200, 0.58)',
   accent: '#cfcfcf',
-  fontLabel: '500 10px "JetBrains Mono", monospace',
-  fontTrack: '600 10px "JetBrains Mono", monospace',
-  fontTitle: '600 12px "JetBrains Mono", monospace',
-  fontDetail: '500 10.5px "JetBrains Mono", monospace',
-  fontSelected: '600 13px "JetBrains Mono", monospace',
-  fontTrackedTitle: '600 13px "JetBrains Mono", monospace',
-  fontTrackedDetail: '500 11px "JetBrains Mono", monospace',
+  fontLabel:
+    '500 10px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif',
+  fontTrack:
+    '600 10px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif',
+  fontTitle:
+    '600 12px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif',
+  fontDetail:
+    '500 10.5px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif',
+  fontSelected:
+    '600 13px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif',
+  fontTrackedTitle:
+    '600 13px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif',
+  fontTrackedDetail:
+    '500 11px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif',
   radius: 4,
   anchorDotRadius: 3.2,
   anchorDotStrokeWidth: 1,
@@ -37,7 +44,8 @@ export const CCTV_THUMBNAIL_STYLE = Object.freeze({
   titleChars: 15,
   background: WORLD_OVERLAY_STYLE.background,
   titleColor: 'rgba(210, 236, 244, 0.95)',
-  titleFont: '600 10px "JetBrains Mono", monospace',
+  titleFont:
+    '600 10px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif',
   accent: 'rgb(207, 207, 207)',
   leader: 'rgba(207, 207, 207, 0.6)',
   rule: 'rgba(207, 207, 207, 0.95)',
@@ -47,8 +55,9 @@ export const CCTV_THUMBNAIL_STYLE = Object.freeze({
 
 /** Detection fonts and compositor glow retained exactly from the source renderer. */
 export const DETECTION_STYLE = Object.freeze({
-  font: '10px JetBrains Mono, monospace',
-  microFont: '9px JetBrains Mono, monospace',
+  font: '10px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif',
+  microFont:
+    '9px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif',
   glowPx: 3,
 });
 

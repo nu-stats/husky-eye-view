@@ -377,6 +377,20 @@ export const DATA_CREDITS = [
       '<a href="https://s4.ad.brown.edu/Projects/UTP2/ncities.htm" target="_blank" rel="noopener">Urban Transition Historical GIS Project</a>, S4, Brown University',
   },
   {
+    key: 'ntia-internet-use-survey',
+    html:
+      'Internet use by state, adults 15+: ' +
+      '<a href="https://www.ntia.gov/data/explorer" target="_blank" rel="noopener">NTIA Internet Use Survey (Data Explorer)</a>, ' +
+      'U.S. Census Bureau CPS Computer and Internet Use Supplement',
+  },
+  {
+    key: 'asu-county-broadband',
+    html:
+      'Broadband at home by county, 2000–2018: Caroline Tolbert and Karen Mossberger (2020), ' +
+      '<a href="https://techdatasociety.asu.edu/broadband-data-portal/county-data" target="_blank" rel="noopener">U.S. CPS & ACS Geographic Estimates of Internet Use, 1997–2018</a>, ' +
+      'Technology, Data and Society, Arizona State University',
+  },
+  {
     key: 'chicago-historical-homicides',
     html:
       'Chicago homicides 1870–1930 (key-locked): Leigh Bienen, ' +

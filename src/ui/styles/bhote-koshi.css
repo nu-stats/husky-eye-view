@@ -426,11 +426,7 @@
   border-radius: 4px;
   color: var(--accent);
   background: rgba(7, 25, 35, 0.9);
-  font:
-    22px/1 'JetBrains Mono',
-    'SFMono-Regular',
-    Consolas,
-    monospace;
+  font: 22px/1 var(--font-mono);
   cursor: pointer;
 }
 

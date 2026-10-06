@@ -32,7 +32,8 @@ const INK = Object.freeze({
   muted: '#8a8984',
   grid: '#e6e5e0',
 });
-const FONT = '"Inter", "Segoe UI", Helvetica, Arial, sans-serif';
+const FONT =
+  '"Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif';
 
 /** 2026-10-04 in the viewer's local time (file names, report dates). */
 export function localDate(date = new Date()) {
@@ -494,19 +495,19 @@ export async function buildReport(
       const short = { ...layer, unit: '' };
       pdf.text(cols[0] + 14, y, `${city.name}, ${city.stateAbbr}`, { size: 9 });
       pdf.text(cols[1] + 4, y, formatValue(short, v.city), { size: 9 });
-      if (v.history) {
-        // City-only measures (segregation): earlier years, not county/state.
+      pdf.text(cols[2] + 4, y, formatValue(short, v.county), { size: 9 });
+      pdf.text(cols[3] + 4, y, formatValue(short, v.state), { size: 9 });
+      if (v.history && Object.values(v.history).some(Number.isFinite)) {
+        // Segregation also carries the city's earlier years.
+        y += 12;
         pdf.text(
-          cols[2] + 4,
+          cols[0] + 24,
           y,
-          Object.entries(v.history)
+          `City earlier: ${Object.entries(v.history)
             .map(([year, value]) => `${year}: ${formatValue(short, value)}`)
-            .join('   '),
-          { size: 9, color: '#52514e' },
+            .join('   ')}`,
+          { size: 8, color: '#52514e' },
         );
-      } else {
-        pdf.text(cols[2] + 4, y, formatValue(short, v.county), { size: 9 });
-        pdf.text(cols[3] + 4, y, formatValue(short, v.state), { size: 9 });
       }
       y += 14;
     }

@@ -320,8 +320,7 @@ export const CURATED_LAYERS = {
         decimals: 1,
         vintage: '2020–2024 (with 2000 and 2010)',
         higherIs: 'worse',
-        cityOnly: true,
-        note: `Dissimilarity index of ${noun} and non-Hispanic white residents across the city's census tracts (0 = evenly spread, 100 = completely separated). City measure only. 2000 and 2010 values are included for comparison.`,
+        note: `Dissimilarity index of ${noun} and non-Hispanic white residents across the census tracts of the city, its principal county and its state (0 = evenly spread, 100 = completely separated). The city's 2000 and 2010 values are included for comparison.`,
         source:
           'Longitudinal Tract Data Base (LTDB), Spatial Structures in the Social Sciences, Brown University (2000, 2010 census counts on 2010 tracts); U.S. Census Bureau, ACS 2020–2024 5-year estimates, table B03002, moved onto 2010 tracts. Index computed by Husky Eye View.',
         table: 'LTDB; ACS B03002',
@@ -556,6 +555,14 @@ function readSegregation() {
         segregationCache.set(String(properties.geoid), properties);
       }
   return segregationCache;
+}
+
+const SEGREGATION_AREAS = 'data/source/segregation/area-indices.json';
+let segregationAreasCache = null;
+/** County and state dissimilarity indices (scripts/build-segregation-layers.mjs). */
+function readSegregationAreas() {
+  segregationAreasCache ||= JSON.parse(readFileSync(SEGREGATION_AREAS, 'utf8'));
+  return segregationAreasCache;
 }
 
 function readPopulation() {
@@ -813,8 +820,12 @@ function main() {
           state: acs.state[city.stateFips]?.[layer.acs] ?? null,
         };
       }
-      // Segregation: the city's own index (no county or state equivalent).
+      // Segregation: the city's index, and the same index over all tracts of
+      // its principal county and its state (scripts/build-segregation-layers.mjs).
       const segregation = readSegregation().get(city.id) || {};
+      const areas = readSegregationAreas();
+      const countySeg = areas.county[city.countyFips] || {};
+      const stateSeg = areas.state[city.stateFips] || {};
       for (const [key, layer] of Object.entries(CURATED_LAYERS)) {
         if (!layer.segregation) continue;
         const value = (suffix) =>
@@ -823,8 +834,12 @@ function main() {
             : null;
         values[key] = {
           city: value('24'),
-          county: null,
-          state: null,
+          county: Number.isFinite(countySeg[`${layer.segregation}24`])
+            ? countySeg[`${layer.segregation}24`]
+            : null,
+          state: Number.isFinite(stateSeg[`${layer.segregation}24`])
+            ? stateSeg[`${layer.segregation}24`]
+            : null,
           history: { 2000: value('00'), 2010: value('10') },
         };
       }

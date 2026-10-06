@@ -911,6 +911,8 @@ const schemas = [
               'segregation-aw',
               'gva-2015',
               'mkdb',
+              // The user's uploaded file, once one is added in the panel.
+              'my-data',
             ],
           },
           minItems: 1,

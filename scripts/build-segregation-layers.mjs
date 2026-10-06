@@ -196,6 +196,46 @@ function outline(geometry) {
     : { type: 'MultiPolygon', coordinates: polygons };
 }
 
+/** Where the county and state indices go (read by build-internet-history-layers). */
+export const AREA_OUT = 'data/source/segregation/area-indices.json';
+
+/**
+ * Dissimilarity for every county or state (all of its 2010 tracts, same
+ * method and minimums as the cities): {areaId: {pop00, bw00, hw00, aw00, ...}}.
+ */
+export function areaIndices(byYear, areaOf) {
+  const out = {};
+  for (const year of YEARS) {
+    const byArea = new Map();
+    for (const [tract, row] of byYear[year]) {
+      if (!row || !(row.pop > 0)) continue;
+      const area = areaOf(tract);
+      if (!byArea.has(area)) byArea.set(area, []);
+      byArea.get(area).push(row);
+    }
+    for (const [area, rows] of byArea) {
+      const values = (out[area] ||= {});
+      const totals = rows.reduce(
+        (sum, r) => {
+          for (const key of Object.keys(sum)) sum[key] += r[key];
+          return sum;
+        },
+        { pop: 0, white: 0, black: 0, asian: 0, hispanic: 0 },
+      );
+      values[`pop${year}`] = Math.round(totals.pop);
+      values[`tracts${year}`] = rows.length;
+      for (const [key, group] of Object.entries(GROUPS))
+        values[`${key}${year}`] =
+          rows.length >= MIN_TRACTS &&
+          totals[group] >= MIN_GROUP &&
+          totals.white >= MIN_GROUP
+            ? dissimilarity(rows, group, 'white')
+            : null;
+    }
+  }
+  return out;
+}
+
 const ordinal = (n) => {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
@@ -349,6 +389,16 @@ async function main() {
   console.log(
     `  ${ordinal(1)}… check: Detroit`,
     JSON.stringify(results.get('2622000')).slice(0, 300),
+  );
+  // Counties and states, for their own layers and for Curated Flights.
+  const areas = {
+    note: 'Dissimilarity (0-100) vs non-Hispanic white residents over 2010 tracts; LTDB 2000/2010, ACS 2020-2024 B03002 moved onto 2010 tracts. scripts/build-segregation-layers.mjs',
+    county: areaIndices(byYear, (tract) => tract.slice(0, 5)),
+    state: areaIndices(byYear, (tract) => tract.slice(0, 2)),
+  };
+  writeFileSync(AREA_OUT, JSON.stringify(areas));
+  console.log(
+    `area indices: ${Object.keys(areas.county).length} counties, ${Object.keys(areas.state).length} states -> ${AREA_OUT}; Cook County 2024: ${JSON.stringify(areas.county['17031'])}`,
   );
 }
 

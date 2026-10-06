@@ -198,12 +198,15 @@ export function createFrames({ state: layerState, services, parts, source }) {
     ctx.strokeRect(36, 36, w - 72, h - 72);
 
     ctx.fillStyle = 'rgba(170, 242, 255, 0.95)';
-    ctx.font = '600 32px "JetBrains Mono", monospace';
+    ctx.font =
+      '600 32px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif';
     ctx.fillText(label.slice(0, 42), 46, 74);
     ctx.fillStyle = 'rgba(127, 216, 231, 0.8)';
-    ctx.font = '500 24px "JetBrains Mono", monospace';
+    ctx.font =
+      '500 24px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif';
     ctx.fillText(city.toUpperCase(), 46, 112);
-    ctx.font = '500 21px "JetBrains Mono", monospace';
+    ctx.font =
+      '500 21px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif';
     ctx.fillText(status.slice(0, 58), 46, h - 42);
   }
 

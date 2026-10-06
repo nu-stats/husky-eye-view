@@ -1016,18 +1016,60 @@ STEP 62: Overview video and guide remade (v0.2.0)
     Flights; label size moved beside POWER UP. The research-key take is reused.
   - The guide gained 5.4-5.6, 7.4 (how the homicides were placed), label size
     (10.1), and photos and clips moved to Curated Flights (7.5).
+  - Same day, re-shot smooth: the recorder films through Chrome's screencast
+    (desktop capture saw only ~2 frames a second of the globe). The opening now
+    shows life expectancy alone, a clean map, then HOLC alone. A narrated sample
+    Curated Flight (Boston -> Seattle -> New York) joined the release.
+
+
+STEP 63: Northeastern fonts; internet and segregation comparisons (v0.2.1)
+-------------------------------------------------------------------------------
+  - Fonts: Lato everywhere (Northeastern's typeface for digital use), with Real
+    Head Pro first in the stack for computers that have it. The Curated Flights
+    PDF keeps its built-in Helvetica.
+  - Internet Use, Adults 15+ (states, NTIA): the NTIA Internet Use Survey for
+    every state, in five-year blocks (2000-04 ... 2020-24) averaging the surveys
+    in each, with standard errors and every NTIA measure on the card.
+  - Broadband at Home, ASU Estimates (counties): Tolbert & Mossberger's county
+    estimates, 2000-04 to 2015-18 (sparse before 2013). No shapefiles exist for
+    either source; both are joined to Census outlines
+    (scripts/build-internet-history-layers.mjs, scripts/extract-asu-broadband.py).
+  - Segregation by County and by State (2000, 2010, 2020-24): the city method
+    over all of an area's tracts. Curated Flights now compares the city's
+    segregation with its county and state.
+  - 75 layers. Census state outlines live in public/context/states/.
+  - Your own data in Curated Flights: a CSV, GeoJSON or zipped shapefile is read
+    in the browser (never uploaded), joined by census GEOIDs (tract, block group,
+    county, place, state) or latitude/longitude, and becomes one more flight
+    layer: its own stop in each city (city, county and state values), gold dots
+    beside every other layer, a MY DATA toggle and legend, and rows, charts and a
+    labeled section in the downloads (src/curated/userData.js, userShapes.js,
+    userOverlay.js). Voice: "include my data".
+  - Pinokio now opens the app at the same address every time,
+    http://127.0.0.1:4242 (HEV_PORT to change it; a busy port falls back to a
+    free one for that launch).
+  - Walking View is switched off for now: Google's photorealistic tiles are built
+    from aerial photos and look melted at eye level. Drone View stays.
+  - Overview video and the sample Curated Flight re-shot: the Data Layers panel
+    closes after each switch, county and state segregation, and the upload
+    (CDC PLACES 2025 uninsured adults by tract) in both videos.
 
 
 ===============================================================================
 WHERE THINGS STAND (October 6, 2026)
 ===============================================================================
-Layers:     71. Newest: Segregation (3), Enumeration Districts (4) and Chicago
-            Homicides 1870-1930 (locked, own key), plus the Time Lens view. All are on
-            voice's list. GVA and MKDB need the research key.
-Views:      Cockpit (planes, helicopters), Drone View, Walking View, Time Lens.
+Layers:     75. Newest: NTIA internet use by state, ASU broadband by county, and
+            segregation by county and by state (Step 63); before them Segregation by
+            city (3), Enumeration Districts (4) and Chicago Homicides 1870-1930 (locked,
+            own key), plus the Time Lens view. All are on voice's list. GVA and MKDB
+            need the research key.
+Views:      Cockpit (planes, helicopters), Drone View, Time Lens. Walking View is
+            switched off for now (Step 63).
 Curated:    Curated Flights (own key) compares up to 3 cities on up to 6 layers
-            (segregation included), with PHOTO and 1-minute REC during the flight and
-            report, data and chart downloads (Steps 52, 58).
+            (segregation included, and the user's own uploaded data), with PHOTO and
+            1-minute REC during the flight and report, data and chart downloads
+            (Steps 52, 58, 63).
+Launch:     Pinokio opens http://127.0.0.1:4242 every time.
 Look:       Northeastern logo, grey interface, research groups first in Data Layers,
             research profile hides the inherited extras ("Show all layers" to see them),
             first run and Scenes start with Boston.
@@ -1040,10 +1082,10 @@ Live feeds: US-focused (Step 39).
 HOLC:       314 cities from Mapping Inequality, Boston included (Step 48); every card
             links to its 1930s area description.
 Media:      Overview video, captions and guide PDF on the latest GitHub release only
-            (v0.2.0; video and guide from Step 62). The release-media workflow moves
-            them to each new release.
-Tests:      All 4,345 unit tests pass. Format, import-direction and package-boundary
-            checks are clean.
+            (v0.2.1; video, sample flight and guide from Step 63). The release-media
+            workflow moves them to each new release.
+Tests:      4,367 unit tests, none failing. Format, import-direction and
+            package-boundary checks are clean.
 
 Backups:    C:\Users\jstow\Documents\HuskyEyeView-backups\
               husky-eye-view-2026-09-26-before-optimization.tar.gz
@@ -1058,6 +1100,8 @@ Data exports:
             mkdb_incidents_geocoded.csv
 
 Git history on main (newest first):
+            (release)  Your data in Curated Flights; internet and segregation
+                       comparisons; Northeastern fonts (tagged v0.2.1)
             (release)  History layers, Time Lens, Chicago homicides (tagged v0.2.0)
             7ef08a24  Internet Access by county and by tract (tagged v0.1.9)
             472f3fe3  Photos and clips, Drone and Walking View, Curated Flights,

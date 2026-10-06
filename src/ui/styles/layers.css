@@ -557,7 +557,7 @@
   gap: 10px;
   padding: 1px 3px 7px;
   border-bottom: 1px solid rgba(188, 188, 188, 0.14);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 #space-mission-panel-host .space-mission-roster-header > div {
   display: grid;
@@ -603,7 +603,7 @@
   border-radius: 4px;
   color: #d8ffff;
   background: rgba(102, 102, 102, 0.045);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   text-align: left;
   cursor: pointer;
   transition:
@@ -683,9 +683,7 @@
 #space-mission-panel-host .space-mission-roster-empty {
   padding: 18px 10px;
   color: rgba(190, 230, 230, 0.7);
-  font:
-    9px/1.5 'JetBrains Mono',
-    monospace;
+  font: 9px/1.5 var(--font-mono);
   letter-spacing: 0.09em;
   text-align: center;
 }
@@ -693,9 +691,7 @@
   margin: 0;
   padding: 3px;
   color: rgba(190, 230, 230, 0.7);
-  font:
-    9px/1.4 'JetBrains Mono',
-    monospace;
+  font: 9px/1.4 var(--font-mono);
   letter-spacing: 0.08em;
   text-align: center;
 }
@@ -706,9 +702,7 @@
   padding: 8px 0 2px;
   border-top: 1px solid rgba(188, 188, 188, 0.18);
   color: rgba(190, 230, 230, 0.7);
-  font:
-    8px 'JetBrains Mono',
-    monospace;
+  font: 8px var(--font-mono);
   letter-spacing: 0.18em;
 }
 #space-mission-panel .space-mission-view-header button {
@@ -729,9 +723,7 @@
   gap: 8px;
   padding: 12px 0;
   color: var(--hud-cyan, #bcbcbc);
-  font:
-    11px 'JetBrains Mono',
-    monospace;
+  font: 11px var(--font-mono);
   letter-spacing: 0.08em;
 }
 #space-mission-panel .space-mission-detail strong {
@@ -752,9 +744,7 @@
 #space-mission-panel .mission-data-section h4 {
   margin: 0 0 6px;
   color: #bcbcbc;
-  font:
-    10px 'JetBrains Mono',
-    monospace;
+  font: 10px var(--font-mono);
   letter-spacing: 0.17em;
 }
 #space-mission-panel .mission-table-scroll {
@@ -765,9 +755,7 @@
   border-collapse: collapse;
   table-layout: fixed;
   color: #d8ffff;
-  font:
-    9px 'JetBrains Mono',
-    monospace;
+  font: 9px var(--font-mono);
   letter-spacing: 0.025em;
 }
 #space-mission-panel .mission-data-table th {
@@ -819,9 +807,7 @@
   align-items: center;
   justify-content: space-between;
   color: rgba(190, 230, 230, 0.68);
-  font:
-    8px 'JetBrains Mono',
-    monospace;
+  font: 8px var(--font-mono);
   letter-spacing: 0.16em;
 }
 #space-mission-panel .mission-replay-speed-header output {
@@ -835,9 +821,7 @@
   display: flex;
   justify-content: space-between;
   color: rgba(190, 230, 230, 0.66);
-  font:
-    7px 'JetBrains Mono',
-    monospace;
+  font: 7px var(--font-mono);
   letter-spacing: 0.08em;
 }
 
@@ -859,9 +843,7 @@
     rgba(255, 159, 67, 0.08),
     rgba(188, 188, 188, 0.08)
   );
-  font:
-    9px 'JetBrains Mono',
-    monospace;
+  font: 9px var(--font-mono);
   letter-spacing: 0.16em;
   cursor: pointer;
   transition:
@@ -912,9 +894,7 @@
   border-radius: 4px;
   color: #bcbcbc;
   background: rgba(188, 188, 188, 0.08);
-  font:
-    15px/1 'JetBrains Mono',
-    monospace;
+  font: 15px/1 var(--font-mono);
   cursor: pointer;
   transition:
     border-color 0.15s ease,
@@ -960,9 +940,7 @@
   border: 1px solid rgba(188, 188, 188, 0.55);
   background: rgba(8, 34, 42, 0.72);
   color: #bcbcbc;
-  font:
-    11px 'JetBrains Mono',
-    monospace;
+  font: 11px var(--font-mono);
   letter-spacing: 0.12em;
   cursor: pointer;
   transition:
@@ -987,9 +965,7 @@
   min-width: 58px;
   text-align: center;
   color: #d8ffff;
-  font:
-    11px 'JetBrains Mono',
-    monospace;
+  font: 11px var(--font-mono);
   letter-spacing: 0.1em;
 }
 #space-mission-panel button {
@@ -1103,9 +1079,7 @@
   left: 70px;
   min-width: 188px;
   color: #fff;
-  font:
-    9px/1.38 'JetBrains Mono',
-    monospace;
+  font: 9px/1.38 var(--font-mono);
   letter-spacing: 0.075em;
   text-shadow:
     0 1px 2px #001018,
@@ -1366,11 +1340,7 @@
   /* The saucer is a COLOR-font glyph: `color` and `text-shadow` cannot touch
      it, so the dim/lit states are carried by `filter` alongside the border and
      fill. 14px sits inside the 26px chip with breathing room. */
-  font:
-    14px/1 ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    monospace;
+  font: 14px/1 var(--font-mono);
   filter: grayscale(0.6) opacity(0.62);
   cursor: pointer;
   transition:
@@ -1616,7 +1586,7 @@
   background: rgba(10, 14, 18, 0.96);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   color: #f0f4f7;
-  font: 13px/1.45 var(--font-ui, sans-serif);
+  font: 13px/1.45 var(--font-sans);
   transform: translate(-50%, -50%);
 }
 .research-key-prompt h2 {

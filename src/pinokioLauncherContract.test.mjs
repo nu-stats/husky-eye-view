@@ -14,7 +14,11 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { isDirectInvocation } from '../scripts/pinokio-install.mjs';
-import { loadViteFromCanonicalRoot } from '../scripts/pinokio-start.mjs';
+import {
+  FIXED_PORT,
+  choosePort,
+  loadViteFromCanonicalRoot,
+} from '../scripts/pinokio-start.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -66,6 +70,21 @@ test('Pinokio start has one fail-closed launcher process', () => {
     script.run[0].params.env.PINOKIO_SHARE_VAR,
     '{{env.PINOKIO_SHARE_VAR || "__gev_sharing_disabled__"}}',
   );
+});
+
+test('Pinokio start opens on the same port every time, with a spare when busy', async () => {
+  const script = require('../pinokio/start.js');
+  assert.equal(script.run[0].params.env.PORT, '{{port}}');
+  assert.equal(
+    script.run[0].params.env.HEV_PORT,
+    `{{env.HEV_PORT || "${FIXED_PORT}"}}`,
+  );
+  const free = async () => true;
+  const busy = async () => false;
+  assert.equal(await choosePort({ PORT: '42005' }, free), 4242);
+  assert.equal(await choosePort({ PORT: '42005', HEV_PORT: '5000' }, free), 5000);
+  assert.equal(await choosePort({ PORT: '42005' }, busy), 42005);
+  await assert.rejects(choosePort({}, busy), /valid local port/);
 });
 
 test('Pinokio install records success explicitly instead of trusting node_modules', async () => {

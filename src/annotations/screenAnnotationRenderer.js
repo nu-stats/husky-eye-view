@@ -840,7 +840,7 @@ function injectStyles() {
   .gev-anno-arrow { filter: drop-shadow(0 0 4px currentColor); stroke-linecap: round; }
   .gev-anno-leader { stroke-dasharray: 2 3; }
   .gev-anno-card { fill: rgba(8,18,28,0.78); stroke: rgba(255,255,255,0.14); stroke-width: 1; }
-  .gev-anno-text { fill: #eaf6ff; font: 600 13px "JetBrains Mono", ui-monospace, monospace; letter-spacing: 0.02em; }
+  .gev-anno-text { fill: #eaf6ff; font: 600 13px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif; letter-spacing: 0.02em; }
   /* draw-on: outlined shapes reveal their stroke */
   .gev-draw { stroke-dasharray: 1400; stroke-dashoffset: 1400; }
   .gev-anno.gev-in .gev-draw { transition: stroke-dashoffset 900ms ease-out; stroke-dashoffset: 0; }

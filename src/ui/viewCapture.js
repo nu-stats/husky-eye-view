@@ -427,10 +427,10 @@ export class ViewCapture {
     const [first, second] = captionLines({ ...description, date });
     context.textBaseline = 'middle';
     context.fillStyle = '#FFFFFF';
-    context.font = `600 ${Math.round(strip * 0.32)}px "Inter", "Segoe UI", sans-serif`;
+    context.font = `600 ${Math.round(strip * 0.32)}px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif`;
     context.fillText(fit(context, first, textWidth), pad, top + strip * 0.33);
     context.fillStyle = 'rgba(255, 255, 255, 0.78)';
-    context.font = `400 ${Math.round(strip * 0.26)}px "Inter", "Segoe UI", sans-serif`;
+    context.font = `400 ${Math.round(strip * 0.26)}px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif`;
     context.fillText(fit(context, second, textWidth), pad, top + strip * 0.72);
     context.restore();
   }
@@ -457,7 +457,7 @@ export class ViewCapture {
     }
     const text = this._creditText(logos.length);
     if (text) {
-      context.font = `400 ${Math.round(strip * 0.24)}px "Inter", "Segoe UI", sans-serif`;
+      context.font = `400 ${Math.round(strip * 0.24)}px "Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif`;
       context.fillStyle = 'rgba(255, 255, 255, 0.85)';
       context.textBaseline = 'middle';
       const w = context.measureText(text).width;

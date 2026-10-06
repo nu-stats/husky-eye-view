@@ -65,11 +65,15 @@ const GROUND_VIEW_ROWS = Object.freeze([
     label: 'Drone View',
     meta: 'Fly 30–120 m up · W/S/A/D, Q/E height',
   }),
+  // Walking View is switched off for now (2026-10-06): at eye level the
+  // photorealistic tiles look melted. Set `off: false` to bring it back
+  // (voice: gevActions.js start_ground_view).
   Object.freeze({
     mode: 'walk',
     icon: '⛶',
     label: 'Walking View',
     meta: 'Walk the street · W/S/A/D, drag to look',
+    off: true,
   }),
 ]);
 
@@ -641,7 +645,7 @@ export class LayerPanel {
       // Walking and Drone views ride with the low flyers: a lower,
       // user-driven look at the same layers. They are views, not data.
       if (layer.id === 'lowflyers') {
-        for (const view of GROUND_VIEW_ROWS)
+        for (const view of GROUND_VIEW_ROWS.filter((row) => !row.off))
           this._toggleContainer.appendChild(this._buildViewRow(view, group));
       }
       if (layer.id === 'local-holc-redlining')

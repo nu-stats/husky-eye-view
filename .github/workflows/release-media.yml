@@ -26,7 +26,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      MEDIA: Husky_Eye_View_Overview.mp4 Husky_Eye_View_Overview.srt Husky_Eye_View_Guide.pdf
+      MEDIA: Husky_Eye_View_Overview.mp4 Husky_Eye_View_Overview.srt Husky_Eye_View_Guide.pdf Husky_Eye_View_Curated_Flight_Sample.mp4 Husky_Eye_View_Curated_Flight_Sample.srt
     steps:
       - name: Move media
         shell: bash

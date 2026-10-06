@@ -114,7 +114,10 @@ app's **POWER UP** panel; [Keys & Costs](#-api-keys) explains the options.
 
 Available on **Windows, macOS, and Linux**. The Pinokio maintainer reports
 cross-platform testing of the fixed installer. The launcher installs the
-locked dependencies, finds a free local port, and opens the app.
+locked dependencies and opens the app at the same address every time,
+**`http://127.0.0.1:4242`**, so it can be bookmarked. If that port is taken,
+it uses a free one for that launch; set `HEV_PORT` in Pinokio's environment to
+choose another fixed port.
 
 **Tried before and installation failed?** Update Pinokio and try again.
 Version 8.2 fixes the launcher installation issue;

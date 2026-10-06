@@ -51,11 +51,11 @@ export const LAYER_GROUP_NOTES = Object.freeze({
   [HEALTH_GROUP]:
     'Counties from far out; tracts appear as you zoom in to a city.',
   [HISTORY_GROUP]:
-    'Census enumeration districts 1900–1930 for ten Northern cities. HOLC: mapped cities from far out, graded areas as you zoom in. Segregation by city, 2000–2024. Public housing nationwide.',
+    'Census enumeration districts 1900–1930 for ten Northern cities. HOLC: mapped cities from far out, graded areas as you zoom in. Segregation by city, county and state, 2000–2024. Public housing nationwide.',
   [CENSUS_GROUP]:
     'ACS 2020–2024: counties from far out, census tracts as you zoom in.',
   [INTERNET_GROUP]:
-    'Counties 1998–2024; the tract layers sharpen from counties to tracts as you zoom in.',
+    'Counties 1998–2024; the tract layers sharpen from counties to tracts as you zoom in. NTIA (states) and ASU (counties) in five-year blocks for comparison.',
   [ENVIRONMENT_GROUP]:
     'Counties from far out, tracts as you zoom in; large parks first, every park closer in.',
   [RESEARCH_DATA_GROUP]: 'Each needs a key from the project owner.',
@@ -156,6 +156,29 @@ export const LAYER_MANIFEST = Object.freeze(
           : []),
       ],
     })),
+    // The same index for whole counties and states.
+    {
+      id: 'local-segregation-counties',
+      token: 'gc',
+      group: HISTORY_GROUP,
+      vintage: '2000–2024',
+      aliases: [
+        'segregation by county',
+        'county segregation',
+        'segregation counties',
+      ],
+    },
+    {
+      id: 'local-segregation-states',
+      token: 'gs',
+      group: HISTORY_GROUP,
+      vintage: '2000–2024',
+      aliases: [
+        'segregation by state',
+        'state segregation',
+        'segregation states',
+      ],
+    },
     {
       id: 'local-public-housing',
       token: 'ph',
@@ -284,6 +307,32 @@ export const LAYER_MANIFEST = Object.freeze(
         'high speed internet tracts',
         'high-speed internet by tract',
         'tract high speed internet',
+      ],
+    },
+    // Five-year blocks for comparison: NTIA states, ASU counties.
+    {
+      id: 'local-internet-ntia-states',
+      token: 'in',
+      group: INTERNET_GROUP,
+      vintage: '2000–2024',
+      aliases: [
+        'ntia internet use',
+        'ntia',
+        'internet use by state',
+        'state internet use',
+        'adult internet use',
+      ],
+    },
+    {
+      id: 'local-internet-asu-counties',
+      token: 'ia',
+      group: INTERNET_GROUP,
+      vintage: '2000–2018',
+      aliases: [
+        'asu broadband',
+        'asu internet',
+        'broadband estimates by county',
+        'county broadband history',
       ],
     },
 

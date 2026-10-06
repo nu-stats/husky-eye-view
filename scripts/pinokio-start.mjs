@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { realpathSync } from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyPinokioEnvironment } from './pinokio-environment.mjs';
@@ -9,12 +10,38 @@ import { validatePinokioSharing } from './pinokio-preflight.mjs';
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const ROOT = realpathSync(path.resolve(path.dirname(MODULE_PATH), '..'));
 
+/** The same address every launch, so a bookmark keeps working. */
+export const FIXED_PORT = 4242;
+
 function launchPort(value) {
   const port = Number.parseInt(value, 10);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error('Pinokio did not supply a valid local port.');
   }
   return port;
+}
+
+/** Whether nothing is listening on 127.0.0.1:port. */
+export function portFree(port) {
+  return new Promise((resolve) => {
+    const probe = net.createServer();
+    probe.once('error', () => resolve(false));
+    probe.listen(port, '127.0.0.1', () => probe.close(() => resolve(true)));
+  });
+}
+
+/**
+ * The fixed port (HEV_PORT, default 4242) when it is free; otherwise the
+ * spare port Pinokio supplied in PORT, so a busy port never blocks a start.
+ */
+export async function choosePort(env = process.env, isFree = portFree) {
+  const fixed = launchPort(env.HEV_PORT || FIXED_PORT);
+  if (await isFree(fixed)) return fixed;
+  const spare = launchPort(env.PORT);
+  console.log(
+    `[Pinokio] Port ${fixed} is in use; this launch uses ${spare} instead.`,
+  );
+  return spare;
 }
 
 export async function loadViteFromCanonicalRoot(
@@ -28,7 +55,7 @@ export async function loadViteFromCanonicalRoot(
 async function start() {
   applyPinokioEnvironment();
   validatePinokioSharing();
-  const port = launchPort(process.env.PORT);
+  const port = await choosePort();
   // Provider Settings routes credential writes to pinokio/ENVIRONMENT (never
   // .env) when the app runs under this launcher. The marker is set here — after
   // applyPinokioEnvironment, before Vite snapshots process.env — so the

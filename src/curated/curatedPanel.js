@@ -26,6 +26,18 @@ import {
   flightFileBase,
 } from './curatedOutputs.js';
 import {
+  USER_LAYER_KEY,
+  defaultOptions,
+  methodsFor,
+  METHODS,
+  LEVEL_PLURAL,
+  readUpload,
+  tableWithUpload,
+  userLayerValues,
+} from './userData.js';
+import { shapesForFlight } from './userShapes.js';
+import { UserDataOverlay } from './userOverlay.js';
+import {
   CLIP_MAX_SECONDS,
   ViewCapture,
   formatClipTime,
@@ -64,6 +76,14 @@ export class CuratedFlightsPanel {
       showToast,
     });
     this.table = null;
+    this.baseTable = null;
+    // The user's own file: {dataset, options}; read and kept in this tab only.
+    this.upload = null;
+    this.keepUpload = true;
+    this.overlay = new UserDataOverlay({
+      viewer,
+      requestRender: () => viewer?.scene?.requestRender?.(),
+    });
     this.unlocked = false;
     this.plan = null;
     this.result = null;
@@ -120,6 +140,7 @@ export class CuratedFlightsPanel {
       releaseRender,
       onCard: (card) => this.renderCard(card),
       onState: (state) => this.renderFlightState(state),
+      setUserLayer: (step) => this.showUpload(step),
       capture: this.capture,
     });
     this.build();
@@ -131,6 +152,7 @@ export class CuratedFlightsPanel {
     listen(window, SESSION_KEY_EVENT, () => {
       forgetCuratedTable();
       this.table = null;
+      this.baseTable = null;
       if (this.root.classList.contains('visible')) this.refreshLock();
     });
   }
@@ -255,6 +277,7 @@ export class CuratedFlightsPanel {
       );
       this.downloads.append(button);
     }
+    this.buildUpload();
     this.form = element('div', { className: 'curated-form' }, [
       element('label', {
         className: 'curated-label',
@@ -277,6 +300,7 @@ export class CuratedFlightsPanel {
           this.formatSelect,
         ]),
       ]),
+      this.uploadBox,
       this.startButton,
       this.downloads,
       element('p', {
@@ -335,6 +359,25 @@ export class CuratedFlightsPanel {
       },
       [this.photoButton, this.clipButton],
     );
+    // Show or hide the upload on the map at any point of the tour.
+    this.myDataButton = element('button', {
+      type: 'button',
+      className: 'curated-button curated-mydata',
+      textContent: 'MY DATA',
+      title: 'Show or hide your uploaded data on the map',
+      hidden: true,
+    });
+    this.myDataButton.setAttribute('aria-pressed', 'false');
+    this.myDataButton.addEventListener('click', () => {
+      this.overlay.setVisible(!this.overlay.visible);
+      this.syncUploadVisibility();
+    });
+    this.captureControls.append(this.myDataButton);
+    this.legendEl = element('aside', {
+      className: 'curated-legend',
+      hidden: true,
+      ariaLabel: 'Your data legend',
+    });
     this.flightBar = element(
       'div',
       { className: 'curated-flight-bar', hidden: true },
@@ -349,7 +392,260 @@ export class CuratedFlightsPanel {
       ],
     );
     this.controls.hidden = false;
-    document.body.append(this.root, this.cardEl, this.flightBar);
+    document.body.append(this.root, this.cardEl, this.flightBar, this.legendEl);
+  }
+
+  // ---------- your data ----------
+
+  buildUpload() {
+    this.fileInput = element('input', {
+      type: 'file',
+      className: 'curated-file',
+      accept: '.csv,.tsv,.txt,.geojson,.json,.geojsonl,.zip',
+      ariaLabel: 'Add your own data',
+    });
+    this.fileInput.addEventListener('change', () => {
+      const file = this.fileInput.files?.[0];
+      if (file) this.addUpload(file);
+    });
+    this.uploadInfo = element('p', { className: 'curated-upload-info' });
+    this.columnSelect = element('select', { ariaLabel: 'Value column' });
+    this.methodSelect = element('select', { ariaLabel: 'How to combine' });
+    this.labelInput = element('input', {
+      type: 'text',
+      className: 'curated-upload-label',
+      ariaLabel: 'Layer name',
+      spellcheck: false,
+    });
+    this.unitInput = element('input', {
+      type: 'text',
+      className: 'curated-upload-label',
+      ariaLabel: 'Unit',
+      placeholder: 'e.g. % of adults',
+      spellcheck: false,
+    });
+    this.keepBox = element('input', { type: 'checkbox', checked: true });
+    const changed = () => {
+      if (!this.upload) return;
+      const column = this.columnSelect.value || null;
+      this.upload.options = {
+        ...this.upload.options,
+        column,
+        method: this.methodSelect.value,
+        label: this.labelInput.value.trim() || 'My data',
+        unit: this.unitInput.value.trim(),
+      };
+      this.applyUpload();
+    };
+    for (const control of [this.columnSelect, this.methodSelect])
+      control.addEventListener('change', changed);
+    this.labelInput.addEventListener('change', changed);
+    this.unitInput.addEventListener('change', changed);
+    this.keepBox.addEventListener('change', () => {
+      this.keepUpload = this.keepBox.checked;
+    });
+    const show = element('button', {
+      type: 'button',
+      className: 'curated-button',
+      textContent: 'SHOW ON MAP',
+      title: 'Draw your data on the map now, with any other layers',
+    });
+    show.addEventListener('click', () => this.previewUpload());
+    const remove = element('button', {
+      type: 'button',
+      className: 'curated-button',
+      textContent: 'REMOVE',
+    });
+    remove.addEventListener('click', () => this.removeUpload());
+    this.uploadOptions = element(
+      'div',
+      { className: 'curated-upload-options', hidden: true },
+      [
+        element('label', { className: 'curated-check' }, [
+          'Value ',
+          this.columnSelect,
+        ]),
+        element('label', { className: 'curated-check' }, [
+          'Combine ',
+          this.methodSelect,
+        ]),
+        element('label', { className: 'curated-check' }, [
+          'Name ',
+          this.labelInput,
+        ]),
+        element('label', { className: 'curated-check' }, [
+          'Unit ',
+          this.unitInput,
+        ]),
+        element('label', { className: 'curated-check' }, [
+          this.keepBox,
+          ' Keep it on the map with every layer',
+        ]),
+        element('div', { className: 'curated-upload-actions' }, [show, remove]),
+      ],
+    );
+    this.uploadBox = element('div', { className: 'curated-upload' }, [
+      element('label', {
+        className: 'curated-label',
+        textContent: 'Your data (optional)',
+      }),
+      element('small', {
+        className: 'curated-hint',
+        textContent:
+          'CSV, GeoJSON or a zipped shapefile, with census GEOIDs (tract, county, place, state) or latitude/longitude. It stays in this browser tab.',
+      }),
+      this.fileInput,
+      this.uploadInfo,
+      this.uploadOptions,
+    ]);
+  }
+
+  async addUpload(file) {
+    this.uploadInfo.textContent = `Reading ${file.name}…`;
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const dataset = await readUpload(file.name, bytes);
+      this.overlay.clear();
+      this.upload = { dataset, options: defaultOptions(dataset) };
+      this.fillUploadControls();
+      this.applyUpload({ check: true });
+    } catch (error) {
+      this.uploadInfo.textContent = error.message;
+      this.fileInput.value = '';
+    }
+  }
+
+  fillUploadControls() {
+    const { dataset, options } = this.upload;
+    this.columnSelect.textContent = '';
+    if (dataset.kind === 'points' || !dataset.numeric.length)
+      this.columnSelect.append(
+        element('option', { value: '', textContent: '(none: count them)' }),
+      );
+    for (const column of dataset.numeric)
+      this.columnSelect.append(
+        element('option', { value: column, textContent: column }),
+      );
+    this.columnSelect.value = options.column || '';
+    this.methodSelect.textContent = '';
+    for (const method of methodsFor(dataset))
+      this.methodSelect.append(
+        element('option', { value: method, textContent: METHODS[method] }),
+      );
+    this.methodSelect.value = options.method;
+    this.labelInput.value = options.label;
+    this.unitInput.value = options.unit;
+    this.keepBox.checked = this.keepUpload;
+    this.uploadOptions.hidden = false;
+    const count = dataset.records.length.toLocaleString('en-US');
+    const what = LEVEL_PLURAL[dataset.level] || 'records';
+    this.uploadInfo.textContent = [
+      `${dataset.name}: ${count} ${what}, joined by ${dataset.join}.`,
+      ...dataset.notes,
+    ].join(' ');
+  }
+
+  /** Put the upload into the flight table (as a layer) and the form. */
+  applyUpload({ check = false } = {}) {
+    if (!this.baseTable) return;
+    const checked = new Set(this.readForm().layers);
+    if (check && this.upload) checked.add(USER_LAYER_KEY);
+    this.table = this.upload
+      ? tableWithUpload(
+          this.baseTable,
+          this.upload.dataset,
+          this.upload.options,
+        )
+      : this.baseTable;
+    this.renderLayerChoices();
+    for (const box of this.layerBox.querySelectorAll('input'))
+      box.checked =
+        checked.has(box.value) && Boolean(this.table.layers[box.value]);
+    // A new upload never pushes the flight past the layer limit.
+    const boxes = [...this.layerBox.querySelectorAll('input:checked')];
+    if (boxes.length > MAX_LAYERS)
+      boxes.find((box) => box.value === USER_LAYER_KEY).checked = false;
+    this.syncLayerCount();
+    if (this.plan?.ok)
+      this.plan = {
+        ...this.plan,
+        layers: this.plan.layers.filter((key) => this.table.layers[key]),
+      };
+    if (this.overlay.drawn) this.previewUpload();
+  }
+
+  removeUpload() {
+    this.upload = null;
+    this.overlay.clear();
+    this.fileInput.value = '';
+    this.uploadInfo.textContent = '';
+    this.uploadOptions.hidden = true;
+    this.applyUpload();
+    this.syncUploadVisibility();
+  }
+
+  /** Draw the upload now (shapes for ID-only files: the cities in the form). */
+  async previewUpload() {
+    if (!this.upload) return;
+    const { dataset, options } = this.upload;
+    const plan = planFlight(this.readForm(), this.table);
+    let outlines = new Map();
+    if (dataset.records.some((record) => record.geoid && !record.geometry)) {
+      if (!plan.cities.length) {
+        this.uploadInfo.textContent =
+          'Enter a city first: files with IDs only are drawn with the census shapes around the flight’s cities.';
+        return;
+      }
+      ({ outlines } = await shapesForFlight(dataset, plan.cities));
+    }
+    const drawn = this.overlay.draw(dataset, options, outlines);
+    this.syncUploadVisibility();
+    if (!drawn.areas && !drawn.points)
+      this.showToast(
+        'None of your data falls on the shapes around these cities.',
+      );
+  }
+
+  /**
+   * The flight's call at each step: true on the upload's own stop, false on
+   * any other layer, null when the tour ends.
+   */
+  showUpload(step) {
+    if (!this.overlay.drawn) return;
+    if (step === null) this.overlay.setVisible(false);
+    else {
+      // Its own stop fills the areas; beside another layer, dots.
+      this.overlay.setMode(step ? 'fill' : 'dots');
+      this.overlay.setVisible(step || this.keepUpload);
+    }
+    this.syncUploadVisibility();
+  }
+
+  syncUploadVisibility() {
+    const on = this.overlay.visible && Boolean(this.overlay.legend);
+    this.myDataButton.hidden = !this.overlay.drawn || !this.flight?.running;
+    this.myDataButton.setAttribute('aria-pressed', String(on));
+    this.myDataButton.classList.toggle('active', on);
+    this.legendEl.hidden = !on;
+    this.legendEl.textContent = '';
+    if (!on) return;
+    const { label, breaks = [], colors } = this.overlay.legend;
+    const digits = this.upload?.options.decimals ?? 1;
+    const fmt = (value) =>
+      value.toLocaleString('en-US', { maximumFractionDigits: digits });
+    this.legendEl.append(element('strong', { textContent: label }));
+    colors.forEach((color, i) => {
+      const swatch = element('i', { className: 'curated-swatch' });
+      swatch.style.background = color;
+      const text = !breaks.length
+        ? 'Your data'
+        : i === 0
+          ? `below ${fmt(breaks[0])}`
+          : i === breaks.length
+            ? `${fmt(breaks[i - 1])} and above`
+            : `${fmt(breaks[i - 1])} to ${fmt(breaks[i])}`;
+      this.legendEl.append(element('span', {}, [swatch, ` ${text}`]));
+    });
   }
 
   renderLayerJump(activeKey = this.card?.key) {
@@ -430,7 +726,14 @@ export class CuratedFlightsPanel {
     if (!this.table) {
       this.setStatus('Loading the city table…');
       try {
-        this.table = await loadCuratedTable();
+        this.baseTable = await loadCuratedTable();
+        this.table = this.upload
+          ? tableWithUpload(
+              this.baseTable,
+              this.upload.dataset,
+              this.upload.options,
+            )
+          : this.baseTable;
       } catch (error) {
         this.setStatus(error.message);
         return false;
@@ -499,6 +802,7 @@ export class CuratedFlightsPanel {
     if (!state.running) this.shotCapture?.stopClip();
     this.startButton.disabled = state.running;
     if (state.running) this.renderLayerJump();
+    this.syncUploadVisibility();
     const pause = this.controls.querySelector('[data-action="pause"]');
     if (pause) pause.textContent = state.paused ? 'RESUME' : 'PAUSE';
     if (state.step === 'flying') this.setStatus(`Flying to ${state.city}…`);
@@ -582,6 +886,34 @@ export class CuratedFlightsPanel {
       this.showToast(
         'GVA / MKDB need the research key; those layers show as locked.',
       );
+    // Your data: its city / county / state values, and its shapes on the map
+    // (kept with every layer when asked, else on its own stop only).
+    if (this.upload) {
+      this.setStatus('Matching your data to the cities…');
+      const { dataset, options } = this.upload;
+      try {
+        const shapes = await shapesForFlight(dataset, plan.cities);
+        if (plan.layers.includes(USER_LAYER_KEY))
+          for (const city of plan.cities) {
+            research[city.id] ||= {};
+            research[city.id][USER_LAYER_KEY] = userLayerValues(
+              dataset,
+              options,
+              city,
+              {
+                county: table.counties?.[city.county?.fips],
+                stateGeometry: shapes.states.get(city.stateFips),
+                tractPoints: shapes.tractPoints,
+              },
+            );
+          }
+        this.overlay.draw(dataset, options, shapes.outlines);
+        this.overlay.setMode('dots');
+        this.overlay.setVisible(this.keepUpload);
+      } catch (error) {
+        this.showToast(`Your data: ${error.message}`);
+      }
+    }
     const run = this.flight.run(plan, table, research, {
       record: plan.record,
       missing,
@@ -724,8 +1056,11 @@ export class CuratedFlightsPanel {
     this.flight.stop();
     this.capture.destroy();
     this.shotCapture.destroy();
+    this.overlay.clear();
     for (const remove of this.removers.splice(0)) remove();
     this.root.remove();
     this.cardEl.remove();
+    this.flightBar.remove();
+    this.legendEl.remove();
   }
 }
