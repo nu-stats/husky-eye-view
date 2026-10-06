@@ -25,7 +25,11 @@ import {
   dataFile,
   flightFileBase,
 } from './curatedOutputs.js';
-import { ViewCapture } from '../ui/viewCapture.js';
+import {
+  CLIP_MAX_SECONDS,
+  ViewCapture,
+  formatClipTime,
+} from '../ui/viewCapture.js';
 
 export const OPEN_EVENT = 'gev:curated-flights-open';
 const FLIGHT_CLIP_MAX_SECONDS = 15 * 60;
@@ -67,29 +71,43 @@ export class CuratedFlightsPanel {
     this.chartFormat = 'png';
     this.busy = false;
     this.removers = [];
+    const describe = () => ({
+      view: 'CURATED FLIGHT',
+      place: this.card?.city
+        ? `${this.card.city.name}, ${this.card.city.stateAbbr}`
+        : this.card?.kind === 'city'
+          ? this.card.title
+          : // Before the first card (the clip's file name): the tour itself.
+            this.plan?.ok
+            ? `${this.plan.cities.map((city) => city.name).join(' vs ')} curated flight`
+            : '',
+      layers: this.card?.layer ? [this.card.layer.label] : [],
+    });
+    const paintOverlay = (ctx, width, height) =>
+      paintCard(ctx, width, height, this.card);
+    // Records the whole flight when "Record the flight" is ticked.
     this.capture = new ViewCapture({
       viewer,
-      describe: () => ({
-        view: 'CURATED FLIGHT',
-        place: this.card?.city
-          ? `${this.card.city.name}, ${this.card.city.stateAbbr}`
-          : this.card?.kind === 'city'
-            ? this.card.title
-            : // Before the first card (the clip's file name): the tour itself.
-              this.plan?.ok
-              ? `${this.plan.cities.map((city) => city.name).join(' vs ')} curated flight`
-              : '',
-        layers: this.card?.layer ? [this.card.layer.label] : [],
-      }),
+      describe,
       holdRender,
       releaseRender,
       maxSeconds: FLIGHT_CLIP_MAX_SECONDS,
-      paintOverlay: (ctx, width, height) =>
-        paintCard(ctx, width, height, this.card),
+      paintOverlay,
       onState: (state) => {
         if (state.saved) this.showToast(`Saved to Downloads: ${state.saved}`);
         if (state.error) this.showToast(`Recording: ${state.error}`);
       },
+    });
+    // PHOTO and REC on the flight bar: a high-resolution image of the current
+    // view, or a clip of up to a minute, to document part of the flight.
+    this.shotCapture = new ViewCapture({
+      viewer,
+      describe,
+      holdRender,
+      releaseRender,
+      maxSeconds: CLIP_MAX_SECONDS,
+      paintOverlay,
+      onState: (state) => this.renderShotState(state),
     });
     this.flight = new CuratedFlight({
       viewer,
@@ -293,6 +311,30 @@ export class CuratedFlightsPanel {
       role: 'group',
       ariaLabel: 'Show a layer',
     });
+    this.photoButton = element('button', {
+      type: 'button',
+      className: 'curated-button curated-photo',
+      textContent: 'PHOTO',
+      title: 'Save a high-resolution image of this view',
+    });
+    this.photoButton.addEventListener('click', () => this.takePhoto());
+    this.clipButton = element('button', {
+      type: 'button',
+      className: 'curated-button curated-clip',
+      textContent: 'REC',
+      title: `Record a clip of up to ${CLIP_MAX_SECONDS / 60} minute`,
+    });
+    this.clipButton.setAttribute('aria-pressed', 'false');
+    this.clipButton.addEventListener('click', () => this.toggleClip());
+    this.captureControls = element(
+      'div',
+      {
+        className: 'curated-capture',
+        role: 'group',
+        ariaLabel: 'Photo and clip',
+      },
+      [this.photoButton, this.clipButton],
+    );
     this.flightBar = element(
       'div',
       { className: 'curated-flight-bar', hidden: true },
@@ -302,6 +344,7 @@ export class CuratedFlightsPanel {
           textContent: 'CURATED FLIGHT',
         }),
         this.controls,
+        this.captureControls,
         this.layerJump,
       ],
     );
@@ -416,8 +459,44 @@ export class CuratedFlightsPanel {
     );
   }
 
+  /** PHOTO during a flight: a high-resolution image of the current view. */
+  takePhoto() {
+    if (!this.flight.running) return false;
+    return this.shotCapture.snapshot();
+  }
+
+  /** REC during a flight: start or stop a clip (up to a minute). */
+  toggleClip() {
+    if (!this.shotCapture.recording) {
+      if (!this.flight.running) return false;
+      // One recorder at a time: the whole flight is already being recorded.
+      if (this.capture.recording) {
+        this.showToast('The whole flight is already being recorded.');
+        return false;
+      }
+    }
+    return this.shotCapture.toggleClip();
+  }
+
+  renderShotState(state) {
+    if (!this.photoButton) return;
+    this.photoButton.disabled = Boolean(state.busy);
+    this.clipButton.classList.toggle('recording', Boolean(state.recording));
+    this.clipButton.setAttribute(
+      'aria-pressed',
+      String(Boolean(state.recording)),
+    );
+    this.clipButton.textContent = state.recording
+      ? `STOP ${formatClipTime(state.elapsedSeconds, state.maxSeconds)}`
+      : 'REC';
+    if (state.saved) this.showToast(`Saved to Downloads: ${state.saved}`);
+    if (state.error) this.showToast(`Capture: ${state.error}`);
+  }
+
   renderFlightState(state) {
     this.flightBar.hidden = !state.running;
+    // Landing (or stopping) ends and saves a clip in progress.
+    if (!state.running) this.shotCapture?.stopClip();
     this.startButton.disabled = state.running;
     if (state.running) this.renderLayerJump();
     const pause = this.controls.querySelector('[data-action="pause"]');
@@ -644,6 +723,7 @@ export class CuratedFlightsPanel {
   destroy() {
     this.flight.stop();
     this.capture.destroy();
+    this.shotCapture.destroy();
     for (const remove of this.removers.splice(0)) remove();
     this.root.remove();
     this.cardEl.remove();

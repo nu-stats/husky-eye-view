@@ -63,12 +63,17 @@ import {
   weatherCodeLabel,
 } from '../data/regionalBrief.js';
 import { setChunkedAreaFillAlpha } from '../data/chunkedAreaLayer.js';
+import { createInfrastructureLayers } from '../data/infrastructure.js';
+import { localGeoJsonServices } from '../app/localGeojsonServices.js';
 
 export class StyleManager extends ApplicationShell {
   constructor(viewer, options = {}) {
     super(viewer, {
       ...options,
       services: {
+        // The Time Lens draws its own copy of the research layers.
+        createTimeLensLayers: (extra) =>
+          createInfrastructureLayers({ ...localGeoJsonServices, ...extra }),
         CITY_POIS,
         GLOBE_VIEW,
         LOCATION_BAR_CITY_IDS,

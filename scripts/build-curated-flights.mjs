@@ -297,6 +297,37 @@ export const CURATED_LAYERS = {
       },
     ]),
   ),
+  // Residential segregation (scripts/build-segregation-layers.mjs): a city
+  // measure only, so county and state stay empty; 2000 and 2010 ride along.
+  ...Object.fromEntries(
+    [
+      ['segregation-bw', 'bw', 'Black–white segregation', 'Black'],
+      [
+        'segregation-hw',
+        'hw',
+        'Latino–white segregation',
+        'Hispanic or Latino',
+      ],
+      ['segregation-aw', 'aw', 'Asian–white segregation', 'Asian'],
+    ].map(([key, pair, label, noun]) => [
+      key,
+      {
+        label,
+        group: 'Segregation (dissimilarity)',
+        layerId: 'local-segregation-2024',
+        segregation: pair,
+        unit: 'index (0–100)',
+        decimals: 1,
+        vintage: '2020–2024 (with 2000 and 2010)',
+        higherIs: 'worse',
+        cityOnly: true,
+        note: `Dissimilarity index of ${noun} and non-Hispanic white residents across the city's census tracts (0 = evenly spread, 100 = completely separated). City measure only. 2000 and 2010 values are included for comparison.`,
+        source:
+          'Longitudinal Tract Data Base (LTDB), Spatial Structures in the Social Sciences, Brown University (2000, 2010 census counts on 2010 tracts); U.S. Census Bureau, ACS 2020–2024 5-year estimates, table B03002, moved onto 2010 tracts. Index computed by Husky Eye View.',
+        table: 'LTDB; ACS B03002',
+      },
+    ]),
+  ),
   'gva-2015': {
     label: 'Gun deaths (GVA 2015)',
     group: 'Research data',
@@ -505,6 +536,26 @@ let acsCache = null;
 function readAcs() {
   acsCache ||= JSON.parse(readFileSync(ACS_FILE, 'utf8'));
   return acsCache;
+}
+
+const SEGREGATION_DIR = 'public/context/segregation';
+let segregationCache = null;
+/** City dissimilarity indices by 7-digit place GEOID (the segregation layers). */
+function readSegregation() {
+  if (segregationCache) return segregationCache;
+  segregationCache = new Map();
+  for (const name of readdirSync(SEGREGATION_DIR).filter((n) =>
+    n.endsWith('.geojsonl'),
+  ))
+    for (const line of readFileSync(
+      path.join(SEGREGATION_DIR, name),
+      'utf8',
+    ).split('\n'))
+      if (line.trim()) {
+        const { properties } = JSON.parse(line);
+        segregationCache.set(String(properties.geoid), properties);
+      }
+  return segregationCache;
 }
 
 function readPopulation() {
@@ -760,6 +811,21 @@ function main() {
           city: acs.place[city.id]?.[layer.acs] ?? null,
           county: acs.county[city.countyFips]?.[layer.acs] ?? null,
           state: acs.state[city.stateFips]?.[layer.acs] ?? null,
+        };
+      }
+      // Segregation: the city's own index (no county or state equivalent).
+      const segregation = readSegregation().get(city.id) || {};
+      for (const [key, layer] of Object.entries(CURATED_LAYERS)) {
+        if (!layer.segregation) continue;
+        const value = (suffix) =>
+          Number.isFinite(segregation[`${layer.segregation}${suffix}`])
+            ? segregation[`${layer.segregation}${suffix}`]
+            : null;
+        values[key] = {
+          city: value('24'),
+          county: null,
+          state: null,
+          history: { 2000: value('00'), 2010: value('10') },
         };
       }
       const tractCounts = {};

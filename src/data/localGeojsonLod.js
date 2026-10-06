@@ -151,13 +151,23 @@ function sortableDistance(distanceM) {
  * @param {object} [options]
  * @param {number} [options.cameraHeightM]
  * @param {Iterable<string>|Set<string>} [options.incumbentIds] Ids that currently hold an active stem.
+ * @param {number} [options.regionalActiveLimit] A larger budget below the
+ *   regional height, for dense point layers whose pins would otherwise show
+ *   only as a small cluster around the camera.
  * @returns {{activeIds:string[], budget:{activeLimit:number}}}
  */
 export function selectInfraLod(
   candidates,
-  { cameraHeightM, incumbentIds } = {},
+  { cameraHeightM, incumbentIds, regionalActiveLimit } = {},
 ) {
-  const budget = infraLodBudget(cameraHeightM);
+  let budget = infraLodBudget(cameraHeightM);
+  if (
+    Number.isFinite(regionalActiveLimit) &&
+    regionalActiveLimit > budget.activeLimit &&
+    Number.isFinite(cameraHeightM) &&
+    cameraHeightM < INFRA_LOD_REGIONAL_HEIGHT_M
+  )
+    budget = { activeLimit: Math.floor(regionalActiveLimit) };
   const incumbents =
     incumbentIds instanceof Set ? incumbentIds : new Set(incumbentIds || []);
 

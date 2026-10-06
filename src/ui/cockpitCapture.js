@@ -7,6 +7,12 @@ import {
 } from './viewCapture.js';
 import { captionLayerNames, cockpitViewLabel } from './captureCaption.js';
 
+/**
+ * Photos and clips are offered only during Curated Flights for now; the cockpit,
+ * drone and walking controls stay hidden (cockpit.html) and P / Shift+P do nothing.
+ */
+export const COCKPIT_CAPTURE_ENABLED = false;
+
 const UNRESOLVED_PLACE = /^(RESOLVING|UNKNOWN|--)/i;
 const FORMAT_STORAGE_KEY = 'hev.snapshotFormat';
 
@@ -81,11 +87,12 @@ export function describeCapture() {
 }
 
 export function takeSnapshot() {
-  if (!this.active) return false;
+  if (!COCKPIT_CAPTURE_ENABLED || !this.active) return false;
   return this.captureController().snapshot();
 }
 
 export function toggleClip() {
+  if (!COCKPIT_CAPTURE_ENABLED) return false;
   const capture = this.captureController();
   if (!this.active && !capture.recording) return false;
   return capture.toggleClip();

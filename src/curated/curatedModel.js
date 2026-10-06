@@ -47,6 +47,26 @@ export const LAYER_ALIASES = Object.freeze({
     'shootings',
   ],
   mkdb: ['mkdb', 'mass killings', 'mass killing', 'mass shootings'],
+  'segregation-bw': [
+    'black white segregation',
+    'black-white segregation',
+    'black white dissimilarity',
+    'segregation',
+    'residential segregation',
+  ],
+  'segregation-hw': [
+    'latino white segregation',
+    'hispanic white segregation',
+    'latino-white segregation',
+    'white latino segregation',
+    'latino white dissimilarity',
+  ],
+  'segregation-aw': [
+    'asian white segregation',
+    'asian-white segregation',
+    'white asian segregation',
+    'asian white dissimilarity',
+  ],
   poverty: ['poverty', 'poverty rate', 'below poverty', 'poor'],
   'median-income': [
     'median income',
@@ -343,9 +363,13 @@ export function compareSentence(layer, city, values) {
     versus(values.county, labels.county),
     versus(values.state, labels.state),
   ].filter(Boolean);
+  // City-only measures (segregation) carry earlier years instead.
+  const earlier = Object.entries(values.history || {})
+    .filter(([, value]) => Number.isFinite(value))
+    .map(([year, value]) => `${year}: ${value.toFixed(digits)}`);
   return `${labels.city}: ${formatValue(layer, cityValue)}${
     parts.length ? `, ${parts.join(' and ')}` : ''
-  }.`;
+  }${earlier.length ? ` (${earlier.join(', ')})` : ''}.`;
 }
 
 /** One row per city × layer for the data download and the report table. */
@@ -365,6 +389,8 @@ export function comparisonRows(plan, table, research = {}) {
         cityValue: values.city ?? null,
         countyValue: values.county ?? null,
         stateValue: values.state ?? null,
+        city2000: values.history?.[2000] ?? null,
+        city2010: values.history?.[2010] ?? null,
         vintage: layer.vintage,
         note: layer.note,
         table: layer.table || '',
@@ -385,6 +411,8 @@ export const ROW_COLUMNS = Object.freeze([
   ['cityValue', 'City value'],
   ['countyValue', 'County value'],
   ['stateValue', 'State value'],
+  ['city2000', 'City value 2000'],
+  ['city2010', 'City value 2010'],
   ['vintage', 'Data years'],
   ['note', 'Definition'],
   ['table', 'Census table / dataset'],

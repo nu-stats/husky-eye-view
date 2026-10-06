@@ -129,6 +129,16 @@ export const KEY_SETUP_KEYS = Object.freeze([
     tier: 'free',
     browserSession: true,
   }),
+  Object.freeze({
+    id: 'chicago-homicides',
+    title: 'CHICAGO HISTORICAL HOMICIDES',
+    unlocks:
+      'Chicago Homicides 1870–1930 (Chicago Historical Homicide Project, Northwestern University), geocoded. Its own key, separate from the research datasets and Curated Flights; ask the project owner for it.',
+    getUrl: '',
+    envVars: Object.freeze(['HEV_CHICAGO_HOMICIDES_KEY']),
+    tier: 'free',
+    browserSession: true,
+  }),
 ]);
 
 /** Hostnames a Provider Settings request may arrive under or originate from. */

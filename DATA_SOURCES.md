@@ -191,6 +191,31 @@ Douglas-Peucker simplification, 6-decimal rounding).
 
 ---
 
+## Husky Eye View research layers (bundled, `public/context/` and `src/data/local_data/`)
+
+| Layers | Source | Notes |
+| --- | --- | --- |
+| HOLC Redlining (1930s), HOLC city outlines | Robert K. Nelson, LaDale Winling et al., *Mapping Inequality: Redlining in New Deal America*, American Panorama, University of Richmond Digital Scholarship Lab — https://dsl.richmond.edu/panorama/redlining/ | Area descriptions are linked, not copied. |
+| Segregation 2000 / 2010 / 2020–24 | Longitudinal Tract Data Base (LTDB), Spatial Structures in the Social Sciences, Brown University (Logan, Xu & Stults 2014, *The Professional Geographer* 66(3)); ACS 2020–2024 table B03002 | Dissimilarity indices computed by Husky Eye View (`scripts/build-segregation-layers.mjs`). |
+| Enumeration Districts 1900 / 1910 / 1920 / 1930 | Shertzer, Walsh & Logan (2016), *Historical Methods* 49(4): 187–197; Urban Transition Historical GIS Project, S4, Brown University (https://s4.ad.brown.edu/Projects/UTP2/ncities.htm) | ED boundaries for ten Northern cities; shaded by land area computed by Husky Eye View (`scripts/build-enumeration-districts.mjs`). |
+| Chicago Homicides 1870–1930 (locked) | Leigh Bienen, *Homicide in Chicago, 1870–1930*, Northwestern University (https://doi.org/10.21985/N2HB3R); City of Chicago street center lines; *Plan of Re-Numbering, City of Chicago* (Chicago Directory Co., 1909); William Martin, *Chicago Streets* (1948 list of street-name changes, Living History of Illinois); Census 2024 place boundaries | Geocoded on this computer (`scripts/extract-chicago-street-history.py`, `scripts/build-chicago-homicides.mjs`): old house numbers converted, renamed streets followed, landmarks and towns placed approximately; names omitted; own key. |
+| Life Expectancy (tracts) and clusters | U.S. Small-Area Life Expectancy Estimates Project (USALEEP), NCHS / NAPHSIS / RWJF, 2010–2015 | Local Moran's I clusters computed by the project. |
+| Life Expectancy (counties) and clusters | County life expectancy 2000–2019, total and by race and ethnicity (`nation_county_le`) | Clusters computed by the project. |
+| PM2.5, Ozone, Park Access | CDC Environmental Public Health Tracking Network (Downscaler model; Access to Parks) | |
+| Nonattainment Areas | U.S. EPA Green Book | |
+| Social & economic layers, internet 2013–2017 / 2020–2024, Curated Flights | U.S. Census Bureau, American Community Survey 5-year estimates; Vintage 2024 population estimates | Public domain (US government work). |
+| Internet use 1998–2010 | Census Current Population Survey, Computer and Internet Use Supplement, via the NTIA Data Explorer | State estimates. |
+| Boundaries, parks | Census TIGER/Line, cartographic boundary files, TIGERweb, 2010–2020 tract relationship file, 2010 Gazetteer | Public domain. |
+| Trauma Centers | HIFLD Hospitals | |
+| Public Housing | HUD | |
+| Boston Neighborhoods | City of Boston neighborhood statistical areas (Analyze Boston) | |
+| Chicago layers | Project-compiled events, TLR and famous shootings; community-mapped "Big Bas #1 Chicagoland & Illinois Gang Map" | Community-mapped; may be incomplete. |
+| Miami-Dade homicides and hotspots | Miami-Dade homicide records, 1956–2011, compiled by the project | |
+| Gun Deaths 2015 (GVA), MKDB Mass Killings | Gun Violence Archive; AP / USA TODAY / Northeastern University Mass Killing Database | Restricted: encrypted in the repository, opened with the research key. |
+| 3D Captures sample | CesiumJS sample data | Apache-2.0. |
+
+---
+
 ## In-app attribution
 
 The required Google Maps / Cesium credit renders on the on-globe credit line (`#cesium-credits`, bottom-left) and must stay visible — including in clean-view and recording modes (the whole line, logo + "Google Maps" + the "Data attribution" link, stays on screen; only the GEV panels/HUD fade). The layer-specific credits (adsb.lol, adsbdb, TeleGeography, OSM datacenters/dams/roads, NASA FIRMS, CelesTrak, USGS, City of Austin, Fintraffic, GBFS, Radio Browser, OpenSky, AISStream) are registered into the expandable **"Data attribution"** popover on that credit line via `viewer.creditDisplay.addStaticCredit(new Cesium.Credit(html, /* showOnScreen */ false))` — see `src/data/dataCredits.js`. When you add a new data source, add its license and attribution to this file **and** append an entry to `DATA_CREDITS` in `src/data/dataCredits.js` so it surfaces in the app.

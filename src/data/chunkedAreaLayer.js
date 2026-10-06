@@ -28,6 +28,15 @@ import { isLocalCardAction, pickLocalEntity } from './localGeojsonCore.js';
 export const CHUNKED_AREA_MAX_HEIGHT_M = 250_000;
 /** Default cap on chunks drawn at once (nearest to the view center first). */
 export const CHUNKED_AREA_MAX_CHUNKS = 30;
+/**
+ * Every area's classification volume, in meters above the ellipsoid. From
+ * far out the photorealistic globe is drawn with coarse flat
+ * facets whose middles sag tens of kilometers below the curved surface (a
+ * 1,000 km chord sags about 20 km), so the volume reaches far down; the top
+ * clears any US summit.
+ */
+export const AREA_VOLUME_BOTTOM_M = -120_000;
+export const AREA_VOLUME_TOP_M = 8_000;
 /** Parsed chunks kept after leaving the view, so panning back is instant. */
 const CHUNK_CACHE_LIMIT = 90;
 const FILL_ALPHA = 0.4;
@@ -287,6 +296,13 @@ export function chunksInView(index, view, limit) {
  * @param {Array<{id:string,label:string,featureColor:Function,legend?:Array,featureSummary?:Function}>} [options.variants]
  *   Alternative views of the same areas (e.g. survey years); the layer row
  *   shows one chip per variant and the first is shown until another is chosen.
+ * @param {object} [options.far] A coarser stand-in drawn when the camera is
+ *   above `maxHeightM` (e.g. county values for a tract layer), so the layer
+ *   always shows something over the country:
+ *   `{ baseUrl, maxHeightM?, maxChunks?, featureColor?, featureSummary?,
+ *   featureFilter?, legend?, sourceNote?, label? }`. Missing functions fall back
+ *   to the layer's own (the coarse chunks then carry the same property names).
+ *   A variant may add `farFeatureColor`, `farFeatureSummary` and `farLegend`.
  * @param {Function} [options.screenSpaceEventHandlerFactory] Test seam.
  * @param {object} services Shared context/overlay operations.
  */
@@ -307,6 +323,7 @@ export function createChunkedAreaLayer(
     featureFilter = null,
     fillAlpha = FILL_ALPHA,
     variants = [],
+    far = null,
     screenSpaceEventHandlerFactory = (canvas) =>
       new Cesium.ScreenSpaceEventHandler(canvas),
   },
@@ -321,19 +338,45 @@ export function createChunkedAreaLayer(
 ) {
   // Relative directories resolve against the page, so the app still finds
   // its data when it is served under a non-root base path.
-  const base = (() => {
-    const raw = String(baseUrl).replace(/\/?$/, '/');
+  const resolveBase = (url) => {
+    const raw = String(url).replace(/\/?$/, '/');
     try {
       return new URL(raw, globalThis.document?.baseURI).href;
     } catch {
       return raw;
     }
-  })();
+  };
+  // The detailed areas, and (optionally) the coarse stand-in used from higher
+  // up. Chunk keys carry the source prefix so both share one draw map.
+  const nearSource = {
+    base: resolveBase(baseUrl),
+    prefix: '',
+    maxHeightM,
+    maxChunks,
+    filter: featureFilter,
+    index: null,
+    indexPromise: null,
+  };
+  const farSource = far
+    ? {
+        base: resolveBase(far.baseUrl),
+        prefix: 'far:',
+        maxHeightM: far.maxHeightM ?? 8_000_000,
+        maxChunks: far.maxChunks ?? 60,
+        filter: far.featureFilter ?? null,
+        index: null,
+        indexPromise: null,
+      }
+    : null;
+  const sourceOf = (chunkKey) =>
+    farSource && String(chunkKey).startsWith(farSource.prefix)
+      ? farSource
+      : nearSource;
+  /** 'near', 'far' (the coarse stand-in) or null (out of range). */
+  let mode = null;
   let viewer = null;
   let enabled = false;
   let destroyed = false;
-  let index = null;
-  let indexPromise = null;
   let error = null;
   let status = null;
   let lastUpdate = null;
@@ -347,13 +390,22 @@ export function createChunkedAreaLayer(
   let rowControlsListener = null;
   // A variant swaps the coloring, legend and card text in place.
   let variantId = variants[0]?.id ?? null;
+  let farColor = far?.featureColor ?? null;
+  let farSummary = far?.featureSummary ?? null;
+  let farLegend = far?.legend ?? null;
   const applyVariant = (variant) => {
     if (!variant) return;
     variantId = variant.id;
     featureColor = variant.featureColor;
     if (variant.legend) legend = variant.legend;
     if (variant.featureSummary) featureSummary = variant.featureSummary;
+    if (variant.farFeatureColor) farColor = variant.farFeatureColor;
+    if (variant.farFeatureSummary) farSummary = variant.farFeatureSummary;
+    if (variant.farLegend) farLegend = variant.farLegend;
   };
+  /** Fill color for a feature of the near or the far source. */
+  const colorOf = (properties, isFar) =>
+    (isFar && farColor ? farColor : featureColor)(properties);
   applyVariant(variants[0]);
   /**
    * chunk id -> { primitives, features } currently drawn. `primitives` are
@@ -426,7 +478,10 @@ export function createChunkedAreaLayer(
         for (const record of primitive.__areaRecords || []) {
           const attributes = primitive.getGeometryInstanceAttributes(record);
           if (!attributes) continue;
-          const css = featureColor(record.feature?.properties || {});
+          const css = colorOf(
+            record.feature?.properties || {},
+            sourceOf(record.__chunkedChunkId) === farSource,
+          );
           attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(
             Cesium.Color.clone(
               baseColorFor(css || '#9e9e9e'),
@@ -452,24 +507,26 @@ export function createChunkedAreaLayer(
     }
   }
 
-  async function loadIndex() {
-    if (index) return index;
-    indexPromise ||= (async () => {
-      const response = await fetch(`${base}index.json`);
+  async function loadIndex(source = nearSource) {
+    if (source.index) return source.index;
+    source.indexPromise ||= (async () => {
+      const response = await fetch(`${source.base}index.json`);
       if (!response.ok) throw new Error(`HTTP ${response.status ?? '?'}`);
       const parsed = await response.json();
       if (!Array.isArray(parsed)) throw new Error('index is malformed');
-      index = parsed;
-      return index;
+      source.index = parsed;
+      return source.index;
     })();
     try {
-      return await indexPromise;
+      return await source.indexPromise;
     } finally {
-      indexPromise = null;
+      source.indexPromise = null;
     }
   }
 
   async function loadChunkFeatures(chunkId) {
+    const source = sourceOf(chunkId);
+    const fileId = String(chunkId).slice(source.prefix.length);
     if (cache.has(chunkId)) {
       const features = cache.get(chunkId);
       cache.delete(chunkId);
@@ -477,7 +534,7 @@ export function createChunkedAreaLayer(
       return features;
     }
     const response = await fetch(
-      `${base}${encodeURIComponent(chunkId)}.geojsonl`,
+      `${source.base}${encodeURIComponent(fileId)}.geojsonl`,
     );
     if (!response.ok) throw new Error(`HTTP ${response.status ?? '?'}`);
     const text = await response.text();
@@ -486,7 +543,7 @@ export function createChunkedAreaLayer(
       .filter((line) => line.trim())
       .map((line) => JSON.parse(line))
       .filter(
-        (feature) => !featureFilter || featureFilter(feature.properties || {}),
+        (feature) => !source.filter || source.filter(feature.properties || {}),
       );
     cache.set(chunkId, features);
     while (cache.size > CHUNK_CACHE_LIMIT) {
@@ -563,9 +620,16 @@ export function createChunkedAreaLayer(
     for (const chunkId of [...drawn.keys()]) releaseChunk(chunkId);
   }
 
-  /** A ground primitive drawing `instances`, one color per instance. */
+  /**
+   * A primitive drawing `instances` (all of one color). Areas are drawn as
+   * ClassificationPrimitives over fixed tall volumes (AREA_VOLUME_*), not
+   * GroundPrimitives: from any distance the photorealistic tiles can be
+   * coarse meshes that sit outside a GroundPrimitive's approximate terrain
+   * heights (over mountains, or the sagging middle of a coarse facet),
+   * which left holes in the color.
+   */
   function batchPrimitive(instances) {
-    const primitive = new Cesium.GroundPrimitive({
+    const primitive = new Cesium.ClassificationPrimitive({
       geometryInstances: instances,
       appearance: new Cesium.PerInstanceColorAppearance({
         flat: true,
@@ -593,9 +657,10 @@ export function createChunkedAreaLayer(
   function buildChunkPrimitives(chunkId, features) {
     const instances = [];
     const usedIds = new Set();
+    const isFar = sourceOf(chunkId) === farSource;
     features.forEach((feature, featureIndex) => {
       const properties = feature.properties || {};
-      const color = colorAttributeFor(featureColor(properties) || '#9e9e9e');
+      const color = colorAttributeFor(colorOf(properties, isFar) || '#9e9e9e');
       const baseId =
         feature.id !== undefined && feature.id !== null
           ? String(feature.id)
@@ -611,6 +676,8 @@ export function createChunkedAreaLayer(
           new Cesium.GeometryInstance({
             geometry: new Cesium.PolygonGeometry({
               polygonHierarchy: hierarchy,
+              height: AREA_VOLUME_BOTTOM_M,
+              extrudedHeight: AREA_VOLUME_TOP_M,
             }),
             id: {
               id: recordId,
@@ -626,11 +693,25 @@ export function createChunkedAreaLayer(
       });
     });
     const primitives = [];
-    // Even batches: 1,300 polygons become 3 × 434, not 600 + 600 + 100.
-    const batches = Math.ceil(instances.length / CHUNKED_AREA_BATCH_SIZE);
-    const size = Math.ceil(instances.length / Math.max(1, batches));
-    for (let i = 0; i < instances.length; i += size)
-      primitives.push(batchPrimitive(instances.slice(i, i + size)));
+    // A ClassificationPrimitive takes one color for all its instances, so
+    // areas are batched by color.
+    const groups = [
+      ...instances
+        .reduce((byColor, instance) => {
+          const key = instance.attributes.color;
+          if (!byColor.has(key)) byColor.set(key, []);
+          byColor.get(key).push(instance);
+          return byColor;
+        }, new Map())
+        .values(),
+    ];
+    for (const group of groups) {
+      // Even batches: 1,300 polygons become 3 × 434, not 600 + 600 + 100.
+      const batches = Math.ceil(group.length / CHUNKED_AREA_BATCH_SIZE);
+      const size = Math.ceil(group.length / Math.max(1, batches));
+      for (let i = 0; i < group.length; i += size)
+        primitives.push(batchPrimitive(group.slice(i, i + size)));
+    }
     return primitives;
   }
 
@@ -688,17 +769,26 @@ export function createChunkedAreaLayer(
     const gen = ++generation;
     lastViewPose = currentPose();
     const height = viewer.camera.positionCartographic?.height;
-    if (!(height <= maxHeightM)) {
+    // Close in: the detailed areas. Farther out: the coarse stand-in, if any.
+    const source =
+      height <= maxHeightM
+        ? nearSource
+        : farSource && height <= farSource.maxHeightM
+          ? farSource
+          : null;
+    if (!source) {
       status = 'zoom-in';
+      mode = null;
       releaseAll();
       notifyRowControls();
       governorRequestRender?.(`chunked-area:${id}`);
       return;
     }
-    status = null;
+    status = source === farSource ? 'overview' : null;
+    mode = source === farSource ? 'far' : 'near';
     let list;
     try {
-      list = await loadIndex();
+      list = await loadIndex(source);
       error = null;
     } catch (err) {
       error = `index unavailable (${err?.message || 'error'})`;
@@ -725,7 +815,11 @@ export function createChunkedAreaLayer(
       : // Horizon-up views have no ground rectangle: use the ground around
         // the camera and ahead of it.
         horizonViewBox(pose);
-    const wanted = new Set(chunksInView(list, view, maxChunks));
+    const wanted = new Set(
+      chunksInView(list, view, source.maxChunks).map(
+        (chunkId) => `${source.prefix}${chunkId}`,
+      ),
+    );
     for (const chunkId of [...drawn.keys()]) {
       if (!wanted.has(chunkId)) releaseChunk(chunkId);
     }
@@ -752,11 +846,13 @@ export function createChunkedAreaLayer(
   }
 
   /** A feature's properties plus the layer-level summary and source line. */
-  function describe(properties) {
+  function describe(properties, isFar = false) {
+    const summarize = isFar && farSummary ? farSummary : featureSummary;
+    const note = isFar && far?.sourceNote ? far.sourceNote : sourceNote;
     return {
       ...properties,
-      ...(featureSummary && { summary: featureSummary(properties) }),
-      ...(sourceNote && { source_note: sourceNote }),
+      ...(summarize && { summary: summarize(properties) }),
+      ...(note && { source_note: note }),
     };
   }
 
@@ -789,7 +885,10 @@ export function createChunkedAreaLayer(
 
   function selectArea(record) {
     const entity = entityForRecord(record);
-    const props = describe(record.feature.properties || {});
+    const props = describe(
+      record.feature.properties || {},
+      sourceOf(record.__chunkedChunkId) === farSource,
+    );
     const center = entity.__chunkedCenter;
     registerEntityContext(entity, {
       id: `${id}:${entity.id}`,
@@ -902,7 +1001,8 @@ export function createChunkedAreaLayer(
       clickHandler?.destroy();
       clickHandler = null;
       cache.clear();
-      index = null;
+      nearSource.index = null;
+      if (farSource) farSource.index = null;
     },
 
     getStats: () => ({
@@ -916,6 +1016,10 @@ export function createChunkedAreaLayer(
       ...(status === 'zoom-in' && {
         status: 'zoom-in',
         statusMessage: zoomInMessage,
+      }),
+      ...(status === 'overview' && {
+        status: 'overview',
+        statusMessage: far?.label || 'overview · zoom in for detail',
       }),
     }),
 
@@ -933,7 +1037,7 @@ export function createChunkedAreaLayer(
         },
       })),
       legend: enabled
-        ? legend.map((item) => ({
+        ? (mode === 'far' && farLegend ? farLegend : legend).map((item) => ({
             label: item.label,
             color: item.color,
             blurb: item.blurb,
@@ -976,7 +1080,7 @@ export function createChunkedAreaLayer(
       if (!enabled) return { ...base, status: 'disabled' };
       if (status === 'zoom-in')
         return { ...base, status: 'zoom-in', statusMessage: zoomInMessage };
-      const withNote = describe;
+      const withNote = (properties) => describe(properties, mode === 'far');
       let atPoint = null;
       const nearby = [];
       for (const { features } of drawn.values()) {

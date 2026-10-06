@@ -926,16 +926,108 @@ STEP 55: Internet Access by county and by tract (October 5, 2026)
     are above 60%; the county layers keep 25-85% so 1998 still reads.
 
 
+STEP 56: Data Layers regrouped by theme (October 5, 2026)
+-------------------------------------------------------------------------------
+  - Groups now read: Life Expectancy & Health; Redlining, Segregation & Housing;
+    People & Economy (Census); Internet Access Over Time; Air & Green Space;
+    Restricted Research Data; City Study: Boston / Chicago / Miami-Dade Homicides;
+    3D Captures; Fly, Drone & Walk; then the inherited groups. Each research group
+    has a one-line note (LAYER_GROUP_NOTES in src/data/layerManifest.js).
+  - Households Without a Vehicle uses a car icon (a Material Symbols glyph).
+
+
+STEP 57: Every layer shows from far out; Great Lakes shorelines (October 5)
+-------------------------------------------------------------------------------
+  - Tract layers draw county values (or each city's outline) above the tract
+    height and switch to tracts as you zoom in (chunkedAreaLayer `far` option;
+    status "overview"). A layer is never blank over the country.
+  - The circular holes in national views came from coarse 3D-tile facets sagging
+    below the ellipsoid. Area layers now draw as tall classification volumes
+    (-120 km to 8 km), batched by color.
+  - County outlines are clipped to the Census cartographic boundary files so the
+    Great Lakes read cleanly (scripts/clip-county-shorelines.mjs).
+  - Overview layers: scripts/build-overview-layers.mjs (HOLC city outlines, large
+    parks). Cluster layers draw non-significant areas off-white.
+  - ?panel=top opens Data Layers under the logo, as an opt-in trial only.
+
+
+STEP 58: Segregation by city, 2000-2024 (October 5)
+-------------------------------------------------------------------------------
+  - Three layers, Segregation 2000 / 2010 / 2020-24 (dissimilarity), for the 514
+    US places of 75,000+: Black-white, Latino-white and Asian-white indices.
+  - Counts: LTDB full-count 2000 and 2010 on 2010 tracts (S4, Brown University;
+    option A), and ACS 2020-2024 table B03002 moved onto 2010 tracts by land
+    area. Cities as the LTDB assigns tracts. At least 1,000 of each group and
+    five tracts. scripts/fetch-segregation-sources.mjs and
+    scripts/build-segregation-layers.mjs.
+  - Card: the three indices and the population, no interpretation sentence.
+  - Curated Flights can choose the three indices (city-only, with 2000 and 2010
+    values in the cards, table and PDF report).
+
+
+STEP 59: Time Lens (October 5)
+-------------------------------------------------------------------------------
+  - Time Lens (1930s <-> today): the HOLC map all around, and a movable,
+    resizable lens showing a layer of today (poverty by default; 13 choices).
+    A second Cesium viewer, camera-synced, clipped by a CSS circle
+    (src/ui/timeLens.js). START is on the row under HOLC Redlining.
+
+
+STEP 60: Chicago historical homicides, 1870-1930 (October 5)
+-------------------------------------------------------------------------------
+  - Source: Leigh Bienen, "Homicide in Chicago, 1870-1930", Northwestern University
+    (doi:10.21985/N2HB3R), the full export with text fields (11,018 cases).
+  - A locked layer with its OWN key (POWER UP row CHICAGO HISTORICAL HOMICIDES,
+    header X-HEV-Chicago-Homicides-Key, session slot hev.chicagoHomicidesKey).
+    The key file is in Documents\HuskyEyeView-backups; it is never printed.
+  - Geocoded on this computer (scripts/build-chicago-homicides.mjs) against City
+    of Chicago street center lines: corners (shared node, or nearest approach
+    within 60 m), addresses (range, same-block fallback, city-grid placement for
+    vanished blocks). Old numbers converted with the 1909 Plan of Re-Numbering;
+    renamed streets followed with William Martin's 1948 list (both read by
+    scripts/extract-chicago-street-history.py); South Division north-south streets
+    kept their numbers; case descriptions fill missing addresses; six landmarks
+    and nearby towns placed approximately. 8,436 of 11,018 mapped (76.6%).
+  - Cards: date, location and how it matched, victim and defendant gender, age
+    and race, method, circumstance, type, trial outcome; residences named in the
+    case description with their Manhattan distance from the crime location. No
+    names.
+
+
+STEP 61: Census enumeration districts, 1900-1930 (October 5)
+-------------------------------------------------------------------------------
+  - Enumeration Districts 1900 / 1910 / 1920 / 1930 for ten Northern cities, from
+    the Urban Transition Historical GIS Project (Shertzer, Walsh and Logan 2016,
+    S4, Brown University). 1910-1930 projected from USA Contiguous Albers.
+  - The public files have no counts, so districts are shaded by land area (small
+    = crowded). From far out, each city's outline for that census.
+    scripts/build-enumeration-districts.mjs. 71 layers in all.
+  - The Brown Geographic Reference File for Chicago (person-level, 1900-1940) was
+    downloaded to data/source/s4-grf (not in git) but is not used yet: its terms
+    say the data must not be redistributed without authorization.
+
+
+STEP 62: Overview video and guide remade (v0.2.0)
+-------------------------------------------------------------------------------
+  - Re-recorded with the regrouped menu: campus tour Boston -> Seattle -> London ->
+    husky home; life expectancy then HOLC alone; new segregation, Time Lens,
+    enumeration district and Chicago homicide shots; cruising-altitude cockpit;
+    drone and walking keys narrated; photos and 1-minute clips shown in Curated
+    Flights; label size moved beside POWER UP. The research-key take is reused.
+  - The guide gained 5.4-5.6, 7.4 (how the homicides were placed), label size
+    (10.1), and photos and clips moved to Curated Flights (7.5).
+
+
 ===============================================================================
-WHERE THINGS STAND (October 5, 2026)
+WHERE THINGS STAND (October 6, 2026)
 ===============================================================================
-Layers:     63. Newest: Social & Economic (9 ACS tract layers) and Internet Access
-            (4: county and tract versions). All are on voice's list. GVA and MKDB
-            need the research key.
-Views:      Cockpit (planes, helicopters), Drone View, Walking View; snapshots
-            (PNG/JPG) and clips (MP4) from each.
-Curated:    Curated Flights (own key) compares up to 3 cities on up to 6 layers, with
-            report, data and chart downloads (Step 52).
+Layers:     71. Newest: Segregation (3), Enumeration Districts (4) and Chicago
+            Homicides 1870-1930 (locked, own key), plus the Time Lens view. All are on
+            voice's list. GVA and MKDB need the research key.
+Views:      Cockpit (planes, helicopters), Drone View, Walking View, Time Lens.
+Curated:    Curated Flights (own key) compares up to 3 cities on up to 6 layers
+            (segregation included), with PHOTO and 1-minute REC during the flight and
+            report, data and chart downloads (Steps 52, 58).
 Look:       Northeastern logo, grey interface, research groups first in Data Layers,
             research profile hides the inherited extras ("Show all layers" to see them),
             first run and Scenes start with Boston.
@@ -948,9 +1040,9 @@ Live feeds: US-focused (Step 39).
 HOLC:       314 cities from Mapping Inequality, Boston included (Step 48); every card
             links to its 1930s area description.
 Media:      Overview video, captions and guide PDF on the latest GitHub release only
-            (v0.1.9; video from Step 54, guide updated in Step 55). The release-media
-            workflow moves them to each new release.
-Tests:      All 4,333 unit tests pass. Format, import-direction and package-boundary
+            (v0.2.0; video and guide from Step 62). The release-media workflow moves
+            them to each new release.
+Tests:      All 4,345 unit tests pass. Format, import-direction and package-boundary
             checks are clean.
 
 Backups:    C:\Users\jstow\Documents\HuskyEyeView-backups\
@@ -966,7 +1058,8 @@ Data exports:
             mkdb_incidents_geocoded.csv
 
 Git history on main (newest first):
-            (release)  Internet Access by county and by tract (tagged v0.1.9)
+            (release)  History layers, Time Lens, Chicago homicides (tagged v0.2.0)
+            7ef08a24  Internet Access by county and by tract (tagged v0.1.9)
             472f3fe3  Photos and clips, Drone and Walking View, Curated Flights,
                        Social & Economic and Internet Access layers (tagged v0.1.8)
             46e6848f  Location bar shows Northeastern's campuses (tagged v0.1.7)

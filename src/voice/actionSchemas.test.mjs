@@ -31,8 +31,9 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     digest,
     // Updated 2026-10-04: start_ground_view (Walking / Drone views) and the
     // Curated Flights tools plan_curated_flight / control_curated_flight
-    // (layers include the ACS 2020–2024 social measures).
-    '7e00ffdfb7ac0ee43dd6f51e73ac842a24ea1128fa5f14c26a352c58cb53570d',
+    // (layers include the ACS 2020–2024 social measures). 2026-10-06: the
+    // flight layers add the three segregation indices.
+    '5f0f4bfb454b1622f3338f82b68ce09a5cd9d0db013fd6654e414d46c81542f4',
   );
 });
 

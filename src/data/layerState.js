@@ -25,7 +25,8 @@ const TRACKING_ID_GRAMMAR = /^[0-9a-z~_-]{1,16}$/;
  * past them is malformed or hostile. Reject the WHOLE payload, matching the
  * unknown-token rule — never salvage a prefix.
  */
-const MAX_ENABLED_LAYERS_CHARS = 160;
+// Every registered layer on at once (66 tokens and their dots) must fit.
+const MAX_ENABLED_LAYERS_CHARS = 256;
 const MAX_LAYER_OPTIONS_CHARS = 512;
 export const LAYER_STATE_STORAGE_KEY = 'gev:layer-state:v2';
 export const LAYER_RESTORE_ORIGINS = Object.freeze({

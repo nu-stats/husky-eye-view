@@ -27,14 +27,18 @@ test('every panel row comes from exactly one manifest entry', () => {
 test('locked research datasets keep their own group that never starts folded', () => {
   const { source, order } = panelOrder();
   assert.deepEqual(
-    order.filter(({ label }) => label === 'Research Data').map(({ id }) => id),
-    ['local-gva-2015', 'local-mkdb'],
+    order
+      .filter(({ label }) => label === 'Restricted Research Data')
+      .map(({ id }) => id),
+    ['local-gva-2015', 'local-mkdb', 'local-chicago-homicides'],
   );
   // Research comes first: the research groups sit above the inherited live
   // feeds, infrastructure and utilities.
   const labels = [...new Set(order.map(({ label }) => label))];
-  assert.equal(labels[0], 'Neighborhood Data (US)');
-  assert.ok(labels.indexOf('Research Data') < labels.indexOf('Live Feeds'));
+  assert.equal(labels[0], 'Life Expectancy & Health');
+  assert.ok(
+    labels.indexOf('Restricted Research Data') < labels.indexOf('Live Feeds'),
+  );
   assert.deepEqual(labels.slice(-3), [
     'Live Feeds',
     'Infrastructure',
@@ -65,7 +69,9 @@ test('panel presentation places Transit between Street Traffic and Bike Share in
     false,
   );
   assert.deepEqual(
-    order.filter(({ label }) => label === 'Chicago').map(({ id }) => id),
+    order
+      .filter(({ label }) => label === 'City Study: Chicago')
+      .map(({ id }) => id),
     [
       'local-chicago-events',
       'local-tlr',

@@ -37,23 +37,40 @@
  * @property {string[]} [aliases] Spoken names voice accepts for the layer.
  */
 
-const RESEARCH_DATA_GROUP = 'Research Data';
+const HEALTH_GROUP = 'Life Expectancy & Health';
+const HISTORY_GROUP = 'Redlining, Segregation & Housing';
+const CENSUS_GROUP = 'People & Economy (Census)';
+const INTERNET_GROUP = 'Internet Access Over Time';
+const ENVIRONMENT_GROUP = 'Air & Green Space';
+const RESEARCH_DATA_GROUP = 'Restricted Research Data';
+const MIAMI_GROUP = 'City Study: Miami-Dade Homicides';
+const VIEWS_GROUP = 'Fly, Drone & Walk';
+
+/** One line under each Data Layers group heading: what it holds, and how. */
+export const LAYER_GROUP_NOTES = Object.freeze({
+  [HEALTH_GROUP]:
+    'Counties from far out; tracts appear as you zoom in to a city.',
+  [HISTORY_GROUP]:
+    'Census enumeration districts 1900–1930 for ten Northern cities. HOLC: mapped cities from far out, graded areas as you zoom in. Segregation by city, 2000–2024. Public housing nationwide.',
+  [CENSUS_GROUP]:
+    'ACS 2020–2024: counties from far out, census tracts as you zoom in.',
+  [INTERNET_GROUP]:
+    'Counties 1998–2024; the tract layers sharpen from counties to tracts as you zoom in.',
+  [ENVIRONMENT_GROUP]:
+    'Counties from far out, tracts as you zoom in; large parks first, every park closer in.',
+  [RESEARCH_DATA_GROUP]: 'Each needs a key from the project owner.',
+  [VIEWS_GROUP]: 'Ride a helicopter, fly a drone, or walk the street.',
+  'Live Feeds': 'Real-time data across the United States.',
+});
 
 /** @type {ReadonlyArray<LayerManifestEntry>} */
 export const LAYER_MANIFEST = Object.freeze(
   [
-    // ---- Neighborhood Data (US) ----------------------------------------
-    {
-      id: 'local-holc-redlining',
-      token: 'o',
-      group: 'Neighborhood Data (US)',
-      vintage: '1930s maps',
-      aliases: ['holc', 'redlining', 'holc redlining', 'redlining map'],
-    },
+    // ---- Life Expectancy & Health ------------------------------------------
     {
       id: 'local-life-expectancy',
       token: '1',
-      group: 'Neighborhood Data (US)',
+      group: HEALTH_GROUP,
       vintage: '2010–2015',
       aliases: [
         'life expectancy',
@@ -64,7 +81,7 @@ export const LAYER_MANIFEST = Object.freeze(
     {
       id: 'local-tract-le-clusters',
       token: '4',
-      group: 'Neighborhood Data (US)',
+      group: HEALTH_GROUP,
       vintage: '2010–2015',
       aliases: [
         'life expectancy clusters',
@@ -75,68 +92,21 @@ export const LAYER_MANIFEST = Object.freeze(
     {
       id: 'local-county-life-expectancy',
       token: '2',
-      group: 'Neighborhood Data (US)',
+      group: HEALTH_GROUP,
       vintage: '2000–2019',
       aliases: ['county life expectancy', 'life expectancy counties'],
     },
     {
       id: 'local-county-le-clusters',
       token: '3',
-      group: 'Neighborhood Data (US)',
+      group: HEALTH_GROUP,
       vintage: '2015',
       aliases: ['county clusters', 'county life expectancy clusters'],
     },
-
-    // ---- Air Quality (US) ----------------------------------------------
-    {
-      id: 'local-air-pm25',
-      token: 'ap',
-      group: 'Air Quality (US)',
-      vintage: '2021',
-      aliases: [
-        'air quality',
-        'pm2.5',
-        'pm 2.5',
-        'fine particles',
-        'particulate matter',
-      ],
-    },
-    {
-      id: 'local-air-ozone',
-      token: 'ao',
-      group: 'Air Quality (US)',
-      vintage: '2022',
-      aliases: ['ozone'],
-    },
-    {
-      id: 'local-air-nonattainment',
-      token: 'an',
-      group: 'Air Quality (US)',
-      vintage: 'as of Aug 2026',
-      aliases: ['nonattainment', 'nonattainment areas'],
-    },
-
-    // ---- Green Space (US) ----------------------------------------------
-    {
-      id: 'local-park-access',
-      token: 'pa',
-      group: 'Green Space (US)',
-      vintage: '2020',
-      aliases: ['green space', 'green spaces', 'park access'],
-    },
-    {
-      id: 'local-parks',
-      token: 'pk',
-      group: 'Green Space (US)',
-      vintage: '2025',
-      aliases: ['parks', 'park outlines'],
-    },
-
-    // ---- Health & Housing (US) -----------------------------------------
     {
       id: 'local-trauma-centers',
       token: 'tc',
-      group: 'Health & Housing (US)',
+      group: HEALTH_GROUP,
       cardNoun: 'Trauma center',
       aliases: [
         'trauma centers',
@@ -145,40 +115,81 @@ export const LAYER_MANIFEST = Object.freeze(
         'hospitals',
       ],
     },
+
+    // ---- Redlining & Housing History ---------------------------------------
+    // Census enumeration districts, 1900–1930, ten Northern cities (S4).
+    ...['1900', '1910', '1920', '1930'].map((year, i) => ({
+      id: `local-enumeration-districts-${year}`,
+      token: `e${i}`,
+      group: HISTORY_GROUP,
+      vintage: year,
+      cardNoun: 'Enumeration district',
+      aliases: [
+        `enumeration districts ${year}`,
+        `census districts ${year}`,
+        `eds ${year}`,
+        ...(year === '1930' ? ['enumeration districts'] : []),
+      ],
+    })),
+    {
+      id: 'local-holc-redlining',
+      token: 'o',
+      group: HISTORY_GROUP,
+      vintage: '1930s maps',
+      aliases: ['holc', 'redlining', 'holc redlining', 'redlining map'],
+    },
+    // Residential segregation (dissimilarity) by city, beside the HOLC maps.
+    ...[
+      ['2000', 'g0', '2000'],
+      ['2010', 'g1', '2010'],
+      ['2024', 'g2', '2020–2024'],
+    ].map(([year, token, vintage]) => ({
+      id: `local-segregation-${year}`,
+      token,
+      group: HISTORY_GROUP,
+      vintage,
+      aliases: [
+        `segregation ${year === '2024' ? 'today' : year}`,
+        `dissimilarity ${year === '2024' ? 'today' : year}`,
+        ...(year === '2024'
+          ? ['segregation', 'dissimilarity index', 'segregation 2024']
+          : []),
+      ],
+    })),
     {
       id: 'local-public-housing',
       token: 'ph',
-      group: 'Health & Housing (US)',
+      group: HISTORY_GROUP,
       cardNoun: 'Public housing',
       aliases: ['public housing', 'housing projects', 'projects'],
     },
 
-    // ---- Social & Economic (US): ACS 2020–2024 tracts --------------------
+    // ---- People & Economy (Census): ACS 2020–2024 tracts -------------------
     {
       id: 'local-acs-poverty',
       token: 'sp',
-      group: 'Social & Economic (US)',
+      group: CENSUS_GROUP,
       vintage: '2020–2024',
       aliases: ['poverty', 'poverty rate', 'below poverty'],
     },
     {
       id: 'local-acs-income',
       token: 'si',
-      group: 'Social & Economic (US)',
+      group: CENSUS_GROUP,
       vintage: '2020–2024',
       aliases: ['income', 'median income', 'household income'],
     },
     {
       id: 'local-acs-unemployment',
       token: 'su',
-      group: 'Social & Economic (US)',
+      group: CENSUS_GROUP,
       vintage: '2020–2024',
       aliases: ['unemployment', 'unemployment rate', 'jobless rate'],
     },
     {
       id: 'local-acs-education',
       token: 'se',
-      group: 'Social & Economic (US)',
+      group: CENSUS_GROUP,
       vintage: '2020–2024',
       aliases: [
         'education',
@@ -190,28 +201,28 @@ export const LAYER_MANIFEST = Object.freeze(
     {
       id: 'local-acs-renters',
       token: 'sr',
-      group: 'Social & Economic (US)',
+      group: CENSUS_GROUP,
       vintage: '2020–2024',
       aliases: ['renters', 'renter occupied', 'tenure', 'rental housing'],
     },
     {
       id: 'local-acs-black',
       token: 'sb',
-      group: 'Social & Economic (US)',
+      group: CENSUS_GROUP,
       vintage: '2020–2024',
       aliases: ['black residents', 'black population', 'african american'],
     },
     {
       id: 'local-acs-hispanic',
       token: 'sh',
-      group: 'Social & Economic (US)',
+      group: CENSUS_GROUP,
       vintage: '2020–2024',
       aliases: ['hispanic residents', 'latino', 'hispanic population'],
     },
     {
       id: 'local-acs-no-vehicle',
       token: 'sv',
-      group: 'Social & Economic (US)',
+      group: CENSUS_GROUP,
       vintage: '2020–2024',
       aliases: [
         'no vehicle',
@@ -222,16 +233,16 @@ export const LAYER_MANIFEST = Object.freeze(
     {
       id: 'local-acs-broadband',
       token: 'sw',
-      group: 'Social & Economic (US)',
+      group: CENSUS_GROUP,
       vintage: '2020–2024',
       aliases: ['broadband', 'broadband tracts', 'internet subscription'],
     },
 
-    // ---- Internet Access (US): CPS 1998–2010 (states) + ACS (counties, tracts)
+    // ---- Internet Access Over Time: CPS states, ACS counties and tracts ----
     {
       id: 'local-internet-use',
       token: 'iu',
-      group: 'Internet Access (US)',
+      group: INTERNET_GROUP,
       vintage: '1998–2024',
       aliases: [
         'internet use',
@@ -244,7 +255,7 @@ export const LAYER_MANIFEST = Object.freeze(
     {
       id: 'local-internet-highspeed',
       token: 'ih',
-      group: 'Internet Access (US)',
+      group: INTERNET_GROUP,
       vintage: '2000–2024',
       aliases: [
         'high speed internet',
@@ -256,7 +267,7 @@ export const LAYER_MANIFEST = Object.freeze(
     {
       id: 'local-internet-use-tracts',
       token: 'it',
-      group: 'Internet Access (US)',
+      group: INTERNET_GROUP,
       vintage: '2013–2024',
       aliases: [
         'internet use tracts',
@@ -267,7 +278,7 @@ export const LAYER_MANIFEST = Object.freeze(
     {
       id: 'local-internet-highspeed-tracts',
       token: 'ix',
-      group: 'Internet Access (US)',
+      group: INTERNET_GROUP,
       vintage: '2013–2024',
       aliases: [
         'high speed internet tracts',
@@ -276,7 +287,50 @@ export const LAYER_MANIFEST = Object.freeze(
       ],
     },
 
-    // ---- Research Data (key-locked) ------------------------------------
+    // ---- Air & Green Space -------------------------------------------------
+    {
+      id: 'local-air-pm25',
+      token: 'ap',
+      group: ENVIRONMENT_GROUP,
+      vintage: '2021',
+      aliases: [
+        'air quality',
+        'pm2.5',
+        'pm 2.5',
+        'fine particles',
+        'particulate matter',
+      ],
+    },
+    {
+      id: 'local-air-ozone',
+      token: 'ao',
+      group: ENVIRONMENT_GROUP,
+      vintage: '2022',
+      aliases: ['ozone'],
+    },
+    {
+      id: 'local-air-nonattainment',
+      token: 'an',
+      group: ENVIRONMENT_GROUP,
+      vintage: 'as of Aug 2026',
+      aliases: ['nonattainment', 'nonattainment areas'],
+    },
+    {
+      id: 'local-park-access',
+      token: 'pa',
+      group: ENVIRONMENT_GROUP,
+      vintage: '2020',
+      aliases: ['green space', 'green spaces', 'park access'],
+    },
+    {
+      id: 'local-parks',
+      token: 'pk',
+      group: ENVIRONMENT_GROUP,
+      vintage: '2025',
+      aliases: ['parks', 'park outlines'],
+    },
+
+    // ---- Restricted Research Data (key-locked) -----------------------------
     {
       id: 'local-gva-2015',
       token: 'gv',
@@ -293,57 +347,69 @@ export const LAYER_MANIFEST = Object.freeze(
       cardNoun: 'Mass killing',
       aliases: ['mkdb', 'mass killings', 'mass killing database'],
     },
+    {
+      id: 'local-chicago-homicides',
+      token: 'ch',
+      group: RESEARCH_DATA_GROUP,
+      vintage: '1870–1930',
+      cardNoun: 'Homicide',
+      aliases: [
+        'chicago historical homicides',
+        'historical chicago homicides',
+        'chicago homicide project',
+      ],
+    },
 
-    // ---- Boston ----------------------------------------------------------
+    // ---- City Study: Boston ------------------------------------------------
     {
       id: 'local-boston-neighborhoods',
       token: 'bn',
-      group: 'Boston',
+      group: 'City Study: Boston',
       cardNoun: 'Neighborhood',
       aliases: ['boston neighborhoods', 'boston neighbourhoods'],
     },
 
-    // ---- Chicago ---------------------------------------------------------
+    // ---- City Study: Chicago -----------------------------------------------
     {
       id: 'local-chicago-events',
       token: 'k',
-      group: 'Chicago',
+      group: 'City Study: Chicago',
       cardNoun: 'Event',
       aliases: ['chicago events', 'chicago homicides'],
     },
     {
       id: 'local-tlr',
       token: 'tl',
-      group: 'Chicago',
+      group: 'City Study: Chicago',
       cardNoun: 'Event',
       aliases: ['tlr', 'no limit'],
     },
     {
       id: 'local-famous-shootings',
       token: 'v',
-      group: 'Chicago',
+      group: 'City Study: Chicago',
       cardNoun: 'Shooting',
       aliases: ['famous shootings', 'shootings'],
     },
     {
       id: 'local-gang-map',
       token: 'y',
-      group: 'Chicago',
+      group: 'City Study: Chicago',
       cardNoun: 'Hood',
       aliases: ['gang map', 'gang territories', 'gangs'],
     },
     {
       id: 'local-gang-map-labels',
       token: 'l',
-      group: 'Chicago',
+      group: 'City Study: Chicago',
       aliases: ['gang names', 'gang labels'],
     },
 
-    // ---- Miami-Dade Homicides --------------------------------------------
+    // ---- City Study: Miami-Dade Homicides ----------------------------------
     {
       id: 'local-miami-homicide-hotspots',
       token: 'mh',
-      group: 'Miami-Dade Homicides',
+      group: MIAMI_GROUP,
       vintage: '1956–2011',
       aliases: [
         'miami hotspots',
@@ -361,18 +427,36 @@ export const LAYER_MANIFEST = Object.freeze(
     ].map(([decade, token, vintage]) => ({
       id: `local-miami-homicides-${decade}`,
       token,
-      group: 'Miami-Dade Homicides',
+      group: MIAMI_GROUP,
       vintage,
       cardNoun: 'Homicide',
       aliases: [`miami homicides ${decade}`],
     })),
 
-    // ---- 3D Captures -----------------------------------------------------
+    // ---- 3D Captures -------------------------------------------------------
     {
       id: 'local-3d-captures',
       token: '3d',
       group: '3D Captures',
       aliases: ['3d captures', 'splats', 'gaussian splats'],
+    },
+
+    // ---- Fly, Drone & Walk: first-person views ----------------------------
+    {
+      id: 'lowflyers',
+      token: 'lf',
+      disposition: 'enabled+mirrored-options',
+      optionOwner: 'flights',
+      group: VIEWS_GROUP,
+      label: 'Helicopters & Low Flyers',
+      aliases: [
+        'helicopters',
+        'helicopter',
+        'choppers',
+        'low flyers',
+        'low fliers',
+        'low flying aircraft',
+      ],
     },
 
     // ---- Live Feeds (inherited from God's Eye View) ----------------------
@@ -392,22 +476,6 @@ export const LAYER_MANIFEST = Object.freeze(
       group: 'Live Feeds',
       extra: true,
       aliases: ['military', 'military flights'],
-    },
-    {
-      id: 'lowflyers',
-      token: 'lf',
-      disposition: 'enabled+mirrored-options',
-      optionOwner: 'flights',
-      group: 'Live Feeds',
-      label: 'Helicopters & Low Flyers',
-      aliases: [
-        'helicopters',
-        'helicopter',
-        'choppers',
-        'low flyers',
-        'low fliers',
-        'low flying aircraft',
-      ],
     },
     {
       id: 'ais-live-vessels',

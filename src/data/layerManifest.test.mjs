@@ -48,6 +48,24 @@ test('flags are used only where they mean something', () => {
   const groups = [
     ...new Set(LAYER_MANIFEST.map((entry) => entry.group).filter(Boolean)),
   ];
-  assert.equal(groups[0], 'Neighborhood Data (US)');
+  assert.equal(groups[0], 'Life Expectancy & Health');
   assert.ok(groups.indexOf(RESEARCH_GROUP) < groups.indexOf('Live Feeds'));
+});
+
+test('every research group heading carries a plain-language note', async () => {
+  const { LAYER_GROUP_NOTES } = await import('./layerManifest.js');
+  const groups = new Set(LAYER_MANIFEST.map((entry) => entry.group));
+  for (const group of [
+    'Life Expectancy & Health',
+    'People & Economy (Census)',
+    'Internet Access Over Time',
+    'Air & Green Space',
+    RESEARCH_GROUP,
+    'Fly, Drone & Walk',
+  ]) {
+    assert.ok(groups.has(group), group);
+    assert.ok(LAYER_GROUP_NOTES[group]?.length > 10, group);
+  }
+  // Helicopters sit with the first-person views, not the live feeds.
+  assert.equal(layerManifestEntry('lowflyers').group, 'Fly, Drone & Walk');
 });

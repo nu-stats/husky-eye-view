@@ -2,8 +2,12 @@ import { layerFeedState } from '../data/feedState.js';
 export { layerFeedState } from '../data/feedState.js';
 import { GUIDANCE_STATUSES } from '../loadingFeedback.js';
 import { keySetupRequirement } from '../keySetupCore.mjs';
-import { openResearchKeyPrompt } from './researchKeyPrompt.js';
-import { LAYER_MANIFEST, RESEARCH_GROUP } from '../data/layerManifest.js';
+import { OWN_KEY_PROMPTS, openResearchKeyPrompt } from './researchKeyPrompt.js';
+import {
+  LAYER_GROUP_NOTES,
+  LAYER_MANIFEST,
+  RESEARCH_GROUP,
+} from '../data/layerManifest.js';
 import {
   applyLayerProfileClass,
   layerListedInProfile,
@@ -69,6 +73,17 @@ const GROUND_VIEW_ROWS = Object.freeze([
   }),
 ]);
 
+// Under HOLC: a lens onto today inside the 1930s map (src/ui/timeLens.js).
+const TIME_LENS_ROW = Object.freeze({
+  mode: 'time-lens',
+  icon: '◎',
+  label: 'Time Lens (1930s ↔ today)',
+  meta: 'HOLC map with a movable window onto a layer of today',
+  title:
+    'Time Lens: the 1930s HOLC map, with today seen through a movable lens',
+  event: 'gev:time-lens-open',
+});
+
 // The years a static dataset describes (manifest `vintage`), shown in its row
 // instead of a "2m ago" refresh time that only means something for live feeds.
 const DATA_VINTAGE = Object.fromEntries(
@@ -102,6 +117,16 @@ export function layerIsLocked(layer) {
     layer?.stats?.keyRequired === true &&
     Boolean(layer?.requiresKeyId)
   );
+}
+
+/**
+ * A layer icon is a text symbol, or `ms:<name>` for a Material Symbols glyph
+ * (each such name must be in index.html's icon_names list).
+ */
+export function setLayerIcon(element, icon) {
+  const glyph = /^ms:([a-z0-9_]+)$/.exec(String(icon || ''));
+  element.classList.toggle('material-symbols-outlined', Boolean(glyph));
+  element.textContent = glyph ? glyph[1] : icon || '';
 }
 
 /** Per-viewer convenience: which layer groups are folded away. */
@@ -454,6 +479,12 @@ export class LayerPanel {
         count.className = 'data-group-on';
         heading.appendChild(label);
         heading.appendChild(count);
+        if (LAYER_GROUP_NOTES[group]) {
+          const note = document.createElement('span');
+          note.className = 'data-group-note';
+          note.textContent = LAYER_GROUP_NOTES[group];
+          heading.appendChild(note);
+        }
         this._bind(heading, 'click', () => this._toggleGroup(group));
         this._toggleContainer.appendChild(heading);
         this._groups.set(group, { heading, count, rows: [] });
@@ -476,7 +507,7 @@ export class LayerPanel {
       left.className = 'data-toggle-left';
       const icon = document.createElement('span');
       icon.className = 'data-icon';
-      icon.textContent = layer.icon;
+      setLayerIcon(icon, layer.icon);
       const name = document.createElement('span');
       name.className = 'data-name';
       name.textContent = panelLabel(layer);
@@ -511,10 +542,21 @@ export class LayerPanel {
           const powerUp = document.getElementById('key-setup-chip');
           if (powerUp && !powerUp.hidden) {
             powerUp.click();
+            // Open at this layer's own key field (it may be far down the list).
+            const keyId = String(live.requiresKeyId || '');
+            const later = globalThis.requestAnimationFrame || setTimeout;
+            later(() => {
+              const row =
+                /^[\w-]+$/.test(keyId) &&
+                document.querySelector(`[data-key-id="${keyId}"]`);
+              row?.scrollIntoView({ block: 'center' });
+              row?.querySelector('input')?.focus({ preventScroll: true });
+            });
             return;
           }
           const saved = await openResearchKeyPrompt({
             layerName: panelLabel(live),
+            ...OWN_KEY_PROMPTS[live.requiresKeyId],
           });
           if (!saved || this._destroyed || this._generation !== generation)
             return;
@@ -602,6 +644,10 @@ export class LayerPanel {
         for (const view of GROUND_VIEW_ROWS)
           this._toggleContainer.appendChild(this._buildViewRow(view, group));
       }
+      if (layer.id === 'local-holc-redlining')
+        this._toggleContainer.appendChild(
+          this._buildViewRow(TIME_LENS_ROW, group),
+        );
     }
     if (previousGroup === RESEARCH_GROUP)
       this._toggleContainer.appendChild(this._buildCuratedRow());
@@ -696,10 +742,11 @@ export class LayerPanel {
     start.className = 'data-toggle-btn data-view-start';
     start.textContent = 'START';
     start.setAttribute('aria-label', `Start ${view.label}`);
-    start.title = `${view.label}: click the map where you want to start`;
+    start.title =
+      view.title || `${view.label}: click the map where you want to start`;
     this._bind(start, 'click', () =>
       window.dispatchEvent(
-        new CustomEvent('gev:ground-view-request', {
+        new CustomEvent(view.event || 'gev:ground-view-request', {
           detail: { mode: view.mode },
         }),
       ),
@@ -736,6 +783,34 @@ export class LayerPanel {
       this._renderToggles();
     });
     return label;
+  }
+
+  /**
+   * A layer that is on but drawn only closer in (tract layers from a national
+   * view) says so plainly: a ZOOM IN badge in place of the count, and one
+   * notice each time it is switched on out of range.
+   */
+  _syncZoomPrompt(row, count, layer) {
+    const waiting =
+      layer.enabled &&
+      String(layer.stats?.status || '').toLowerCase() === 'zoom-in';
+    row.classList.toggle('needs-zoom', waiting);
+    if (waiting && count) count.textContent = 'ZOOM IN';
+    this._zoomNoticed ||= new Set();
+    if (!waiting) {
+      this._zoomNoticed.delete(layer.id);
+      return;
+    }
+    if (this._zoomNoticed.has(layer.id)) return;
+    this._zoomNoticed.add(layer.id);
+    const message = String(layer.stats?.statusMessage || 'zoom in to load')
+      .replace(/ to load$/, ' to see it')
+      .trim();
+    window.dispatchEvent(
+      new CustomEvent('gev:notice', {
+        detail: { message: `${panelLabel(layer)}: ${message}.` },
+      }),
+    );
   }
 
   /** Qualify a loaded count when it does not mean items currently on screen. */
@@ -915,6 +990,7 @@ export class LayerPanel {
       if (count) {
         count.textContent = this._layerCountText(layer.stats);
       }
+      this._syncZoomPrompt(row, count, layer);
 
       const meta = row.querySelector('.data-toggle-meta');
       if (meta) {

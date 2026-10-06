@@ -31,6 +31,11 @@ import { aircraftTrackingTarget } from '../cockpitTracking.js';
 
 import { ShellFeedback } from './shellFeedback.js';
 import { CuratedFlightsPanel } from '../curated/curatedPanel.js';
+import { TimeLens } from './timeLens.js';
+import {
+  applyDataPanelPlacement,
+  wantsDataPanelTop,
+} from './dataPanelPlacement.js';
 
 import { runCctvLayerEnableTransition } from '../cctvFocusPolicy.js';
 
@@ -391,6 +396,26 @@ export class StyleManager extends ShellFacade {
       releaseRender: services.releaseContinuousRender,
       showToast: (message) => this._showToast(message),
     });
+
+    // Time Lens (Data Layers → HOLC row): the 1930s map with a movable
+    // window onto a layer of today.
+    this.timeLens = new TimeLens({
+      viewer,
+      readDataManager: () => this._dataManager,
+      showToast: (message) => this._showToast(message),
+      createLayers: services.createTimeLensLayers,
+    });
+
+    // Layout trial: ?panel=top puts Data Layers under the title plate,
+    // dropping down. The panel may mount a moment later, so retry briefly.
+    if (wantsDataPanelTop()) {
+      let tries = 0;
+      const place = () => {
+        if (applyDataPanelPlacement() || ++tries > 40) return;
+        setTimeout(place, 250);
+      };
+      place();
+    }
 
     // Full-globe sun/moon ring. It is a crisp screen-space overlay above the
     // Cesium canvas but below the HUD/detection/readout z ladder.
@@ -1539,6 +1564,7 @@ export class StyleManager extends ShellFacade {
     this._visualSettings.releaseIrBoost();
     this._cockpitCoordinator.destroy();
     this.curatedFlights?.destroy();
+    this.timeLens?.destroy();
     this._contextControls.disconnect();
     this._layerBindings.disconnect();
 

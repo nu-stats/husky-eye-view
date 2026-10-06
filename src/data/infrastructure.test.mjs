@@ -6,7 +6,11 @@ import * as Cesium from 'cesium';
 import {
   createInfrastructureLayers,
   INTERNET_MEASURES,
+  SEGREGATION_YEARS,
+  ENUMERATION_DISTRICT_YEARS,
+  enumerationDistrictSummary,
   internetSummary,
+  segregationSummary,
 } from 'gods-eye-view/infrastructure';
 import { createLocalGeoJsonLayer } from 'gods-eye-view/infrastructure/geojson';
 
@@ -176,6 +180,20 @@ test('infrastructure factory preserves identity and creates independent state wi
         source: 'HUD',
       },
       ...[
+        ['2000', '2000', 'LTDB 2000'],
+        ['2010', '2010', 'LTDB 2010'],
+        ['2024', '2020–24', 'ACS 2020–2024'],
+      ].map(([id, label, source]) => ({
+        id: `local-segregation-${id}`,
+        name: `Segregation ${label} (dissimilarity)`,
+        source,
+      })),
+      ...['1900', '1910', '1920', '1930'].map((year) => ({
+        id: `local-enumeration-districts-${year}`,
+        name: `Enumeration Districts ${year}`,
+        source: 'S4 Urban Transition HGIS',
+      })),
+      ...[
         ['local-acs-poverty', 'Poverty (tracts)'],
         ['local-acs-income', 'Median Household Income (tracts)'],
         ['local-acs-unemployment', 'Unemployment (tracts)'],
@@ -217,20 +235,34 @@ test('infrastructure factory preserves identity and creates independent state wi
         source: 'Mass Killing Database',
       },
       {
+        id: 'local-chicago-homicides',
+        name: 'Chicago Homicides 1870–1930',
+        source: 'Chicago Historical Homicide Project',
+      },
+      {
         id: 'local-boston-neighborhoods',
         name: 'Boston Neighborhoods',
         source: 'Neighborhood areas',
       },
     ],
   );
-  const locked = new Set(['local-gva-2015', 'local-mkdb']);
+  const locked = new Set([
+    'local-gva-2015',
+    'local-mkdb',
+    'local-chicago-homicides',
+  ]);
   first.forEach((layer, index) => {
     assert.notEqual(layer, second[index]);
     layer.destroy();
     const stats = second[index].getStats();
     if (locked.has(layer.id)) {
       // Research datasets start locked until the server says the key opens them.
-      assert.equal(second[index].requiresKeyId, 'research-data');
+      assert.equal(
+        second[index].requiresKeyId,
+        layer.id === 'local-chicago-homicides'
+          ? 'chicago-homicides'
+          : 'research-data',
+      );
       assert.equal(stats.keyRequired, true);
       assert.equal(stats.status, 'locked');
       assert.equal(stats.count, 0);
@@ -469,5 +501,49 @@ test('internet layers come by county (1998–2024) and by tract (ACS periods)', 
   assert.equal(
     internetSummary(counties, counties.years[5], {}),
     'No 2013–17 estimate here.',
+  );
+});
+
+test('segregation cards give all three indices and the population, nothing more', () => {
+  const year = SEGREGATION_YEARS.find((y) => y.suffix === '24');
+  const text = segregationSummary(year, {
+    name: 'Chicago, IL',
+    bw24: 80.3,
+    hw24: 59.4,
+    aw24: 42.9,
+    pop24: 2664452,
+    n_black24: 770000,
+  });
+  assert.equal(
+    text,
+    [
+      'Chicago, IL, 2020–24 — dissimilarity index (0–100):',
+      'Black–white 80.3 · Latino–white 59.4 · Asian–white 42.9',
+      'Population: 2,664,452',
+    ].join('\n'),
+  );
+  assert.match(
+    segregationSummary(year, { name: 'Smallville, KS', bw24: 31 }),
+    /Black–white 31\.0 · Latino–white n\/a · Asian–white n\/a/,
+  );
+});
+
+test('enumeration district cards give the district, city, census and area', () => {
+  const text = enumerationDistrictSummary({
+    ed: '412',
+    city: 'Chicago, IL',
+    year: 1910,
+    area_km2: 0.0423,
+  });
+  assert.match(
+    text,
+    /^Enumeration district 412, Chicago, IL — 1910 census, 0\.042 km²\./,
+  );
+  assert.match(text, /sized for one census taker/);
+  assert.deepEqual(
+    ENUMERATION_DISTRICT_YEARS.map((entry) => entry.id),
+    [1900, 1910, 1920, 1930].map(
+      (year) => `local-enumeration-districts-${year}`,
+    ),
   );
 });

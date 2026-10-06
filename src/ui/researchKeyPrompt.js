@@ -13,9 +13,17 @@
 const RESEARCH_KEY_SLOT = 'hev.researchKey';
 const RESEARCH_KEY_EVENT = 'hev:research-key-changed';
 
-function writeResearchKey(value) {
+/** Datasets with a key of their own: its session slot (DATASET_LOCKS). */
+export const OWN_KEY_PROMPTS = Object.freeze({
+  'chicago-homicides': Object.freeze({
+    slot: 'hev.chicagoHomicidesKey',
+    keyName: 'Chicago historical homicides key',
+  }),
+});
+
+function writeResearchKey(value, slot = RESEARCH_KEY_SLOT) {
   try {
-    globalThis.sessionStorage?.setItem(RESEARCH_KEY_SLOT, value);
+    globalThis.sessionStorage?.setItem(slot, value);
   } catch {
     return false;
   }
@@ -30,12 +38,15 @@ function writeResearchKey(value) {
 /**
  * Open the prompt. Resolves true when a key was saved, false when cancelled.
  * Only one prompt is open at a time.
- * @param {{documentRef?: Document, layerName?: string}} [options]
+ * A dataset with its own key passes that key's session slot and name.
+ * @param {{documentRef?: Document, layerName?: string, slot?: string, keyName?: string}} [options]
  * @returns {Promise<boolean>}
  */
 export function openResearchKeyPrompt({
   documentRef = globalThis.document,
   layerName = 'research layers',
+  slot = RESEARCH_KEY_SLOT,
+  keyName = 'research datasets key',
 } = {}) {
   if (!documentRef?.body) return Promise.resolve(false);
   documentRef.querySelector('.research-key-prompt')?.remove();
@@ -50,9 +61,10 @@ export function openResearchKeyPrompt({
 
     const title = documentRef.createElement('h2');
     title.id = 'research-key-prompt-title';
-    title.textContent = 'Research key';
+    title.textContent =
+      keyName === 'research datasets key' ? 'Research key' : 'Dataset key';
     const blurb = documentRef.createElement('p');
-    blurb.textContent = `Enter the research datasets key to open ${layerName}. It is kept only in this browser tab and is forgotten when the tab closes.`;
+    blurb.textContent = `Enter the ${keyName} to open ${layerName}. It is kept only in this browser tab and is forgotten when the tab closes.`;
     const input = documentRef.createElement('input');
     input.type = 'password';
     input.autocomplete = 'off';
@@ -79,7 +91,7 @@ export function openResearchKeyPrompt({
       event.preventDefault();
       const value = input.value.trim();
       if (!value) return;
-      close(writeResearchKey(value));
+      close(writeResearchKey(value, slot));
     });
     cancel.addEventListener('click', () => close(false));
     dialog.addEventListener('keydown', (event) => {

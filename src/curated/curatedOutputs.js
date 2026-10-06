@@ -494,8 +494,20 @@ export async function buildReport(
       const short = { ...layer, unit: '' };
       pdf.text(cols[0] + 14, y, `${city.name}, ${city.stateAbbr}`, { size: 9 });
       pdf.text(cols[1] + 4, y, formatValue(short, v.city), { size: 9 });
-      pdf.text(cols[2] + 4, y, formatValue(short, v.county), { size: 9 });
-      pdf.text(cols[3] + 4, y, formatValue(short, v.state), { size: 9 });
+      if (v.history) {
+        // City-only measures (segregation): earlier years, not county/state.
+        pdf.text(
+          cols[2] + 4,
+          y,
+          Object.entries(v.history)
+            .map(([year, value]) => `${year}: ${formatValue(short, value)}`)
+            .join('   '),
+          { size: 9, color: '#52514e' },
+        );
+      } else {
+        pdf.text(cols[2] + 4, y, formatValue(short, v.county), { size: 9 });
+        pdf.text(cols[3] + 4, y, formatValue(short, v.state), { size: 9 });
+      }
       y += 14;
     }
     pdf.line(M, y - 6, pdf.width - M, y - 6, { color: '#e6e5e0' });

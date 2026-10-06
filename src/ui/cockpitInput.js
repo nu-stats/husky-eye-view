@@ -3,6 +3,7 @@ import {
   COCKPIT_LOOK_STEP_PITCH_DEG,
   COCKPIT_LOOK_STEP_YAW_DEG,
 } from './cockpitLook.js';
+import { COCKPIT_CAPTURE_ENABLED } from './cockpitCapture.js';
 
 export function onKeyDown(event) {
   if (this.destroyed) return false;
@@ -63,8 +64,8 @@ export function onKeyDown(event) {
   if (this.active && !event.metaKey && !event.ctrlKey && !event.altKey) {
     const zoomStep =
       key === '+' || key === '=' ? 1 : key === '-' || key === '_' ? -1 : 0;
-    // P saves a snapshot; Shift+P starts or stops a clip.
-    if (key === 'p') {
+    // P saves a snapshot; Shift+P starts or stops a clip (when capture is on).
+    if (key === 'p' && COCKPIT_CAPTURE_ENABLED) {
       event.preventDefault();
       event.stopImmediatePropagation();
       if (event.shiftKey) this.toggleClip();

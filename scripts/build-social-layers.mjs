@@ -41,6 +41,21 @@ export const TRACT_KEYS = [
   'bb',
   'net',
 ];
+/**
+ * County values for the tract layers' overview from far out: the ACS county
+ * estimates, and population-weighted means of the tract environment measures.
+ */
+export const COUNTY_SOCIAL_KEYS = [
+  'pov',
+  'inc',
+  'unemp',
+  'ba',
+  'rent',
+  'blk',
+  'hisp',
+  'noveh',
+];
+export const COUNTY_ENVIRONMENT_KEYS = ['pm25', 'o3', 'park'];
 /** 2013–2017 internet shares: any subscription, broadband of any type. */
 export const INTERNET_2017_KEYS = ['net17', 'bb17'];
 
@@ -247,8 +262,22 @@ function main() {
     readFileSync(RELATIONSHIP_FILE, 'utf8'),
     acs2017.tract2010,
   );
+  // Population-weighted county means of the tract environment measures, for
+  // the county overview the tract layers show from far out.
+  const environment = new Map();
   const tracts = rewriteChunks('public/context/tracts-2020', (p) => {
     const values = acs.tract[String(p.geoid)] || {};
+    const weight = Number(values.pop) || 0;
+    if (weight > 0) {
+      const county = String(p.geoid).slice(0, 5);
+      const sums = environment.get(county) || {};
+      for (const key of COUNTY_ENVIRONMENT_KEYS) {
+        if (!Number.isFinite(p[key])) continue;
+        sums[key] = (sums[key] || 0) + p[key] * weight;
+        sums[`${key}_w`] = (sums[`${key}_w`] || 0) + weight;
+      }
+      environment.set(county, sums);
+    }
     for (const key of [...TRACT_KEYS, ...INTERNET_2017_KEYS]) delete p[key];
     let any = false;
     for (const key of TRACT_KEYS) {
@@ -272,21 +301,29 @@ function main() {
         /^(ia|hs)\d{4}$/.test(key) ||
         ['net', 'bb', ...INTERNET_2017_KEYS].includes(key),
     );
+  const overviewKeys = [...COUNTY_SOCIAL_KEYS, ...COUNTY_ENVIRONMENT_KEYS];
   const counties = rewriteChunks(
     'public/context/county-life-expectancy',
     (p) => {
-      for (const key of internetKeys(p)) delete p[key];
+      for (const key of [...internetKeys(p), ...overviewKeys]) delete p[key];
       const geoid = String(p.geoid);
       Object.assign(p, cps[STATE_ABBR[geoid.slice(0, 2)]] || {});
       const county = acs.county[geoid] || {};
       if (Number.isFinite(county.net)) p.net = county.net;
       if (Number.isFinite(county.bb)) p.bb = county.bb;
       Object.assign(p, internet2017Shares(acs2017.county[geoid]));
-      return internetKeys(p).length > 0;
+      // The tract layers' county overview: the same property names.
+      for (const key of COUNTY_SOCIAL_KEYS)
+        if (Number.isFinite(county[key])) p[key] = county[key];
+      const sums = environment.get(geoid) || {};
+      for (const key of COUNTY_ENVIRONMENT_KEYS)
+        if (sums[`${key}_w`] > 0)
+          p[key] = Number((sums[key] / sums[`${key}_w`]).toFixed(1));
+      return true;
     },
   );
   console.log(
-    `county-life-expectancy: internet values on ${counties.touched} counties (CPS ${Object.keys(CPS_YEARS).join(', ')}; ACS ${acs2017.vintage}, ${acs.vintage})`,
+    `county-life-expectancy: internet values (CPS ${Object.keys(CPS_YEARS).join(', ')}; ACS ${acs2017.vintage}, ${acs.vintage}) and the tract layers' county overview on ${counties.touched} counties`,
   );
 }
 

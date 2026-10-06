@@ -125,8 +125,10 @@
           <strong id="cockpit-layer-opacity-value" aria-hidden="true">70%</strong>
         </label>
         <!-- Snapshot (PNG) and clip (MP4, up to 60 s) of the 3D view, saved to
-             Downloads with a caption strip and the map credits. -->
-        <div class="cockpit-capture-controls" role="group" aria-label="Snapshot and clip">
+             Downloads with a caption strip and the map credits. Hidden for now:
+             photos and clips are offered only during Curated Flights
+             (COCKPIT_CAPTURE_ENABLED in src/ui/cockpitCapture.js). -->
+        <div class="cockpit-capture-controls" role="group" aria-label="Snapshot and clip" hidden>
           <button id="cockpit-snapshot" type="button" aria-label="Save a high-resolution snapshot" title="Save a high-resolution snapshot (P key)">
             <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
           </button>
@@ -327,7 +329,6 @@
     <div class="cockpit-help" role="note" aria-label="Cockpit keyboard shortcuts">
       <span>WHEEL / <kbd>+</kbd> <kbd>−</kbd> ZOOM · <kbd>0</kbd> RESET</span>
       <span><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> / DRAG LOOK · <kbd>HOME</kbd> AHEAD</span>
-      <span><kbd>P</kbd> PHOTO · <kbd>SHIFT</kbd>+<kbd>P</kbd> CLIP</span>
       <span><kbd>C</kbd> / <kbd>ESC</kbd> EXIT</span>
     </div>
   </section>

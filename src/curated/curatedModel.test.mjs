@@ -274,6 +274,24 @@ test('the highlight sentence compares the city with its county and state', () =>
   assert.match(compareSentence(LAYERS.pm25, detroit, {}), /no pm2\.5 data/);
 });
 
+test('a city-only measure (segregation) lists its earlier years instead', () => {
+  const detroit = TABLE.cities[0];
+  const layer = {
+    label: 'Latino–white segregation',
+    unit: 'index (0–100)',
+    decimals: 1,
+  };
+  assert.equal(
+    compareSentence(layer, detroit, {
+      city: 65.8,
+      county: null,
+      state: null,
+      history: { 2000: 58.1, 2010: 59.4 },
+    }),
+    'Detroit: 65.8 index (0–100) (2000: 58.1, 2010: 59.4).',
+  );
+});
+
 test('dollar measures read as money, differences included', () => {
   const income = {
     label: 'Median household income',

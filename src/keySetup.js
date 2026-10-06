@@ -73,6 +73,8 @@ export const SESSION_KEY_SLOTS = Object.freeze({
   HEV_RESEARCH_DATA_KEY: 'hev.researchKey',
   // Curated Flights has its own key (src/curated/curatedAccess.js).
   HEV_CURATED_FLIGHTS_KEY: 'hev.curatedKey',
+  // The Chicago historical homicides layer has its own key too.
+  HEV_CHICAGO_HOMICIDES_KEY: 'hev.chicagoHomicidesKey',
 });
 export const SESSION_KEY_EVENT = 'hev:research-key-changed';
 

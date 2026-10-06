@@ -276,6 +276,125 @@ export const DATA_CREDITS = [
       '<a href="https://www.submarinecablemap.com" target="_blank" rel="noopener">submarinecablemap.com</a> ' +
       '(CC BY-NC-SA 3.0 — NonCommercial)',
   },
+
+  // ── Husky Eye View research layers ───────────────────────────────
+  {
+    key: 'mapping-inequality',
+    html:
+      'HOLC redlining maps and 1930s area descriptions: Robert K. Nelson, LaDale Winling et al., ' +
+      '<a href="https://dsl.richmond.edu/panorama/redlining/" target="_blank" rel="noopener">Mapping Inequality: Redlining in New Deal America</a>, ' +
+      'American Panorama, University of Richmond Digital Scholarship Lab',
+  },
+  {
+    key: 'ltdb-segregation',
+    html:
+      'Segregation (dissimilarity, computed by Husky Eye View): ' +
+      '<a href="https://s4.ad.brown.edu/Projects/Diversity/Researcher/Bridging.htm" target="_blank" rel="noopener">Longitudinal Tract Data Base</a>, ' +
+      'Spatial Structures in the Social Sciences, Brown University — Logan, Xu &amp; Stults (2014), ' +
+      '“Interpolating US Decennial Census Tract Data from as Early as 1970 to 2010,” <i>The Professional Geographer</i> 66(3)',
+  },
+  {
+    key: 'usaleep',
+    html:
+      'Tract life expectancy 2010–2015: ' +
+      '<a href="https://www.cdc.gov/nchs/nvss/usaleep/usaleep.html" target="_blank" rel="noopener">U.S. Small-Area Life Expectancy Estimates Project (USALEEP)</a> — ' +
+      'NCHS, NAPHSIS and the Robert Wood Johnson Foundation; clusters (Local Moran’s I) computed by the project',
+  },
+  {
+    key: 'county-life-expectancy',
+    html: 'County life expectancy 2000–2019, total and by race and ethnicity, with clusters (Local Moran’s I) computed by the project',
+  },
+  {
+    key: 'cdc-tracking',
+    html:
+      'PM2.5 and ozone (Downscaler model, EPA CMAQ with monitor data) and access to parks: ' +
+      '<a href="https://ephtracking.cdc.gov" target="_blank" rel="noopener">CDC Environmental Public Health Tracking Network</a>',
+  },
+  {
+    key: 'epa-green-book',
+    html:
+      'Nonattainment areas: ' +
+      '<a href="https://www.epa.gov/green-book" target="_blank" rel="noopener">U.S. EPA Green Book</a>',
+  },
+  {
+    key: 'census-acs',
+    html:
+      'Social and economic measures, internet and broadband, segregation 2020–2024, Curated Flights: ' +
+      '<a href="https://www.census.gov/programs-surveys/acs" target="_blank" rel="noopener">U.S. Census Bureau, American Community Survey</a> ' +
+      '5-year estimates (2013–2017, 2020–2024); city populations from the Vintage 2024 population estimates',
+  },
+  {
+    key: 'census-cps-ntia',
+    html:
+      'Internet use 1998–2010: U.S. Census Bureau Current Population Survey, Computer and Internet Use Supplement, via the ' +
+      '<a href="https://www.ntia.gov/data/explorer" target="_blank" rel="noopener">NTIA Data Explorer</a>',
+  },
+  {
+    key: 'census-boundaries',
+    html:
+      'Boundaries: U.S. Census Bureau TIGER/Line, cartographic boundary files (tracts, counties, places), ' +
+      'TIGERweb, the 2010–2020 tract relationship file and the 2010 Gazetteer; parks from TIGER/Line Area Landmarks',
+  },
+  {
+    key: 'hifld-hospitals',
+    html:
+      'Trauma centers: ' +
+      '<a href="https://hifld-geoplatform.hub.arcgis.com" target="_blank" rel="noopener">Homeland Infrastructure Foundation-Level Data (HIFLD)</a>, Hospitals',
+  },
+  {
+    key: 'hud-public-housing',
+    html:
+      'Public housing developments: ' +
+      '<a href="https://hudgis-hud.opendata.arcgis.com" target="_blank" rel="noopener">U.S. Department of Housing and Urban Development (HUD)</a>',
+  },
+  {
+    key: 'boston-neighborhoods',
+    html:
+      'Boston neighborhoods: City of Boston neighborhood statistical areas, ' +
+      '<a href="https://data.boston.gov" target="_blank" rel="noopener">Analyze Boston</a>',
+  },
+  {
+    key: 'chicago-layers',
+    html:
+      'Chicago events, TLR and famous shootings: project-compiled from public reporting and video; ' +
+      'gang territories and names: community-mapped “Big Bas #1 Chicagoland &amp; Illinois Gang Map” (Google My Maps)',
+  },
+  {
+    key: 'miami-homicides',
+    html: 'Miami-Dade homicides 1956–2011 and hotspots: Miami-Dade homicide records, compiled by the project',
+  },
+  {
+    key: 'restricted-research',
+    html:
+      'Restricted (key-locked) research data: ' +
+      '<a href="https://www.gunviolencearchive.org" target="_blank" rel="noopener">Gun Violence Archive</a> (2015); ' +
+      'Associated Press / USA TODAY / Northeastern University Mass Killing Database (2006–2023)',
+  },
+  {
+    key: 's4-enumeration-districts',
+    html:
+      'Census enumeration districts 1900–1930: Shertzer, Walsh and Logan (2016), Historical Methods 49(4); ' +
+      '<a href="https://s4.ad.brown.edu/Projects/UTP2/ncities.htm" target="_blank" rel="noopener">Urban Transition Historical GIS Project</a>, S4, Brown University',
+  },
+  {
+    key: 'chicago-historical-homicides',
+    html:
+      'Chicago homicides 1870–1930 (key-locked): Leigh Bienen, ' +
+      '<a href="https://doi.org/10.21985/N2HB3R" target="_blank" rel="noopener">Homicide in Chicago, 1870–1930</a> ' +
+      '(Chicago Historical Homicide Project, Northwestern University); locations geocoded against ' +
+      '<a href="https://data.cityofchicago.org/d/pr57-gg9e" target="_blank" rel="noopener">City of Chicago street center lines</a>, ' +
+      'the Chicago Directory Company’s 1909 Plan of Re-Numbering, and William Martin’s 1948 list of Chicago street-name changes (Living History of Illinois)',
+  },
+  {
+    key: 'splat-sample',
+    html: '3D capture sample: CesiumJS sample data (Apache-2.0)',
+  },
+  {
+    key: 'bpd-scanner',
+    html:
+      'Boston Police scanner link: the department’s public feed on ' +
+      '<a href="https://radio.rapidsos.com/boston" target="_blank" rel="noopener">radio.rapidsos.com/boston</a> (linked, not played)',
+  },
 ];
 
 /**

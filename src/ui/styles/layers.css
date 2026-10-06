@@ -287,6 +287,34 @@
   letter-spacing: 1px;
 }
 
+/* Icon-font layer icons (setLayerIcon) match the text symbols' size. */
+.data-icon.material-symbols-outlined {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* On, but drawn only closer in: the count reads ZOOM IN in amber. */
+.data-toggle-row.needs-zoom .data-count {
+  color: #f2b44b;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+}
+
+/* One plain-language line under a group heading: what it holds, and how. */
+.data-layer-group-heading {
+  flex-wrap: wrap;
+}
+
+.data-group-note {
+  flex-basis: 100%;
+  padding: 2px 0 0 11px;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  font: 400 11px var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .data-toggle-row {
   padding: 7px 10px 6px;
   border-radius: 8px;
@@ -1653,4 +1681,37 @@
 }
 body.profile-research #tr3b-toggle {
   display: none !important;
+}
+
+/* Layout trial (?panel=top, src/ui/dataPanelPlacement.js): Data Layers sits
+   just under the title plate and drops down; the bottom row no longer holds it. */
+#data-panel-top-anchor {
+  position: fixed;
+  top: 110px;
+  left: 16px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 230px);
+  pointer-events: none;
+}
+body.data-panel-top #data-panel-top-anchor > #data-panel {
+  position: relative;
+  inset: auto;
+  min-width: 190px;
+  max-height: 100%;
+  pointer-events: auto;
+}
+body.data-panel-top #data-panel-top-anchor > #data-panel:not(.collapsed) {
+  width: 330px;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+body.data-panel-top
+  #data-panel-top-anchor
+  > #data-panel:not(.collapsed)
+  .data-panel-inner {
+  max-height: calc(100vh - 290px);
+  overflow: hidden;
 }

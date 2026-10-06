@@ -58,7 +58,11 @@ export function captionLines({ view, place, date = new Date(), layers = [] }) {
 }
 
 /** Panel groups that are live feeds or tools rather than map data. */
-const NON_DATA_GROUPS = new Set(['Live Feeds', 'Utilities']);
+const NON_DATA_GROUPS = new Set([
+  'Live Feeds',
+  'Fly, Drone & Walk',
+  'Utilities',
+]);
 
 /** Names of the map-data layers that are on, from `{name, group}` panel rows. */
 export function captionLayerNames(rows = []) {

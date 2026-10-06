@@ -79,7 +79,11 @@ test('the key comes only with the request, never from the server configuration',
   let res = await request(plugin, '/status');
   assert.deepEqual(JSON.parse(res.body), {
     configured: false,
-    datasets: { 'gva-2015': 'locked', mkdb: 'locked' },
+    datasets: {
+      'gva-2015': 'locked',
+      mkdb: 'locked',
+      'chicago-homicides': 'locked',
+    },
   });
   assert.equal((await request(plugin, '/mkdb')).status, 503);
   // The browser session's key, sent in the header, does.
@@ -104,7 +108,11 @@ test('the research route serves data only to the right key', async (t) => {
   let res = await request(plugin, '/status');
   assert.deepEqual(JSON.parse(res.body), {
     configured: false,
-    datasets: { 'gva-2015': 'locked', mkdb: 'locked' },
+    datasets: {
+      'gva-2015': 'locked',
+      mkdb: 'locked',
+      'chicago-homicides': 'locked',
+    },
   });
   res = await request(plugin, '/mkdb');
   assert.equal(res.status, 503);
@@ -124,6 +132,7 @@ test('the research route serves data only to the right key', async (t) => {
   assert.deepEqual(JSON.parse(res.body).datasets, {
     'gva-2015': 'locked',
     mkdb: 'unlocked',
+    'chicago-homicides': 'locked',
   });
 
   res = await request(plugin, '/gva-2015');
@@ -172,7 +181,8 @@ test('the research key is browser-session only: the server can never save it', (
   const row = status.keys.find((key) => key.id === 'research-data');
   assert.equal(row.set, false);
   assert.equal(row.browserSession, true);
-  // Both owner-issued session keys (research data, Curated Flights) are
+  // The owner-issued session keys (research data, Curated Flights, Chicago
+  // historical homicides) are
   // optional and never count toward "keys waiting".
   assert.equal(
     status.total,
@@ -180,8 +190,8 @@ test('the research key is browser-session only: the server can never save it', (
   );
   assert.equal(
     status.keys.filter((key) => key.browserSession).length,
-    2,
-    'research data and Curated Flights',
+    3,
+    'research data, Curated Flights and Chicago historical homicides',
   );
   assert.ok(!JSON.stringify(status).includes('k1'));
 });

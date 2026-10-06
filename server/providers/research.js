@@ -46,7 +46,18 @@ export const RESEARCH_KEY_HEADER = 'x-hev-research-key';
 export const RESEARCH_DATASETS = Object.freeze({
   'gva-2015': 'gva_2015.geojsonl.enc',
   mkdb: 'mkdb.geojsonl.enc',
+  // Its own key (scripts/build-chicago-homicides.mjs), sent in its own header.
+  'chicago-homicides': 'chicago_homicides.geojsonl.enc',
 });
+
+/** Datasets locked with a key of their own, and the header that carries it. */
+export const DATASET_KEY_HEADERS = Object.freeze({
+  'chicago-homicides': 'x-hev-chicago-homicides-key',
+});
+
+/** The header a dataset's key arrives in (the research key by default). */
+export const keyHeaderFor = (id) =>
+  DATASET_KEY_HEADERS[id] || RESEARCH_KEY_HEADER;
 
 function deriveKey(passphrase, salt) {
   return scryptSync(String(passphrase), salt, 32, SCRYPT);
@@ -95,8 +106,8 @@ export function decryptResearchBuffer(buffer, passphrase) {
 /** Vite plugin serving the locked datasets to this machine's map. */
 export function researchDataProxy({
   dataDir = path.join(ROOT, 'data', 'research'),
-  readKey = (req) =>
-    String(req?.headers?.[RESEARCH_KEY_HEADER] || '')
+  readKey = (req, id) =>
+    String(req?.headers?.[keyHeaderFor(id)] || '')
       .trim()
       .slice(0, 512),
 } = {}) {
@@ -124,13 +135,18 @@ export function researchDataProxy({
       const id = String(req.url || '')
         .split('?')[0]
         .replace(/^\/+|\/+$/g, '');
-      const key = readKey(req);
+      const key = readKey(req, id);
       if (id === 'status') {
+        // Each dataset is tried with the key from its own header.
         const datasets = {};
+        let configured = false;
         for (const name of Object.keys(RESEARCH_DATASETS)) {
-          datasets[name] = key && open(name, key) ? 'unlocked' : 'locked';
+          const datasetKey = readKey(req, name);
+          if (datasetKey) configured = true;
+          datasets[name] =
+            datasetKey && open(name, datasetKey) ? 'unlocked' : 'locked';
         }
-        sendJson(200, { configured: Boolean(key), datasets });
+        sendJson(200, { configured, datasets });
         return;
       }
       if (!Object.hasOwn(RESEARCH_DATASETS, id)) {

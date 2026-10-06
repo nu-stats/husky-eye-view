@@ -351,6 +351,34 @@ test('zoomed out past the threshold nothing loads and the panel says zoom in', a
   }
 });
 
+test('a layer with a far stand-in draws it when zoomed out, then the detail up close', async () => {
+  const env = await createHarness({
+    heightM: 5_000_000,
+    layerOptions: {
+      far: {
+        baseUrl: 'context/far-counties/',
+        label: 'showing counties · zoom in for tracts',
+        featureSummary: (p) => `County view of ${p.name}.`,
+      },
+    },
+  });
+  try {
+    await env.layer.enable(env.viewer);
+    // From far out: the stand-in's chunks, never "zoom in".
+    assert.deepEqual(env.layer.getDrawnChunkIds(), ['far:17031']);
+    assert.ok(env.fetched.some((url) => url.includes('far-counties/index.json')));
+    assert.ok(env.fetched.some((url) => url.endsWith('far-counties/17031.geojsonl')));
+    const stats = env.layer.getStats();
+    assert.equal(stats.status, 'overview');
+    assert.equal(stats.statusMessage, 'showing counties · zoom in for tracts');
+    env.setPick(env.records()[0]);
+    env.click();
+    assert.match(env.selected.at(-1).properties.summary, /^County view of /);
+  } finally {
+    env.cleanup();
+  }
+});
+
 test('a nationwide layer loads at country height and has its own zoom hint', async () => {
   const wide = await createHarness({
     heightM: 5_000_000,
@@ -515,26 +543,33 @@ test('disable releases every drawn county', async () => {
   }
 });
 
-test('a county is drawn as one batched ground primitive, not an entity per area', async () => {
+test('a county is drawn as batched classification primitives, one per color, not an entity per area', async () => {
   const env = await createHarness({ chunks: { ...CHUNKS, 17031: COOK_AREAS } });
   try {
     await env.layer.enable(env.viewer);
     assert.equal(env.added.length, 0, 'no data sources / entities');
-    assert.equal(env.ground.length, 1, 'one primitive for the county');
-    const [primitive] = env.ground;
-    assert.ok(primitive instanceof Cesium.GroundPrimitive);
-    assert.equal(primitive.classificationType, Cesium.ClassificationType.BOTH);
-    assert.ok(
-      primitive.appearance instanceof Cesium.PerInstanceColorAppearance,
-    );
+    // Red (A, C) and blue (B's two parts, and D without an estimate).
+    assert.equal(env.ground.length, 2, 'one primitive per color');
+    for (const primitive of env.ground) {
+      assert.ok(primitive instanceof Cesium.ClassificationPrimitive);
+      assert.equal(
+        primitive.classificationType,
+        Cesium.ClassificationType.BOTH,
+      );
+      assert.ok(
+        primitive.appearance instanceof Cesium.PerInstanceColorAppearance,
+      );
+    }
     // One instance per polygon: the MultiPolygon contributes two.
     assert.deepEqual(
-      env.records().map((record) => record.id),
-      ['tract-a', 'tract-b', 'tract-b_2', 'tract-c', '17031:3'],
+      env.ground.flatMap((p) => p.geometryInstances.map((i) => i.id.id)),
+      ['tract-a', 'tract-c', 'tract-b', 'tract-b_2', '17031:3'],
     );
     assert.ok(
-      primitive.geometryInstances.every(
-        (instance) => instance.geometry instanceof Cesium.PolygonGeometry,
+      env.ground.every((primitive) =>
+        primitive.geometryInstances.every(
+          (instance) => instance.geometry instanceof Cesium.PolygonGeometry,
+        ),
       ),
     );
     // Counts are areas (features), not polygon parts.
@@ -568,15 +603,16 @@ test('each area takes its own color from featureColor', async () => {
       );
       return [...value];
     };
-    const colors = env.ground[0].geometryInstances.map((instance) => [
-      ...instance.attributes.color.value,
-    ]);
+    // A batch per color, every instance in a batch the same color.
+    const colors = env.ground.map((primitive) =>
+      primitive.geometryInstances.map((instance) => [
+        ...instance.attributes.color.value,
+      ]),
+    );
     assert.deepEqual(colors, [
-      bytes('#b2182b'),
-      bytes('#2166ac'),
-      bytes('#2166ac'),
-      bytes('#b2182b'),
-      bytes('#9e9e9e'), // unparseable color falls back to gray
+      [bytes('#b2182b'), bytes('#b2182b')],
+      [bytes('#2166ac'), bytes('#2166ac')],
+      [bytes('#9e9e9e')], // unparseable color falls back to gray
     ]);
   } finally {
     env.cleanup();
@@ -590,9 +626,12 @@ test('picking an area of the batch selects exactly that feature', async () => {
   });
   try {
     await env.layer.enable(env.viewer);
-    const records = env.records();
+    const records = env.ground.flatMap((p) =>
+      p.geometryInstances.map((instance) => instance.id),
+    );
     // The second part of tract B.
-    env.setPick(records[2]);
+    const partTwo = records.find((record) => record.id === 'tract-b_2');
+    env.setPick(partTwo);
     env.click();
     assert.equal(env.selected.length, 1);
     const record = env.selected[0];
@@ -600,7 +639,7 @@ test('picking an area of the batch selects exactly that feature', async () => {
     assert.equal(record.label, 'Tract B');
     assert.equal(record.properties.life_exp_8, 81.2);
     assert.equal(record.properties.source_note, 'USALEEP.');
-    assert.equal(record.dataSource, env.ground[0]);
+    assert.equal(record.dataSource, partTwo.primitive);
     // Centered on the clicked part (-87.62), not the feature's other part.
     assert.ok(Math.abs(record.longitude - -87.62) < 0.01, record.longitude);
     assert.ok(Math.abs(record.latitude - 41.9) < 0.01, record.latitude);
@@ -610,7 +649,7 @@ test('picking an area of the batch selects exactly that feature', async () => {
     assert.equal(entity.__localLayerId, 'local-life-expectancy');
     assert.equal(entity.__gevContextId, record.id);
     assert.ok(
-      records.every((r, i) => (i === 2 ? r.entity === entity : !r.entity)),
+      records.every((r) => (r === partTwo ? r.entity === entity : !r.entity)),
       'only the clicked area has an entity',
     );
     // Clicking it again reuses the same entity.
@@ -660,7 +699,8 @@ test('a county with thousands of areas is split into even batches added over sev
   const many = Array.from({ length: 1300 }, (_, i) => ({
     type: 'Feature',
     id: `t${i}`,
-    properties: { name: `T${i}`, life_exp_8: i % 2 ? 70 : 80 },
+    // One color, so the batching is by count alone.
+    properties: { name: `T${i}`, life_exp_8: 70 },
     geometry: square(
       -87.9 + (i % 50) * 0.01,
       41.6 + Math.floor(i / 50) * 0.01,

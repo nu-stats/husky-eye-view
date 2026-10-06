@@ -1,4 +1,4 @@
-import { createLocalGeoJsonLayer } from './localGeojsonCore.js';
+import { createLocalGeoJsonLayer, DATASET_LOCKS } from './localGeojsonCore.js';
 import { createChunkedAreaLayer } from './chunkedAreaLayer.js';
 
 // Nationwide context layers, chunked by county under public/context/ by
@@ -49,15 +49,26 @@ const LIFE_EXPECTANCY_CLUSTERS = Object.freeze([
   { type: 'HL', label: 'High–Low outlier', color: '#92c5de' },
   { type: 'LH', label: 'Low–High outlier', color: '#f4a582' },
 ]);
+// Areas outside any significant cluster are off-white, so the cluster layers
+// still show the country's shape and the cluster colors stand out.
+const NOT_SIGNIFICANT_COLOR = '#f3efe6';
+const isCluster = (p) =>
+  LIFE_EXPECTANCY_CLUSTERS.some((c) => c.type === p.cluster);
 const clusterColor = (p) =>
   LIFE_EXPECTANCY_CLUSTERS.find((c) => c.type === p.cluster)?.color ||
-  NO_DATA_COLOR;
-const clusterLegend = () =>
-  LIFE_EXPECTANCY_CLUSTERS.map((c) => ({
+  NOT_SIGNIFICANT_COLOR;
+const clusterLegend = () => [
+  ...LIFE_EXPECTANCY_CLUSTERS.map((c) => ({
     label: c.label,
     color: c.color,
     test: (p) => p.cluster === c.type,
-  }));
+  })),
+  {
+    label: 'Not significant',
+    color: NOT_SIGNIFICANT_COLOR,
+    test: (p) => !isCluster(p),
+  },
+];
 // Card wording for a tract's cluster (formerly stored in every feature).
 const CLUSTER_WORDING = Object.freeze({
   HH: ['long-life cluster (high–high)', 'high, and so are its neighbors'],
@@ -65,6 +76,13 @@ const CLUSTER_WORDING = Object.freeze({
   HL: ['high outlier (high–low)', 'high while its neighbors are low'],
   LH: ['low outlier (low–high)', 'low while its neighbors are high'],
 });
+/** County card: its Local Moran's I result, or that it is not significant. */
+function countyClusterSummary(p) {
+  return (
+    p.cluster_summary ||
+    "Not part of a significant Local Moran's I cluster (county life expectancy, 2015)."
+  );
+}
 function tractClusterSummary(p) {
   const [label, detail] = CLUSTER_WORDING[p.cluster] || [];
   if (!label) return 'Not a significant cluster.';
@@ -349,7 +367,8 @@ export const SOCIAL_MEASURES = Object.freeze([
     id: 'local-acs-no-vehicle',
     key: 'noveh',
     name: 'Households Without a Vehicle (tracts)',
-    icon: '⊘',
+    // A car (Material Symbols), drawn by setLayerIcon in the Data Layers panel.
+    icon: 'ms:directions_car',
     table: 'B25044',
     definition: 'share of occupied housing units with no vehicle available.',
     format: (v) => `${v.toFixed(1)}% of households have no vehicle`,
@@ -501,10 +520,145 @@ const NONATTAINMENT_TYPES = Object.freeze([
 
 /** County layers are drawn nationwide: every state, from space-station height. */
 const COUNTY_LAYER_OPTIONS = Object.freeze({
-  maxHeightM: 8_000_000,
+  // Up to a whole-Earth view: these layers always show over the country.
+  maxHeightM: 30_000_000,
   maxChunks: 60,
   zoomInMessage: 'zoom in to the United States to load',
 });
+
+/**
+ * What a tract layer shows from far out: the same measure for every county
+ * (scripts/build-social-layers.mjs writes it under the same property names),
+ * so a layer always draws over the whole country and sharpens to tracts as
+ * the view closes in.
+ */
+const countyOverview = (extra = {}) => ({
+  baseUrl: 'context/county-life-expectancy/',
+  maxHeightM: COUNTY_LAYER_OPTIONS.maxHeightM,
+  maxChunks: COUNTY_LAYER_OPTIONS.maxChunks,
+  label: 'showing counties · zoom in for tracts',
+  ...extra,
+});
+const COUNTY_MEAN_NOTE =
+  'County view: the population-weighted mean of the county’s tract estimates.';
+// ---- Residential segregation: dissimilarity index, cities of 75,000+ ------
+// scripts/build-segregation-layers.mjs: 2010 tracts throughout (LTDB, Brown
+// University; ACS moved onto them), each city's tracts fixed by LTDB.
+const DISSIMILARITY_BINS = Object.freeze([
+  { label: 'Under 30 (low)', color: '#f2f0f7', min: -Infinity, max: 30 },
+  { label: '30–40', color: '#dadaeb', min: 30, max: 40 },
+  { label: '40–50', color: '#bcbddc', min: 40, max: 50 },
+  { label: '50–60', color: '#9e9ac8', min: 50, max: 60 },
+  { label: '60–70 (high)', color: '#756bb1', min: 60, max: 70 },
+  { label: '70 and over', color: '#54278f', min: 70, max: Infinity },
+]);
+const SEGREGATION_GROUPS = Object.freeze([
+  { key: 'bw', label: 'Black–white', group: 'black', noun: 'Black' },
+  {
+    key: 'hw',
+    label: 'Latino–white',
+    group: 'hispanic',
+    noun: 'Hispanic or Latino',
+  },
+  { key: 'aw', label: 'Asian–white', group: 'asian', noun: 'Asian' },
+]);
+const LTDB_CITATION =
+  'Longitudinal Tract Data Base, Spatial Structures in the Social Sciences, Brown University (Logan, Xu & Stults 2014).';
+// Census enumeration districts, 1900–1930, for ten Northern cities
+// (scripts/build-enumeration-districts.mjs). The source files carry no
+// counts, so districts are shaded by land area: each was sized for one
+// enumerator, so the small ones are the crowded ones.
+const ED_CITATION =
+  'Shertzer, Walsh and Logan (2016), "Segregation and Neighborhood Change in Northern Cities: New Historical GIS Data from 1900–1930", Historical Methods 49(4): 187–197; Urban Transition Historical GIS Project, S4, Brown University (s4.ad.brown.edu/Projects/UTP2/ncities.htm).';
+const ED_AREA_BINS = Object.freeze([
+  {
+    label: 'Under 0.03 km² (most crowded)',
+    color: '#662506',
+    min: -Infinity,
+    max: 0.03,
+  },
+  { label: '0.03–0.06 km²', color: '#993404', min: 0.03, max: 0.06 },
+  { label: '0.06–0.12 km²', color: '#cc4c02', min: 0.06, max: 0.12 },
+  { label: '0.12–0.25 km²', color: '#ec7014', min: 0.12, max: 0.25 },
+  { label: '0.25–0.5 km²', color: '#fe9929', min: 0.25, max: 0.5 },
+  { label: '0.5–1 km²', color: '#fec44f', min: 0.5, max: 1 },
+  {
+    label: '1 km² or more (least crowded)',
+    color: '#fee391',
+    min: 1,
+    max: Infinity,
+  },
+]);
+export const ENUMERATION_DISTRICT_YEARS = Object.freeze(
+  [1900, 1910, 1920, 1930].map((year) =>
+    Object.freeze({
+      id: `local-enumeration-districts-${year}`,
+      year,
+      name: `Enumeration Districts ${year}`,
+    }),
+  ),
+);
+export function enumerationDistrictSummary(p) {
+  const area = Number.isFinite(p.area_km2)
+    ? `, ${p.area_km2 < 0.1 ? p.area_km2.toFixed(3) : p.area_km2.toFixed(2)} km²`
+    : '';
+  return [
+    `Enumeration district ${p.ed}, ${p.city} — ${p.year} census${area}.`,
+    'Each district was sized for one census taker to count in about two weeks, so small districts mark crowded neighborhoods.',
+  ].join('\n');
+}
+export const SEGREGATION_YEARS = Object.freeze([
+  {
+    id: 'local-segregation-2000',
+    name: 'Segregation 2000 (dissimilarity)',
+    suffix: '00',
+    label: '2000',
+    source: 'LTDB 2000',
+    note: `Census 2000 full counts on 2010 tracts from the ${LTDB_CITATION} Cities: places of 75,000+ (2024), each with the 2010 tracts the LTDB assigns it. Index computed by Husky Eye View.`,
+  },
+  {
+    id: 'local-segregation-2010',
+    name: 'Segregation 2010 (dissimilarity)',
+    suffix: '10',
+    label: '2010',
+    source: 'LTDB 2010',
+    note: `Census 2010 full counts on 2010 tracts from the ${LTDB_CITATION} Cities: places of 75,000+ (2024), each with the 2010 tracts the LTDB assigns it. Index computed by Husky Eye View.`,
+  },
+  {
+    id: 'local-segregation-2024',
+    name: 'Segregation 2020–24 (dissimilarity)',
+    suffix: '24',
+    label: '2020–24',
+    source: 'ACS 2020–2024',
+    note: `American Community Survey 2020–2024 5-year estimates, table B03002, moved from 2020 to 2010 tracts by shared land area; cities and tracts as in the ${LTDB_CITATION} Index computed by Husky Eye View.`,
+  },
+]);
+
+/**
+ * Card text for one city and year: all three dissimilarity indices (0–100)
+ * and the city's population. The chosen pair only sets the map colors.
+ */
+export function segregationSummary(year, p) {
+  const name = p.name || 'This city';
+  const value = (pair) => {
+    const d = p[`${pair.key}${year.suffix}`];
+    return `${pair.label} ${Number.isFinite(d) ? d.toFixed(1) : 'n/a'}`;
+  };
+  const population = p[`pop${year.suffix}`];
+  return [
+    `${name}, ${year.label} — dissimilarity index (0–100):`,
+    SEGREGATION_GROUPS.map(value).join(' · '),
+    ...(Number.isFinite(population) && population > 0
+      ? [`Population: ${Math.round(population).toLocaleString('en-US')}`]
+      : []),
+  ].join('\n');
+}
+
+/** HOLC overview: share of each mapped city's graded land rated D. */
+const HOLC_D_SHARE_BINS = shareBins(
+  [15, 25, 35, 50],
+  ['#fde0dd', '#fcae91', '#fb6a4a', '#de2d26', '#a50f15'],
+);
 
 // Resolved by Vite in builds and relative to this module in other consumers.
 const datacentersUrl = new URL(
@@ -615,6 +769,22 @@ const MKDB_DEATHS = Object.freeze([
 ]);
 const mkdbDeaths = (p) =>
   MKDB_DEATHS.find((d) => p.killed >= d.min && p.killed < d.max);
+// Chicago homicides 1870–1930 (Bienen, Northwestern), geocoded by
+// scripts/build-chicago-homicides.mjs. Locked with a key of its own.
+const chicagoHomicidesUrl = '/api/research/chicago-homicides';
+export const CHICAGO_HOMICIDE_DECADES = Object.freeze(
+  [
+    ['1870s', '#fed976', 1870],
+    ['1880s', '#feb24c', 1880],
+    ['1890s', '#fd8d3c', 1890],
+    ['1900s', '#fc4e2a', 1900],
+    ['1910s', '#e31a1c', 1910],
+    ['1920s', '#bd0026', 1920],
+    ['1930', '#800026', 1930],
+  ].map(([label, color, decade]) => Object.freeze({ label, color, decade })),
+);
+const chicagoHomicideDecade = (p) =>
+  CHICAGO_HOMICIDE_DECADES.find((d) => d.decade === p.decade);
 // Boston's 69 neighborhood statistical areas, reprojected from Massachusetts
 // State Plane by scripts/convert-boston-neighborhoods.mjs. Each area is shaded
 // by the neighborhood group the source file assigns it (its `Nbhd` field).
@@ -853,6 +1023,24 @@ export function createInfrastructureLayers(services) {
         color: g.color,
         test: (p) => p.holc_grade === g.grade,
       })),
+      // From far out: every mapped city's outline, shaded by its share of
+      // land graded D (scripts/build-overview-layers.mjs).
+      far: {
+        baseUrl: 'context/holc-cities/',
+        maxHeightM: COUNTY_LAYER_OPTIONS.maxHeightM,
+        maxChunks: COUNTY_LAYER_OPTIONS.maxChunks,
+        label: 'showing mapped cities · zoom in for graded areas',
+        featureColor: (p) =>
+          binOf(HOLC_D_SHARE_BINS, p.d_share)?.color || NO_DATA_COLOR,
+        featureSummary: (p) => p.summary,
+        legend: binLegend(HOLC_D_SHARE_BINS, 'd_share').map((item) =>
+          item.label === 'No estimate'
+            ? item
+            : { ...item, label: `${item.label} of land graded D` },
+        ),
+        sourceNote:
+          'Mapping Inequality, 1930s HOLC maps: city outline (all graded areas) and the share of graded land rated D.',
+      },
     },
     services,
   );
@@ -872,6 +1060,14 @@ export function createInfrastructureLayers(services) {
       featureColor: (p) =>
         lifeExpectancyBin(p.life_exp_8)?.color || NO_DATA_COLOR,
       legend: lifeExpectancyLegend('life_exp_8'),
+      far: countyOverview({
+        featureColor: (p) =>
+          lifeExpectancyBin(p.life_exp)?.color || NO_DATA_COLOR,
+        featureSummary: (p) => p.summary,
+        legend: lifeExpectancyLegend('life_exp'),
+        sourceNote:
+          'County view: county life expectancy, 2019 (nation_county_le). Zoom in for USALEEP tracts (2010–2015).',
+      }),
     },
     services,
   );
@@ -902,6 +1098,7 @@ export function createInfrastructureLayers(services) {
       featureSummary: airSummary,
       featureColor: (p) => binOf(PM25_BINS, p.pm25)?.color || NO_DATA_COLOR,
       legend: binLegend(PM25_BINS, 'pm25'),
+      far: countyOverview({ sourceNote: COUNTY_MEAN_NOTE }),
     },
     services,
   );
@@ -917,6 +1114,7 @@ export function createInfrastructureLayers(services) {
       featureSummary: airSummary,
       featureColor: (p) => binOf(OZONE_BINS, p.o3)?.color || NO_DATA_COLOR,
       legend: binLegend(OZONE_BINS, 'o3'),
+      far: countyOverview({ sourceNote: COUNTY_MEAN_NOTE }),
     },
     services,
   );
@@ -936,6 +1134,13 @@ export function createInfrastructureLayers(services) {
       featureColor: (p) =>
         binOf(PARK_ACCESS_BINS, p.park)?.color || NO_DATA_COLOR,
       legend: binLegend(PARK_ACCESS_BINS, 'park'),
+      far: countyOverview({
+        featureSummary: (p) =>
+          Number.isFinite(p.park)
+            ? `${p.park.toFixed(1)}% of the county's residents live within 1/2 mile of a park (2020).`
+            : 'No park-access estimate for this county.',
+        sourceNote: COUNTY_MEAN_NOTE,
+      }),
     },
     services,
   );
@@ -963,6 +1168,13 @@ export function createInfrastructureLayers(services) {
       // Parks are sparse; a wider view still loads only a few cells.
       maxHeightM: 600_000,
       maxChunks: 60,
+      // From far out: national, state and tribal parks of 1,000+ acres.
+      far: {
+        baseUrl: 'context/parks-large/',
+        maxHeightM: COUNTY_LAYER_OPTIONS.maxHeightM,
+        maxChunks: 60,
+        label: 'showing large parks · zoom in for all parks',
+      },
     },
     services,
   );
@@ -984,7 +1196,7 @@ export function createInfrastructureLayers(services) {
       })),
       fillAlpha: 0.35,
       // 75 regulatory areas in all, so the whole country can be shown at once.
-      maxHeightM: 8_000_000,
+      maxHeightM: COUNTY_LAYER_OPTIONS.maxHeightM,
       maxChunks: 64,
       zoomInMessage: 'zoom in to the United States to load',
     },
@@ -1002,7 +1214,7 @@ export function createInfrastructureLayers(services) {
       source: "Local Moran's I",
       sourceNote:
         "Local Moran's I (Anselin) on USALEEP tract life expectancy (nation_tracts_le_cluster).",
-      featureFilter: (p) => Boolean(p.cluster),
+      // Every tract: clusters in color, the rest off-white.
       featureSummary: tractClusterSummary,
       featureColor: clusterColor,
       legend: clusterLegend(),
@@ -1010,6 +1222,15 @@ export function createInfrastructureLayers(services) {
       // view limits as other tract layers.
       maxHeightM: 400_000,
       maxChunks: 45,
+      far: {
+        baseUrl: 'context/county-life-expectancy/',
+        maxHeightM: COUNTY_LAYER_OPTIONS.maxHeightM,
+        maxChunks: COUNTY_LAYER_OPTIONS.maxChunks,
+        label: 'showing county clusters · zoom in for tracts',
+        featureSummary: (p) => countyClusterSummary(p),
+        sourceNote:
+          "County view: Local Moran's I on county life expectancy, 2015.",
+      },
     },
     services,
   );
@@ -1033,9 +1254,11 @@ export function createInfrastructureLayers(services) {
     {
       id: 'local-county-le-clusters',
       name: 'Life Expectancy Clusters (counties)',
-      baseUrl: 'context/county-clusters/',
+      // Every county (scripts/merge-county-clusters.mjs adds the results).
+      baseUrl: 'context/county-life-expectancy/',
       icon: '◈',
       source: "Local Moran's I",
+      featureSummary: (p) => countyClusterSummary(p),
       featureColor: clusterColor,
       legend: clusterLegend(),
       ...COUNTY_LAYER_OPTIONS,
@@ -1061,9 +1284,9 @@ export function createInfrastructureLayers(services) {
         test: (p) => p.band === b.band,
       })),
       fillAlpha: 0.6,
-      maxHeightM: 400_000,
+      // One small chunk: drawn from any height, so it shows from a national view.
+      maxHeightM: COUNTY_LAYER_OPTIONS.maxHeightM,
       maxChunks: 1,
-      zoomInMessage: 'zoom in to Miami-Dade to load',
     },
     services,
   );
@@ -1134,6 +1357,38 @@ export function createInfrastructureLayers(services) {
     services,
   );
 
+  const chicagoHomicides = createLocalGeoJsonLayer(
+    {
+      id: 'local-chicago-homicides',
+      name: 'Chicago Homicides 1870–1930',
+      url: chicagoHomicidesUrl,
+      lockedDataset: 'chicago-homicides',
+      lockKey: DATASET_LOCKS['chicago-homicides'],
+      // 8,436 cases, most in the central city: show enough at once to read it.
+      regionalPinLimit: 2500,
+      color: '#e31a1c',
+      icon: '●',
+      source: 'Chicago Historical Homicide Project',
+      labels: true,
+      labelMax: 50,
+      labelGridPx: 90,
+      featureColor: (p) => chicagoHomicideDecade(p)?.color || NO_DATA_COLOR,
+      legend: [
+        ...CHICAGO_HOMICIDE_DECADES.map((d) => ({
+          label: d.label,
+          color: d.color,
+          test: (p) => chicagoHomicideDecade(p) === d,
+        })),
+        {
+          label: 'Year not recorded',
+          color: NO_DATA_COLOR,
+          test: (p) => !chicagoHomicideDecade(p),
+        },
+      ],
+    },
+    services,
+  );
+
   const traumaCenters = createLocalGeoJsonLayer(
     {
       id: 'local-trauma-centers',
@@ -1199,6 +1454,76 @@ export function createInfrastructureLayers(services) {
     services,
   );
 
+  // Residential segregation by city (dissimilarity), one layer per year, a
+  // chip per pair of groups; drawn from any height (514 city outlines).
+  const segregationLayers = SEGREGATION_YEARS.map((year) =>
+    createChunkedAreaLayer(
+      {
+        id: year.id,
+        name: year.name,
+        baseUrl: 'context/segregation/',
+        ...COUNTY_LAYER_OPTIONS,
+        icon: '◐',
+        source: year.source,
+        sourceNote: year.note,
+        fillAlpha: 0.6,
+        variants: SEGREGATION_GROUPS.map((pair) => {
+          const key = `${pair.key}${year.suffix}`;
+          return {
+            id: pair.key,
+            label: pair.label,
+            title: `${pair.label} dissimilarity index, ${year.label}`,
+            featureColor: (p) =>
+              binOf(DISSIMILARITY_BINS, p[key])?.color || NO_DATA_COLOR,
+            legend: binLegend(DISSIMILARITY_BINS, key),
+            featureSummary: (p) => segregationSummary(year, p),
+          };
+        }),
+        featureColor: () => NO_DATA_COLOR,
+      },
+      services,
+    ),
+  );
+
+  // Enumeration districts, one layer per census; from far out, each city's
+  // outline for that census.
+  const enumerationDistrictLayers = ENUMERATION_DISTRICT_YEARS.map((entry) =>
+    createChunkedAreaLayer(
+      {
+        id: entry.id,
+        name: entry.name,
+        baseUrl: `context/enumeration-districts-${entry.year}/`,
+        icon: '▦',
+        source: 'S4 Urban Transition HGIS',
+        sourceNote: `Census enumeration district boundaries, ${entry.year}: ${ED_CITATION} Shaded by land area (computed by Husky Eye View).`,
+        featureSummary: enumerationDistrictSummary,
+        featureColor: (p) =>
+          binOf(ED_AREA_BINS, p.area_km2)?.color || NO_DATA_COLOR,
+        legend: binLegend(ED_AREA_BINS, 'area_km2').filter(
+          (item) => item.label !== 'No estimate',
+        ),
+        fillAlpha: 0.55,
+        far: {
+          baseUrl: 'context/enumeration-district-cities/',
+          maxHeightM: COUNTY_LAYER_OPTIONS.maxHeightM,
+          maxChunks: 1,
+          label: 'showing mapped cities · zoom in for districts',
+          featureFilter: (p) => p.year === entry.year,
+          featureColor: () => '#cc4c02',
+          featureSummary: (p) => p.summary,
+          legend: [
+            {
+              label: `Cities mapped for ${entry.year}`,
+              color: '#cc4c02',
+              test: () => true,
+            },
+          ],
+          sourceNote: `Outline of every city with ${entry.year} enumeration district maps: ${ED_CITATION}`,
+        },
+      },
+      services,
+    ),
+  );
   // Social & Economic (US): ACS tract measures on the shared 2020 tract
   // chunks (scripts/build-social-layers.mjs). Each names its Census table.
   const socialLayers = SOCIAL_MEASURES.map((measure) =>
@@ -1217,6 +1542,13 @@ export function createInfrastructureLayers(services) {
         featureColor: (p) =>
           binOf(measure.bins, p[measure.key])?.color || NO_DATA_COLOR,
         legend: binLegend(measure.bins, measure.key),
+        far: countyOverview({
+          featureSummary: (p) =>
+            Number.isFinite(p[measure.key])
+              ? `${measure.format(p[measure.key])} in this county (ACS ${ACS_SOCIAL_VINTAGE}, table ${measure.table}).`
+              : 'No ACS estimate for this county.',
+          sourceNote: `U.S. Census Bureau, American Community Survey ${ACS_SOCIAL_VINTAGE} 5-year estimates, table ${measure.table}, county estimates. Zoom in for census tracts.`,
+        }),
       },
       services,
     ),
@@ -1254,8 +1586,18 @@ export function createInfrastructureLayers(services) {
           featureColor: (p) => binOf(bins, p[year.key])?.color || NO_DATA_COLOR,
           legend: binLegend(bins, year.key),
           featureSummary: (p) => internetSummary(measure, year, p),
+          // The tract layers' county overview reads the same keys.
+          farFeatureSummary: (p) =>
+            internetSummary(
+              measure,
+              year.scope === 'tract' ? { ...year, scope: 'county' } : year,
+              p,
+            ),
         })),
         featureColor: () => NO_DATA_COLOR,
+        ...(measure.geography === 'tract' && {
+          far: countyOverview({ sourceNote: INTERNET_COUNTY_SOURCE_NOTE }),
+        }),
       },
       services,
     );
@@ -1283,10 +1625,13 @@ export function createInfrastructureLayers(services) {
     miamiHomicideHotspots,
     traumaCenters,
     publicHousing,
+    ...segregationLayers,
+    ...enumerationDistrictLayers,
     ...socialLayers,
     ...internetLayers,
     gva2015,
     mkdb,
+    chicagoHomicides,
     bostonNeighborhoods,
   ];
 }

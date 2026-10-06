@@ -6,7 +6,14 @@ export const LOADING_FAILURE_DWELL_MS = 5000;
 export const LOADING_LONG_THRESHOLD_MS = 30000;
 export const TRAFFIC_SYNC_CONFIRM_MS = 1500;
 /** Layer statuses that are user guidance, not feed faults (see manager.js layerFeedState). */
-export const GUIDANCE_STATUSES = Object.freeze(['zoom-in', 'empty', 'idle']);
+// 'overview': an area layer showing its coarse stand-in (e.g. counties for a
+// tract layer) until the view is close enough for the detail.
+export const GUIDANCE_STATUSES = Object.freeze([
+  'zoom-in',
+  'overview',
+  'empty',
+  'idle',
+]);
 
 function finiteCount(value) {
   const number = Number(value);

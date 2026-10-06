@@ -25,15 +25,35 @@ export const RESEARCH_KEY_SESSION_SLOT = 'hev.researchKey';
 export const RESEARCH_KEY_HEADER = 'X-HEV-Research-Key';
 export const RESEARCH_KEY_EVENT = 'hev:research-key-changed';
 
-/** Request headers carrying this session's research key, if one is set. */
-function researchKeyHeaders() {
+/**
+ * The keys locked datasets open with: the research key (GVA, MKDB) by
+ * default, or a dataset's own key (its session slot, request header, and the
+ * POWER UP row that asks for it). Mirrors server/providers/research.js.
+ */
+export const DATASET_LOCKS = Object.freeze({
+  research: Object.freeze({
+    slot: RESEARCH_KEY_SESSION_SLOT,
+    header: RESEARCH_KEY_HEADER,
+    keyId: 'research-data',
+  }),
+  'chicago-homicides': Object.freeze({
+    slot: 'hev.chicagoHomicidesKey',
+    header: 'X-HEV-Chicago-Homicides-Key',
+    keyId: 'chicago-homicides',
+    message:
+      'Locked: click to enter its own key (CHICAGO HISTORICAL HOMICIDES in POWER UP, kept only for this browser session).',
+  }),
+});
+
+/** Request headers carrying this session's key for `lock`, if one is set. */
+function researchKeyHeaders(lock = DATASET_LOCKS.research) {
   let key = '';
   try {
-    key = globalThis.sessionStorage?.getItem(RESEARCH_KEY_SESSION_SLOT) || '';
+    key = globalThis.sessionStorage?.getItem(lock.slot) || '';
   } catch {
     // Storage blocked: the layer simply stays locked.
   }
-  return key ? { [RESEARCH_KEY_HEADER]: key } : {};
+  return key ? { [lock.header]: key } : {};
 }
 const DEFAULT_LABEL_GRID_PX = 132;
 const VISIBILITY_UPDATE_MS = 450;
@@ -194,6 +214,13 @@ export function localInfrastructureOverlayCopy(properties, layerId) {
     ]
       .filter(Boolean)
       .join(' · ');
+    if (victim) details.push(clampCardLine(victim));
+    details.push('Click for details');
+  } else if (layerId === 'local-chicago-homicides') {
+    // The incident summary's victim line (age, gender, race; no names).
+    const victim = String(props.summary ?? '')
+      .split('\n')
+      .find((line) => line.startsWith('Victim: '));
     if (victim) details.push(clampCardLine(victim));
     details.push('Click for details');
   } else if (layerId === 'local-famous-shootings') {
@@ -589,6 +616,11 @@ export function createLocalGeoJsonLayer(
     // A locked research dataset (server/providers/research.js): the layer
     // stays locked, and refuses to turn on, until the research key opens it.
     lockedDataset = null,
+    // Which key opens it (DATASET_LOCKS); the research key by default.
+    lockKey = DATASET_LOCKS.research,
+    // Pins drawn at once below the regional height (default budget 420); a
+    // dense historical layer raises it so a city view shows its spread.
+    regionalPinLimit = null,
     lockStatusUrl = '/api/research/status',
     screenSpaceEventHandlerFactory = (canvas) =>
       new Cesium.ScreenSpaceEventHandler(canvas),
@@ -837,7 +869,7 @@ export function createLocalGeoJsonLayer(
     try {
       const response = await fetch(lockStatusUrl, {
         cache: 'no-store',
-        headers: researchKeyHeaders(),
+        headers: researchKeyHeaders(lockKey),
       });
       const status = response.ok ? await response.json() : null;
       _locked = status?.datasets?.[lockedDataset] !== 'unlocked';
@@ -867,7 +899,7 @@ export function createLocalGeoJsonLayer(
     icon,
     source,
     ...(lockedDataset && {
-      requiresKeyId: 'research-data',
+      requiresKeyId: lockKey.keyId,
       statsBeforeInit: true,
     }),
     updateInterval: 0,
@@ -896,7 +928,7 @@ export function createLocalGeoJsonLayer(
           error: null,
           keyRequired: true,
           status: 'locked',
-          statusMessage: LOCKED_DATASET_MESSAGE,
+          statusMessage: lockKey.message || LOCKED_DATASET_MESSAGE,
         };
       return { count: _count, lastUpdate: _lastUpdate, error: _error };
     },
@@ -960,7 +992,7 @@ export function createLocalGeoJsonLayer(
         return {
           ...base,
           status: 'locked',
-          statusMessage: LOCKED_DATASET_MESSAGE,
+          statusMessage: lockKey.message || LOCKED_DATASET_MESSAGE,
         };
       if (!_enabled) return { ...base, status: 'disabled' };
       if (!_cachedFeatures) {
@@ -1013,7 +1045,7 @@ export function createLocalGeoJsonLayer(
       if (_destroyed) return;
       // A key entered in POWER UP since startup takes effect here.
       if (_locked) await refreshLock();
-      if (_locked) throw new Error(LOCKED_DATASET_MESSAGE);
+      if (_locked) throw new Error(lockKey.message || LOCKED_DATASET_MESSAGE);
       _enabled = true;
       _stemGeometryDirty = true;
       _lastVisibilityUpdate = Number.NEGATIVE_INFINITY;
@@ -1051,7 +1083,7 @@ export function createLocalGeoJsonLayer(
                   : fetchGeoJsonLines(
                       url,
                       _loadController.signal,
-                      lockedDataset ? researchKeyHeaders() : undefined,
+                      lockedDataset ? researchKeyHeaders(lockKey) : undefined,
                     ));
                 if (_destroyed) return;
                 _cachedFeatures = features;
@@ -1444,6 +1476,7 @@ export function createLocalGeoJsonLayer(
             const selection = selectInfraLod(candidates, {
               cameraHeightM,
               incumbentIds: _activeLodIds,
+              regionalActiveLimit: regionalPinLimit,
             });
             const grace = applyInfraEvictionGrace({
               selectedIds: selection.activeIds,
