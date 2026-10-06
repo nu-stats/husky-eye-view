@@ -168,6 +168,77 @@ test('nonempty OpenSky payload with zero usable rows cannot prove share target a
   }
 });
 
+test('a newly seen aircraft appears at its delayed position, not ahead of it', async () => {
+  // The fleet renders RENDER_DELAY_SEC behind real time, so a fresh contact's
+  // first displayed position is its fix projected back to that delayed time.
+  // Creating the billboard at the raw fix drew it ahead until the next fleet
+  // tick, which then jumped it back about one delay of travel.
+  const added = [];
+  const billboardCollection = {
+    show: false,
+    add(options) {
+      const billboard = { ...options };
+      added.push(billboard);
+      return billboard;
+    },
+    remove() {},
+  };
+  const viewer = { camera: { positionCartographic: null }, scene: {} };
+  _setTrackedFlightRefreshStateForTest({
+    icao24: 'seed00',
+    entity: null,
+    billboard: { show: false, position: Cesium.Cartesian3.fromDegrees(0, 0, 0) },
+    billboardCollection,
+    viewer,
+    meta: { rawLat: 0, rawLon: 0, onGround: false },
+    tracked: false,
+  });
+  const icao24 = 'fresh1';
+  const fixLon = -97.6;
+  const fixLat = 30.3;
+  const speedMps = 250;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (!String(url).startsWith('/api/flights')) {
+      return { ok: true, status: 200, json: async () => ({ ac: [] }) };
+    }
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({
+        time: nowSec,
+        states: [[
+          icao24, 'NEW123 ', 'United States', nowSec - 2, nowSec - 2,
+          fixLon, fixLat, 10_668, false, speedMps, 90, 0, null, 10_700,
+          null, null, null, 5,
+        ]],
+      }),
+    };
+  };
+  try {
+    await flightsLayer.update(viewer);
+    const billboard = added.find((entry) => entry.id === icao24);
+    assert.ok(billboard, 'the new contact gets a billboard');
+    const shown = Cesium.Cartographic.fromCartesian(billboard.position);
+    const fix = Cesium.Cartesian3.fromDegrees(fixLon, fixLat, 10_700);
+    const behindM = Cesium.Cartesian3.distance(
+      Cesium.Cartesian3.fromRadians(shown.longitude, shown.latitude, 10_700),
+      fix,
+    );
+    // Eastbound, so the delayed position is west of the fix by the travel
+    // between the delayed time and the fix (about 28 s).
+    assert.ok(Cesium.Math.toDegrees(shown.longitude) < fixLon, 'drawn behind the fix');
+    assert.ok(
+      behindM > speedMps * 25 && behindM < speedMps * 31,
+      `expected about ${speedMps * 28} m behind the fix, got ${Math.round(behindM)} m`,
+    );
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
 test('flights poll refreshes tracked callsign/FL/kts and marks a missed poll STALE', async () => {
   const icao24 = 'a1b2c3';
   const entity = { gevLabelModel: { title: 'OLD', details: [] } };

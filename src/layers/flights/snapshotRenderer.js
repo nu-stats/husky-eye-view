@@ -185,8 +185,14 @@ export function createFlightSnapshotRenderer({
         // as the enrichment path — the class's GLB/scale may have changed.
         if (prevMeta?.klass !== meta.klass) rendering._syncModelToClass(icao24);
       } else {
+        // Start where the fleet pass will draw it: the fleet renders behind
+        // real time, so a fresh contact's displayed position is its fix
+        // projected back to that delayed time. Creating it at the raw fix drew
+        // it ahead until the next fleet tick snapped it back.
+        const displayed =
+          motion._deadReckon(icao24, new Cesium.Cartesian3()) || position;
         const bb = flightState._billboardCollection.add({
-          position,
+          position: displayed,
           image: aircraftIcon(rendering._iconKind(icao24, meta.klass)),
           width: isTracked ? 24 : 20,
           height: isTracked ? 24 : 20,
