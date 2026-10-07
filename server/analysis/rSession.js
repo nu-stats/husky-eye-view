@@ -196,7 +196,34 @@ export function findR({
   }
   const found = candidates.filter((file) => exists(file));
   found.sort((a, b) => newer(versionOf(b), versionOf(a)));
-  return found.length ? describe(found[0]) : null;
+  if (found.length) return describe(found[0]);
+  // R in a conda environment (Pinokio's miniforge, or the conda this server
+  // runs under): <root>/envs/<env>/lib/R/bin/[x64/]Rscript.
+  const roots = [
+    env.CONDA_PREFIX,
+    env.CONDA_ROOT,
+    env.CONDA_EXE && paths.dirname(paths.dirname(env.CONDA_EXE)),
+    env.PINOKIO_HOME && paths.join(env.PINOKIO_HOME, 'bin', 'miniforge'),
+    platform === 'win32' ? 'C:\\pinokio\\bin\\miniforge' : null,
+  ].filter(Boolean);
+  const prefixes = [];
+  for (const root of new Set(roots)) {
+    prefixes.push(root);
+    for (const name of list(paths.join(root, 'envs')))
+      prefixes.push(paths.join(root, 'envs', name));
+  }
+  for (const prefix of prefixes) {
+    const rscript = (
+      platform === 'win32'
+        ? [
+            paths.join(prefix, 'lib', 'R', 'bin', 'x64', 'Rscript.exe'),
+            paths.join(prefix, 'lib', 'R', 'bin', 'Rscript.exe'),
+          ]
+        : [paths.join(prefix, 'lib', 'R', 'bin', 'Rscript')]
+    ).find((file) => exists(file));
+    if (rscript) return describe(rscript);
+  }
+  return null;
 }
 
 /** Validate a request and write an R session folder (no R run yet). */

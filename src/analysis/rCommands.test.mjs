@@ -203,6 +203,24 @@ test('an R session folder holds the data, the script and, to open it, an RStudio
   assert.equal(refused.ok, false);
 });
 
+test('R in one of Pinokio’s conda environments is found without HEV_R_PATH', () => {
+  const rscript =
+    'D:\\pk\\bin\\miniforge\\envs\\hev-r\\lib\\R\\bin\\x64\\Rscript.exe';
+  const r = findR({
+    env: { PINOKIO_HOME: 'D:\\pk' },
+    platform: 'win32',
+    exists: (f) => f === rscript,
+    list: (dir) =>
+      dir === 'D:\\pk\\bin\\miniforge\\envs'
+        ? ['base-tools', 'hev-r']
+        : dir.endsWith('conda-meta')
+          ? ['r-base-4.4.3-h1234_0.json']
+          : [],
+  });
+  assert.equal(r.path, rscript);
+  assert.equal(r.version, '4.4.3');
+});
+
 test('R from a conda environment gets its version and its libraries on PATH', () => {
   const rscript = 'C:\\envs\\hev-r\\lib\\R\\bin\\x64\\Rscript.exe';
   const r = findR({

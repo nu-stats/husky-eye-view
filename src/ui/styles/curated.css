@@ -443,6 +443,150 @@
   margin: 0 10px 2px 0;
   white-space: nowrap;
 }
+/* The data table popped out: drag by the title bar, resize from the corner. */
+.stata-data-float {
+  position: fixed;
+  left: 16px;
+  bottom: 96px;
+  z-index: 1300;
+  width: 560px;
+  height: 320px;
+  min-width: 320px;
+  min-height: 170px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  resize: both;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(14, 18, 24, 0.94);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+.stata-data-float-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.stata-data-float-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 8px 4px;
+}
+.stata-data-float .stata-data-scroll {
+  flex: 1;
+  max-height: none;
+}
+
+/* Data Analysis → Surprise: a dog photo over the map. */
+.dog-surprise {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+.dog-surprise-card {
+  margin: 0;
+  max-width: min(92vw, 900px);
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(16, 20, 26, 0.96);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+.dog-surprise-card img {
+  display: block;
+  max-width: 100%;
+  max-height: 78vh;
+  border-radius: 6px;
+}
+.dog-surprise-card figcaption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+.dog-surprise-card .curated-close {
+  position: static;
+}
+
+/* Plain English and Moran's I. */
+.stata-plain {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+.stata-plain-note:empty {
+  display: none;
+}
+.stata-moran-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.stata-moran-row select {
+  max-width: 220px;
+}
+.stata-moran:empty {
+  display: none;
+}
+.stata-moran {
+  margin: 6px 0;
+  font-size: 12px;
+}
+.stata-moran-card p {
+  margin: 3px 0;
+}
+.stata-moran-i strong {
+  font-size: 15px;
+}
+.moran-plot {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  margin-top: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.moran-frame {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.25);
+}
+.moran-axis {
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-dasharray: 3 3;
+}
+.moran-dot {
+  fill: #7fb3ff;
+  fill-opacity: 0.55;
+}
+.moran-slope {
+  stroke: #ffea00;
+  stroke-width: 2;
+}
+.moran-quad,
+.moran-label {
+  fill: rgba(255, 255, 255, 0.7);
+  font-size: 9px;
+}
+.moran-label {
+  font-size: 10px;
+}
+
 /* The session's data: click rows to highlight their areas on the map. */
 .stata-data {
   margin: 8px 0;

@@ -8,6 +8,8 @@
  *        -> runs the program in batch mode; {ok, id, steps, log, files, problems}
  *   POST <prefix>/open  {geography, state?, view?}
  *        -> opens the program itself with the data loaded; {ok, id, files}
+ *   POST <prefix>/moran {geography|baseUrl, state?, view?, variable, rook?}
+ *        -> global Moran's I with contiguity weights, computed here
  *   GET  <prefix>/sessions/<id>/<file>      -> one file of a session
  *   GET  <prefix>/sessions/<id>.zip         -> the whole session
  *
@@ -21,6 +23,7 @@ import path from 'node:path';
 import { admitKeySetupRequest } from '../../src/keySetupCore.mjs';
 import { analysisVariables } from '../../src/analysis/stataCommands.js';
 import { sampleLayerVariables } from '../analysis/layerData.js';
+import { moranForRequest } from '../analysis/moran.js';
 import {
   analysisRoot,
   sessionFiles,
@@ -130,10 +133,13 @@ export function analysisProxy({
             variables: (baseUrl
               ? sampleLayerVariables({ baseUrl })
               : analysisVariables(url.searchParams.get('geography') || 'county')
-            ).map(({ name: variable, label, kind }) => ({
+            ).map(({ name: variable, label, kind, short, aliases }) => ({
               name: variable,
               label,
               kind,
+              // For the plain-English box: other ways people say it.
+              ...(short && { short }),
+              ...(aliases?.length && { aliases }),
             })),
           });
         }
@@ -162,6 +168,22 @@ export function analysisProxy({
             'Cache-Control': 'no-store',
           });
           return res.end(readFileSync(full));
+        }
+        if (req.method === 'POST' && route === 'moran') {
+          // Computed here (no Stata or R needed): one click, as in GeoDa.
+          const request = await readBody(req);
+          return sendJson(
+            res,
+            200,
+            moranForRequest({
+              geography: request.geography,
+              baseUrl: request.baseUrl,
+              state: request.state,
+              view: request.view,
+              variable: request.variable,
+              rook: request.rook,
+            }),
+          );
         }
         if (req.method === 'POST' && (route === 'run' || route === 'open')) {
           if (busy)

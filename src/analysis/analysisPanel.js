@@ -7,9 +7,14 @@
  * session folder with its script and log (server/providers/analysis.js).
  */
 import { STATES } from '../reports/areaReport.js';
-import { STATA_COMMAND_NAMES, MAX_DO_FILE_BYTES } from './stataCommands.js';
-import { MAX_R_SCRIPT_BYTES } from './rCommands.js';
+import {
+  STATA_COMMAND_NAMES,
+  MAX_DO_FILE_BYTES,
+  checkCommandLines,
+} from './stataCommands.js';
+import { MAX_R_SCRIPT_BYTES, checkRLines } from './rCommands.js';
 import { LAYER_MANIFEST, layerManifestEntry } from '../data/layerManifest.js';
+import { translatePlainEnglish } from './plainEnglish.js';
 import {
   AnalysisMap,
   legendRows,
@@ -107,6 +112,184 @@ function element(tag, props = {}, children = []) {
   return node;
 }
 
+/** Drag a floating window by its title bar, kept inside the window. */
+function dragBy(handle, win) {
+  handle.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('button')) return;
+    const box = win.getBoundingClientRect();
+    const dx = event.clientX - box.left;
+    const dy = event.clientY - box.top;
+    handle.setPointerCapture(event.pointerId);
+    const move = (e) => {
+      const left = Math.max(
+        0,
+        Math.min(window.innerWidth - 80, e.clientX - dx),
+      );
+      const top = Math.max(
+        0,
+        Math.min(window.innerHeight - 40, e.clientY - dy),
+      );
+      Object.assign(win.style, {
+        left: `${left}px`,
+        top: `${top}px`,
+        right: 'auto',
+        bottom: 'auto',
+      });
+    };
+    const up = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+  });
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+const svg = (tag, attrs = {}, children = []) => {
+  const node = document.createElementNS(SVG, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  for (const child of [].concat(children))
+    node.append(
+      child instanceof Node ? child : document.createTextNode(String(child)),
+    );
+  return node;
+};
+const fmt = (v, digits = 3) =>
+  Number.isFinite(v)
+    ? v.toLocaleString('en-US', { maximumFractionDigits: digits })
+    : '—';
+const pText = (p) => (p < 0.001 ? 'p < 0.001' : `p = ${fmt(p, 3)}`);
+
+/** Moran's I as GeoDa shows it: the numbers and the Moran scatter plot. */
+function moranCard(r) {
+  const size = 260;
+  const pad = 30;
+  const span = Math.min(
+    5,
+    Math.max(2, ...r.points.flat().map((v) => Math.abs(v))),
+  );
+  const at = (v) => pad + ((v + span) / (2 * span)) * (size - 2 * pad);
+  const flip = (v) => size - at(v);
+  const clamp = (v) => Math.max(-span, Math.min(span, v));
+  const dots = r.points.map(([x, y]) =>
+    svg('circle', {
+      cx: at(clamp(x)).toFixed(1),
+      cy: flip(clamp(y)).toFixed(1),
+      r: 1.8,
+      class: 'moran-dot',
+    }),
+  );
+  const ends = [-span, span].map((x) => [x, clamp(r.I * x)]);
+  const plot = svg(
+    'svg',
+    {
+      viewBox: `0 0 ${size} ${size}`,
+      class: 'moran-plot',
+      role: 'img',
+      'aria-label': `Moran scatter plot of ${r.variable}; slope ${fmt(r.I)}`,
+    },
+    [
+      svg('rect', {
+        x: pad,
+        y: pad,
+        width: size - 2 * pad,
+        height: size - 2 * pad,
+        class: 'moran-frame',
+      }),
+      svg('line', {
+        x1: at(0),
+        y1: pad,
+        x2: at(0),
+        y2: size - pad,
+        class: 'moran-axis',
+      }),
+      svg('line', {
+        x1: pad,
+        y1: flip(0),
+        x2: size - pad,
+        y2: flip(0),
+        class: 'moran-axis',
+      }),
+      ...dots,
+      svg('line', {
+        x1: at(ends[0][0]),
+        y1: flip(ends[0][1]),
+        x2: at(ends[1][0]),
+        y2: flip(ends[1][1]),
+        class: 'moran-slope',
+      }),
+      svg(
+        'text',
+        {
+          x: size - pad - 4,
+          y: pad + 12,
+          'text-anchor': 'end',
+          class: 'moran-quad',
+        },
+        'High–High',
+      ),
+      svg(
+        'text',
+        { x: pad + 4, y: size - pad - 6, class: 'moran-quad' },
+        'Low–Low',
+      ),
+      svg('text', { x: pad + 4, y: pad + 12, class: 'moran-quad' }, 'Low–High'),
+      svg(
+        'text',
+        {
+          x: size - pad - 4,
+          y: size - pad - 6,
+          'text-anchor': 'end',
+          class: 'moran-quad',
+        },
+        'High–Low',
+      ),
+      svg(
+        'text',
+        {
+          x: size / 2,
+          y: size - 8,
+          'text-anchor': 'middle',
+          class: 'moran-label',
+        },
+        `${r.variable} (standardized)`,
+      ),
+      svg(
+        'text',
+        {
+          x: 10,
+          y: size / 2,
+          'text-anchor': 'middle',
+          transform: `rotate(-90 10 ${size / 2})`,
+          class: 'moran-label',
+        },
+        'Spatial lag',
+      ),
+    ],
+  );
+  const significant = r.pseudoP <= 0.05;
+  const reading = !significant
+    ? 'Not significant: no clear spatial pattern.'
+    : r.I > 0
+      ? 'Positive and significant: similar values cluster together.'
+      : 'Negative and significant: neighbors tend to differ (a checkerboard).';
+  return element('div', { className: 'stata-moran-card' }, [
+    element('p', { className: 'stata-moran-i' }, [
+      element('strong', { textContent: `Moran’s I = ${fmt(r.I, 4)}` }),
+      ` for ${r.label || r.variable}`,
+    ]),
+    element('p', {
+      textContent: `E[I] = ${fmt(r.expected, 4)} · z = ${fmt(r.z, 2)}, ${pText(r.p)} (randomization) · pseudo ${pText(r.pseudoP)} (${r.permutations} permutations)`,
+    }),
+    element('p', {
+      textContent: `${r.n.toLocaleString('en-US')} areas · ${r.weights} · neighbors per area ${fmt(r.neighbors.mean, 2)} (${r.neighbors.min}–${r.neighbors.max})${r.islands ? ` · ${r.islands} without neighbors` : ''}`,
+    }),
+    element('p', { className: 'curated-hint', textContent: reading }),
+    plot,
+  ]);
+}
+
 export class AnalysisPanel {
   constructor({
     engine = 'stata',
@@ -180,6 +363,30 @@ export class AnalysisPanel {
       ariaLabel: this.engine.lineLabel,
       placeholder: this.engine.examples.join('\n'),
     });
+    // Plain English: a sentence becomes the lines above, for review.
+    this.plain = element('textarea', {
+      className: 'stata-plain',
+      rows: 2,
+      ariaLabel: 'Ask in plain English',
+      placeholder:
+        'e.g. spatial regression DV = poverty, IV: unemployment rate, percent foreign-born',
+    });
+    this.translateButton = element('button', {
+      type: 'button',
+      className: 'curated-button',
+      textContent: `WRITE THE ${this.engine.name.toUpperCase()} CODE`,
+      title: `Turn the sentence into ${this.engine.name} lines (check them, then run)`,
+    });
+    this.plainNote = element('p', {
+      className: 'curated-hint stata-plain-note',
+    });
+    this.translateButton.addEventListener('click', () => this.translate());
+    this.plain.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        void this.translate();
+      }
+    });
     this.doInput = element('input', {
       type: 'file',
       accept: this.engine.scriptAccept,
@@ -209,6 +416,17 @@ export class AnalysisPanel {
     this.variables = element('details', { className: 'stata-variables' }, [
       element('summary', { textContent: 'Variables' }),
     ]);
+    // Moran's I in one click (computed by the server, as GeoDa shows it).
+    this.moranVar = element('select', { ariaLabel: 'Variable for Moran’s I' });
+    this.moranButton = element('button', {
+      type: 'button',
+      className: 'curated-button',
+      textContent: 'MORAN’S I',
+      title:
+        'Global Moran’s I for this variable: queen contiguity, row-standardized, 999 permutations',
+    });
+    this.moranButton.addEventListener('click', () => void this.moran());
+    this.moranOut = element('div', { className: 'stata-moran' });
     this.output = element('div', { className: 'stata-output' });
     this.layer.addEventListener('change', () => {
       this.layerChosen = true;
@@ -240,6 +458,15 @@ export class AnalysisPanel {
         ]),
         element('label', {
           className: 'curated-label',
+          textContent: 'Ask in plain English (optional)',
+        }),
+        this.plain,
+        element('div', { className: 'curated-options' }, [
+          this.translateButton,
+        ]),
+        this.plainNote,
+        element('label', {
+          className: 'curated-label',
           textContent: this.engine.lineLabel,
         }),
         this.commands,
@@ -257,6 +484,14 @@ export class AnalysisPanel {
           this.openButton,
         ]),
         this.variables,
+        element('div', { className: 'stata-moran-row' }, [
+          element('label', { className: 'curated-check' }, [
+            'Spatial autocorrelation ',
+            this.moranVar,
+          ]),
+          this.moranButton,
+        ]),
+        this.moranOut,
       ]),
       this.statusLine,
       this.output,
@@ -453,6 +688,23 @@ export class AnalysisPanel {
         `${this.engine.api}/variables?${query.query}`,
       );
       const { variables = [] } = await response.json();
+      this.variableList = variables;
+      const previous = this.moranVar.value;
+      this.moranVar.replaceChildren(
+        ...variables
+          .filter(
+            (v) => v.kind === 'numeric' && !['lon', 'lat'].includes(v.name),
+          )
+          .map((v) =>
+            element('option', {
+              value: v.name,
+              textContent: v.name,
+              title: v.label,
+            }),
+          ),
+      );
+      if ([...this.moranVar.options].some((o) => o.value === previous))
+        this.moranVar.value = previous;
       // Names (what you type) and labels (what they mean), side by side.
       this.variables.replaceChildren(
         element('summary', {
@@ -471,6 +723,33 @@ export class AnalysisPanel {
     } catch {
       /* the list is a convenience */
     }
+  }
+
+  /**
+   * Plain English to this program's lines (panel and voice): the lines
+   * replace the box's contents for review; nothing runs yet.
+   */
+  async translate(text = this.plain.value) {
+    if (!this.variableList) await this.loadVariables();
+    const out = translatePlainEnglish(
+      text,
+      this.variableList || [],
+      this.engine.id,
+    );
+    if (!out.ok) {
+      this.plainNote.textContent = out.problems.join(' ');
+      return out;
+    }
+    this.plain.value = text;
+    this.commands.value = out.lines.join('\n');
+    const unique = [
+      ...new Map(out.matched.map((m) => [m.phrase, m])).values(),
+    ].filter((m) => m.phrase.replace(/\s+/g, '_').toLowerCase() !== m.name);
+    this.plainNote.textContent =
+      (unique.length
+        ? `Matched ${unique.map((m) => `“${m.phrase}” → ${m.name}`).join(', ')}. `
+        : '') + `Check the lines, then run in ${this.engine.name}.`;
+    return out;
   }
 
   async checkProgram() {
@@ -530,6 +809,30 @@ export class AnalysisPanel {
   async run(request = {}) {
     const resolved = this.resolveRequest(request);
     if (resolved.problem) return this.fail([resolved.problem]);
+    // English typed in the Commands box: show the code it means instead of
+    // an error (only when the text is not valid code already).
+    if (
+      typeof request.commands === 'string' &&
+      request.commands.trim() &&
+      !request.doFile
+    ) {
+      if (!this.variableList) await this.loadVariables();
+      const lines = request.commands.split(/\r?\n/).filter((l) => l.trim());
+      const check = (this.engine.id === 'r' ? checkRLines : checkCommandLines)(
+        lines,
+        this.variableList || [],
+      );
+      if (check.problems.length) {
+        const out = await this.translate(request.commands);
+        if (out.ok) {
+          this.setStatus(
+            `Read as plain English — the ${this.engine.name} code is in the box. Check it, then run.`,
+          );
+          return { ok: false, translated: true, lines: out.lines };
+        }
+        this.plainNote.textContent = '';
+      }
+    }
     if (this.busy)
       return this.fail([
         `${this.engine.name} is still working on the last run.`,
@@ -556,6 +859,57 @@ export class AnalysisPanel {
       return this.fail([`${this.engine.name} run failed: ${error.message}`]);
     } finally {
       this.busy = false;
+    }
+  }
+
+  /**
+   * Global Moran's I for one variable of the chosen data (panel and voice):
+   * the statistic, its tests and the Moran scatter plot.
+   */
+  async moran(request = {}) {
+    const variable = request.variable || this.moranVar.value;
+    if (!variable) return this.fail(['Choose a variable for Moran’s I.']);
+    const resolved = this.resolveRequest({
+      ...this.readForm(),
+      ...request,
+      commands: [],
+      doFile: null,
+    });
+    if (resolved.problem) return this.fail([resolved.problem]);
+    this.open();
+    this.moranButton.disabled = true;
+    this.moranOut.textContent = `Computing Moran’s I for ${variable}…`;
+    try {
+      const result = await this.post('moran', {
+        geography: resolved.geography,
+        baseUrl: resolved.baseUrl,
+        state: resolved.state,
+        view: resolved.view,
+        variable,
+        rook: Boolean(request.rook),
+      });
+      this.moranOut.textContent = '';
+      if (!result.ok) {
+        this.moranOut.textContent = (result.problems || []).join(' ');
+        return result;
+      }
+      this.moranOut.append(moranCard(result));
+      return {
+        ok: true,
+        variable,
+        I: result.I,
+        expected: result.expected,
+        z: result.z,
+        p: result.p,
+        pseudoP: result.pseudoP,
+        n: result.n,
+        weights: result.weights,
+      };
+    } catch (error) {
+      this.moranOut.textContent = `Moran’s I failed: ${error.message}`;
+      return { ok: false, problems: [error.message] };
+    } finally {
+      this.moranButton.disabled = false;
     }
   }
 
@@ -590,6 +944,8 @@ export class AnalysisPanel {
   }
 
   render(result) {
+    // A popped-out table belongs to the last run.
+    this.undock?.();
     this.output.textContent = '';
     if (!result.id) return;
     const steps = element(
@@ -665,14 +1021,21 @@ export class AnalysisPanel {
       className: 'curated-button',
       textContent: 'Clear highlight',
     });
+    const pop = element('button', {
+      type: 'button',
+      className: 'curated-button',
+      textContent: 'Pop out ⧉',
+      title:
+        'Move the table into its own window you can drag and resize, and tuck this panel away so the map shows',
+    });
     const scroll = element('div', { className: 'stata-data-scroll' });
     const note = element('p', { className: 'curated-hint' });
-    details.append(
-      summary,
-      element('div', { className: 'stata-data-tools' }, [filter, clear]),
-      scroll,
-      note,
-    );
+    const tools = element('div', { className: 'stata-data-tools' }, [
+      filter,
+      clear,
+      pop,
+    ]);
+    details.append(summary, tools, scroll, note);
     const state = {
       table: null,
       columns: [],
@@ -792,8 +1155,8 @@ export class AnalysisPanel {
       draw();
       highlight();
     });
-    details.addEventListener('toggle', async () => {
-      if (!details.open || state.table) return;
+    const load = async () => {
+      if (state.table) return;
       note.textContent = 'Loading the data…';
       try {
         state.table = await this.map.table(base, result.files);
@@ -806,7 +1169,54 @@ export class AnalysisPanel {
       } catch (error) {
         note.textContent = `Could not read the data: ${error.message}`;
       }
+    };
+    details.addEventListener('toggle', () => {
+      if (details.open) void load();
     });
+    // Pop out: the table in its own window (drag by its title bar, resize
+    // from the corner) with this panel tucked away, so the highlighted
+    // areas show on the map. "Back to panel" puts both back.
+    const popOut = async () => {
+      if (this.undock) return;
+      details.open = true;
+      await load();
+      const back = element('button', {
+        type: 'button',
+        className: 'curated-button',
+        textContent: 'Back to panel',
+      });
+      const head = element('header', { className: 'stata-data-float-head' }, [
+        element('span', {
+          textContent: 'Data — click rows to show them on the map',
+        }),
+        back,
+      ]);
+      const body = element('div', { className: 'stata-data-float-body' });
+      const win = element(
+        'section',
+        {
+          className: 'stata-data stata-data-float',
+          role: 'dialog',
+          ariaLabel: 'Data table',
+        },
+        [head, body],
+      );
+      pop.hidden = true;
+      body.append(tools, scroll, note);
+      document.body.append(win);
+      this.root.hidden = true;
+      dragBy(head, win);
+      const dock = () => {
+        details.append(tools, scroll, note);
+        pop.hidden = false;
+        win.remove();
+        this.undock = null;
+        this.root.hidden = false;
+      };
+      back.addEventListener('click', dock);
+      this.undock = dock;
+    };
+    pop.addEventListener('click', () => void popOut());
     return [details];
   }
 

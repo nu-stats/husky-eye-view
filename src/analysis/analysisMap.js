@@ -394,7 +394,7 @@ export class AnalysisMap {
             }),
             attributes: {
               color: Cesium.ColorGeometryInstanceAttribute.fromColor(
-                Cesium.Color.fromCssColorString(HIGHLIGHT_FILL).withAlpha(0.6),
+                Cesium.Color.fromCssColorString(HIGHLIGHT_FILL).withAlpha(0.9),
               ),
             },
           }),
@@ -403,7 +403,7 @@ export class AnalysisMap {
           new Cesium.GeometryInstance({
             geometry: new Cesium.GroundPolylineGeometry({
               positions: [...outer, outer[0]],
-              width: 4,
+              width: 6,
             }),
             attributes: {
               color: Cesium.ColorGeometryInstanceAttribute.fromColor(

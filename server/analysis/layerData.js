@@ -177,6 +177,7 @@ export function layerVariables(areas) {
         tableLabel: (measure.tableLabel || measure.label)
           .replace(/["`$\\]/g, "'")
           .slice(0, 80),
+        aliases: measure.aliases || [],
       }),
     };
   });

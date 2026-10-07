@@ -116,6 +116,7 @@ export function analysisVariables(geography) {
       label: labelText(`${m.label}, ${m.years}`),
       short: labelText(m.short),
       tableLabel: labelText(m.tableLabel || m.label),
+      aliases: m.aliases || [],
       kind: m.format === 'category' ? 'string' : 'numeric',
       key: m.key,
       measureId: m.id,

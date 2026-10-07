@@ -677,6 +677,45 @@ export class LayerPanel {
     this._toggleContainer.appendChild(this._buildReportsRow());
     this._toggleContainer.appendChild(this._buildStataRow());
     this._toggleContainer.appendChild(this._buildRRow());
+    this._toggleContainer.appendChild(this._buildSurpriseRow());
+  }
+
+  /** Data Analysis → Surprise: a random photo of one of the dogs. */
+  _buildSurpriseRow() {
+    const group = ANALYSIS_GROUP;
+    const row = document.createElement('div');
+    row.className =
+      'data-toggle-row data-view-row data-curated-row data-surprise-row';
+    row.dataset.group = group;
+    this._groups.get(group)?.rows.push({ row, label: 'surprise' });
+    const top = document.createElement('div');
+    top.className = 'data-toggle-top';
+    const left = document.createElement('div');
+    left.className = 'data-toggle-left';
+    const icon = document.createElement('span');
+    icon.className = 'data-icon';
+    icon.textContent = '🐾';
+    const name = document.createElement('span');
+    name.className = 'data-name';
+    name.textContent = 'Surprise';
+    left.append(icon, name);
+    const right = document.createElement('div');
+    right.className = 'data-toggle-right';
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'data-toggle-btn data-view-start';
+    open.setAttribute('aria-label', 'Open the surprise');
+    open.textContent = 'OPEN';
+    this._bind(open, 'click', () =>
+      import('./dogSurprise.js').then((m) => m.showDogSurprise()),
+    );
+    right.appendChild(open);
+    top.append(left, right);
+    const meta = document.createElement('div');
+    meta.className = 'data-toggle-meta';
+    meta.textContent = 'A break from the data';
+    row.append(top, meta);
+    return row;
   }
 
   /**
