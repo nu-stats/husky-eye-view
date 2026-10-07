@@ -22,7 +22,7 @@ import {
   SESSION_SHAPES_FILE,
   STATA_COMMANDS,
 } from './stataCommands.js';
-import { geometryBbox, parseCsv } from '../curated/userData.js';
+import { parseCsv } from '../curated/userData.js';
 
 /** Selected rows on the map: a bright fill with a thick outline. */
 const HIGHLIGHT_FILL = '#00E5FF';
@@ -41,20 +41,6 @@ export const RESIDUAL_RAMP = Object.freeze([
 export const MAX_MAP_COUNTIES = 400;
 
 const MODEL_FILE = new RegExp(`^${MAP_FILE_PREFIX}m(\\d+)\\.csv$`);
-
-const polygonsOf = (geometry) =>
-  geometry?.type === 'Polygon'
-    ? [geometry.coordinates]
-    : geometry?.type === 'MultiPolygon'
-      ? geometry.coordinates
-      : [];
-
-const pointsOf = (geometry) =>
-  geometry?.type === 'Point'
-    ? [geometry.coordinates]
-    : geometry?.type === 'MultiPoint'
-      ? geometry.coordinates
-      : [];
 
 /**
  * A Stata export delimited file: {columns, rows: [{hev_id, geoid?, ...}]}
@@ -342,138 +328,26 @@ export class AnalysisMap {
     const token = ++this.highlightToken;
     this.clearHighlight();
     if (!this.viewer || !rows.length) return { ok: true, areas: 0 };
-    const [{ keyOf, outlines, problem }, Cesium] = await Promise.all([
-      this.shapesFor(base, rows),
-      import('cesium'),
-    ]);
+    // Drawn by the upload overlay's module, which loads Cesium itself (a
+    // dynamic import('cesium') from this lazily loaded chunk failed in the
+    // production build: "Cannot access … before initialization").
+    const [{ keyOf, outlines, problem }, { drawHighlight }] = await Promise.all(
+      [this.shapesFor(base, rows), import('../curated/userOverlay.js')],
+    );
     if (token !== this.highlightToken) return { ok: false, stale: true };
     if (problem) return { ok: false, problem };
-    const fills = [];
-    const lines = [];
-    const dots = [];
-    let box = null;
-    const degrees = (positions) => {
-      const flat = [];
-      for (const [lon, lat] of positions || [])
-        if (Number.isFinite(lon) && Number.isFinite(lat)) flat.push(lon, lat);
-      const n = flat.length;
-      if (n >= 4 && flat[0] === flat[n - 2] && flat[1] === flat[n - 1])
-        flat.length = n - 2;
-      return Cesium.Cartesian3.fromDegreesArray(flat);
-    };
-    let found = 0;
-    for (const row of rows) {
-      const geometry = outlines.get(keyOf(row));
-      if (!geometry) continue;
-      found += 1;
-      const b = geometryBbox(geometry);
-      if (b)
-        box = box
-          ? [
-              Math.min(box[0], b[0]),
-              Math.min(box[1], b[1]),
-              Math.max(box[2], b[2]),
-              Math.max(box[3], b[3]),
-            ]
-          : b;
-      dots.push(...pointsOf(geometry));
-      for (const rings of polygonsOf(geometry)) {
-        const [outer, ...holes] = rings.map(degrees);
-        if (!outer || outer.length < 3) continue;
-        fills.push(
-          new Cesium.GeometryInstance({
-            geometry: new Cesium.PolygonGeometry({
-              polygonHierarchy: new Cesium.PolygonHierarchy(
-                outer,
-                holes
-                  .filter((h) => h.length >= 3)
-                  .map((h) => new Cesium.PolygonHierarchy(h)),
-              ),
-              height: -120_000,
-              extrudedHeight: 8_000,
-            }),
-            attributes: {
-              color: Cesium.ColorGeometryInstanceAttribute.fromColor(
-                Cesium.Color.fromCssColorString(HIGHLIGHT_FILL).withAlpha(0.9),
-              ),
-            },
-          }),
-        );
-        lines.push(
-          new Cesium.GeometryInstance({
-            geometry: new Cesium.GroundPolylineGeometry({
-              positions: [...outer, outer[0]],
-              width: 6,
-            }),
-            attributes: {
-              color: Cesium.ColorGeometryInstanceAttribute.fromColor(
-                Cesium.Color.fromCssColorString(HIGHLIGHT_LINE),
-              ),
-            },
-          }),
-        );
-      }
-    }
-    const scene = this.viewer.scene;
-    if (fills.length)
-      this.highlighted.push(
-        scene.primitives.add(
-          new Cesium.ClassificationPrimitive({
-            geometryInstances: fills,
-            appearance: new Cesium.PerInstanceColorAppearance({
-              flat: true,
-              translucent: true,
-            }),
-            classificationType: Cesium.ClassificationType.BOTH,
-            asynchronous: true,
-          }),
-        ),
-      );
-    if (lines.length)
-      this.highlighted.push(
-        scene.primitives.add(
-          new Cesium.GroundPolylinePrimitive({
-            geometryInstances: lines,
-            appearance: new Cesium.PolylineColorAppearance(),
-            classificationType: Cesium.ClassificationType.BOTH,
-            asynchronous: true,
-          }),
-        ),
-      );
-    if (dots.length) {
-      const points = scene.primitives.add(
-        new Cesium.PointPrimitiveCollection(),
-      );
-      for (const [lon, lat] of dots)
-        points.add({
-          position: Cesium.Cartesian3.fromDegrees(lon, lat),
-          pixelSize: 14,
-          color: Cesium.Color.fromCssColorString(HIGHLIGHT_FILL),
-          outlineColor: Cesium.Color.fromCssColorString(HIGHLIGHT_LINE),
-          outlineWidth: 3,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        });
-      this.highlighted.push(points);
-    }
-    if (fly && box) {
-      // Some room around the areas, so their neighbors show too.
-      const padX = Math.max(0.02, (box[2] - box[0]) * 0.6);
-      const padY = Math.max(0.02, (box[3] - box[1]) * 0.6);
-      this.viewer.camera.flyTo({
-        destination: Cesium.Rectangle.fromDegrees(
-          box[0] - padX,
-          box[1] - padY,
-          box[2] + padX,
-          box[3] + padY,
-        ),
-        duration: 1.2,
-      });
-    }
-    scene.requestRender?.();
+    const geometries = rows
+      .map((row) => outlines.get(keyOf(row)))
+      .filter(Boolean);
+    this.highlighted = drawHighlight(this.viewer, geometries, {
+      fly,
+      fill: HIGHLIGHT_FILL,
+      line: HIGHLIGHT_LINE,
+    });
     return {
-      ok: found > 0,
-      areas: found,
-      problem: found ? null : 'These rows have no shapes to show.',
+      ok: geometries.length > 0,
+      areas: geometries.length,
+      problem: geometries.length ? null : 'These rows have no shapes to show.',
     };
   }
 

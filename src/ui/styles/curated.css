@@ -449,7 +449,7 @@
   left: 16px;
   bottom: 96px;
   z-index: 1300;
-  width: 560px;
+  width: 700px;
   height: 320px;
   min-width: 320px;
   min-height: 170px;
@@ -489,7 +489,7 @@
   max-height: none;
 }
 
-/* Data Analysis → Surprise: a dog photo over the map. */
+/* Analysis menu → Surprise: a dog photo over the map. */
 .dog-surprise {
   position: fixed;
   inset: 0;

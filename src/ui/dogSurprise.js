@@ -1,5 +1,5 @@
 /**
- * Data Analysis → Surprise: a random photo of one of the project's dogs
+ * Analysis menu → Surprise: a random photo of one of the project's dogs
  * (public/dogs/, listed in index.json). "Another" picks a different one;
  * Esc, the × or a click outside closes it.
  */

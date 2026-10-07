@@ -8,6 +8,8 @@
  *        -> runs the program in batch mode; {ok, id, steps, log, files, problems}
  *   POST <prefix>/open  {geography, state?, view?}
  *        -> opens the program itself with the data loaded; {ok, id, files}
+ *   POST <prefix>/browse {geography|baseUrl, state?, view?}
+ *        -> the data only (no program run), for the table and brushing
  *   POST <prefix>/moran {geography|baseUrl, state?, view?, variable, rook?}
  *        -> global Moran's I with contiguity weights, computed here
  *   GET  <prefix>/sessions/<id>/<file>      -> one file of a session
@@ -168,6 +170,37 @@ export function analysisProxy({
             'Cache-Control': 'no-store',
           });
           return res.end(readFileSync(full));
+        }
+        if (req.method === 'POST' && route === 'browse') {
+          // The data alone (data.csv, and shapes for non-census layers), for
+          // the table and brushing: no program runs, none need be installed.
+          const request = await readBody(req);
+          const prepared = prepare(
+            {
+              geography: request.geography,
+              baseUrl: request.baseUrl,
+              layerName: request.layerName,
+              state: request.state,
+              view: request.view,
+              commands: [],
+              browse: true,
+            },
+            { env },
+          );
+          if (!prepared.ok) return sendJson(res, 200, prepared);
+          const session = prepared.session;
+          return sendJson(res, 200, {
+            ok: true,
+            problems: [],
+            browse: true,
+            steps: [],
+            log: '',
+            files: sessionFiles(session.folder),
+            id: session.id,
+            title: session.title,
+            areas: session.areas,
+            folder: session.folder,
+          });
         }
         if (req.method === 'POST' && route === 'moran') {
           // Computed here (no Stata or R needed): one click, as in GeoDa.

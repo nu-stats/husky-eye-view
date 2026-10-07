@@ -416,7 +416,7 @@ export class StyleManager extends ShellFacade {
       exitPanels: () => this._panelChrome.exitCockpit(),
     });
 
-    // Curated Flights and Area Reports (Data Layers → Data Analysis) load on
+    // Curated Flights and Area Reports (the Analysis menu) load on
     // first use: most sessions never open them, and together they are ~200 KB
     // of code plus two panels. The first open event (or voice request) loads
     // the module and opens the panel; after that each panel listens itself.

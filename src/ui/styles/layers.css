@@ -211,12 +211,55 @@
   pointer-events: none;
 }
 
-#data-panel .panel-header > .panel-collapse-btn {
+#data-panel .panel-header > .panel-collapse-btn,
+#analysis-panel .panel-header > .panel-collapse-btn {
   flex: none;
 }
 
-#data-panel .panel-header > .panel-divider {
+#data-panel .panel-header > .panel-divider,
+#analysis-panel .panel-header > .panel-divider {
   min-width: 0;
+}
+
+/* Analysis: the tools that work on the layers (its own bottom-row menu). */
+#analysis-panel {
+  --panel-expanded-width: 300px;
+  position: fixed;
+  top: calc(var(--left-stack-top) + var(--left-stack-gap));
+  left: var(--left-stack-x);
+  z-index: 100;
+  width: var(--panel-expanded-width);
+}
+
+#analysis-panel .panel-glow {
+  position: absolute;
+  inset: -20px;
+  background: radial-gradient(
+    ellipse at center,
+    var(--accent-dim) 0%,
+    transparent 60%
+  );
+  filter: blur(20px);
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+/* Its rows are tools, not layers: always full strength, with their notes. */
+#analysis-panel .data-toggle-row .data-toggle-meta {
+  display: block;
+}
+
+#analysis-panel .data-toggle-row .data-name,
+#analysis-panel .data-toggle-row .data-icon {
+  opacity: 1;
+}
+
+#analysis-panel .data-toggle-row .data-name {
+  color: var(--text-primary);
+}
+
+#analysis-panel .analysis-rows {
+  overflow-y: auto;
 }
 
 .data-on-badge[hidden] {
@@ -1538,7 +1581,8 @@
 }
 #right-context-rail.bottom-row
   > [data-panel-id]:is(#pp-toggles, #cctv-panel, #global-context-panel),
-#left-panel-stack.bottom-row > [data-panel-id]:is(#data-panel, #scene-panel) {
+#left-panel-stack.bottom-row
+  > [data-panel-id]:is(#data-panel, #analysis-panel, #scene-panel) {
   position: absolute;
   top: auto;
   right: auto;
@@ -1558,13 +1602,18 @@
     .collapsed
   ),
 #left-panel-stack.bottom-row
-  > [data-panel-id]:is(#data-panel, #scene-panel):not(.collapsed) {
+  > [data-panel-id]:is(#data-panel, #analysis-panel, #scene-panel):not(
+    .collapsed
+  ) {
   left: calc(var(--slot-left, 0px) + var(--popup-shift, 0px));
   width: var(--panel-expanded-width);
   min-width: 0;
   z-index: 2;
 }
 #left-panel-stack.bottom-row > #data-panel:not(.collapsed) .data-panel-inner,
+#left-panel-stack.bottom-row
+  > #analysis-panel:not(.collapsed)
+  .data-panel-inner,
 #left-panel-stack.bottom-row > #scene-panel:not(.collapsed) .scene-panel-inner {
   height: auto;
   max-height: var(--left-stack-max-height, 70vh);

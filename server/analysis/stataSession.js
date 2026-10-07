@@ -391,7 +391,12 @@ export function prepareAnalysisSession(
       );
     else doFile = text;
   }
-  if (!request.interactive && !checked.commands.length && !doFile)
+  if (
+    !request.interactive &&
+    !request.browse &&
+    !checked.commands.length &&
+    !doFile
+  )
     problems.push(`Give at least one command or a ${engine.scriptWord}.`);
   if (problems.length) return { ok: false, problems };
 

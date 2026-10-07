@@ -14,6 +14,7 @@ const AREA_VOLUME_BOTTOM_M = -120_000;
 const AREA_VOLUME_TOP_M = 8_000;
 import {
   classOf,
+  geometryBbox,
   geometryPoint,
   quantileBreaks,
   toNumber,
@@ -59,6 +60,135 @@ function dotImage(css) {
   ctx.strokeStyle = 'rgba(10, 10, 10, 0.85)';
   ctx.stroke();
   return canvas;
+}
+
+const pointsOf = (geometry) =>
+  geometry?.type === 'Point'
+    ? [geometry.coordinates]
+    : geometry?.type === 'MultiPoint'
+      ? geometry.coordinates
+      : [];
+
+/**
+ * Highlight shapes (the analysis panel's chosen rows): a bright fill, a thick
+ * outline, a ringed dot for points, and the camera brought to them. Returns
+ * the primitives added, for the caller to remove.
+ */
+export function drawHighlight(
+  viewer,
+  geometries,
+  { fly = true, fill = '#00E5FF', line = '#FFEA00' } = {},
+) {
+  const scene = viewer?.scene;
+  if (!scene || !geometries.length) return [];
+  const fills = [];
+  const lines = [];
+  const dots = [];
+  let box = null;
+  for (const geometry of geometries) {
+    const b = geometryBbox(geometry);
+    if (b)
+      box = box
+        ? [
+            Math.min(box[0], b[0]),
+            Math.min(box[1], b[1]),
+            Math.max(box[2], b[2]),
+            Math.max(box[3], b[3]),
+          ]
+        : b;
+    dots.push(...pointsOf(geometry));
+    for (const rings of polygonsOf(geometry)) {
+      const [outer, ...holes] = rings.map(ring);
+      if (!outer || outer.length < 3) continue;
+      fills.push(
+        new Cesium.GeometryInstance({
+          geometry: new Cesium.PolygonGeometry({
+            polygonHierarchy: new Cesium.PolygonHierarchy(
+              outer,
+              holes
+                .filter((h) => h.length >= 3)
+                .map((h) => new Cesium.PolygonHierarchy(h)),
+            ),
+            height: AREA_VOLUME_BOTTOM_M,
+            extrudedHeight: AREA_VOLUME_TOP_M,
+          }),
+          attributes: {
+            color: Cesium.ColorGeometryInstanceAttribute.fromColor(
+              Cesium.Color.fromCssColorString(fill).withAlpha(0.9),
+            ),
+          },
+        }),
+      );
+      lines.push(
+        new Cesium.GeometryInstance({
+          geometry: new Cesium.GroundPolylineGeometry({
+            positions: [...outer, outer[0]],
+            width: 6,
+          }),
+          attributes: {
+            color: Cesium.ColorGeometryInstanceAttribute.fromColor(
+              Cesium.Color.fromCssColorString(line),
+            ),
+          },
+        }),
+      );
+    }
+  }
+  const added = [];
+  if (fills.length)
+    added.push(
+      scene.primitives.add(
+        new Cesium.ClassificationPrimitive({
+          geometryInstances: fills,
+          appearance: new Cesium.PerInstanceColorAppearance({
+            flat: true,
+            translucent: true,
+          }),
+          classificationType: Cesium.ClassificationType.BOTH,
+          asynchronous: true,
+        }),
+      ),
+    );
+  if (lines.length && Cesium.GroundPolylinePrimitive)
+    added.push(
+      scene.primitives.add(
+        new Cesium.GroundPolylinePrimitive({
+          geometryInstances: lines,
+          appearance: new Cesium.PolylineColorAppearance(),
+          classificationType: Cesium.ClassificationType.BOTH,
+          asynchronous: true,
+        }),
+      ),
+    );
+  if (dots.length) {
+    const points = scene.primitives.add(new Cesium.PointPrimitiveCollection());
+    for (const [lon, lat] of dots)
+      points.add({
+        position: Cesium.Cartesian3.fromDegrees(lon, lat),
+        pixelSize: 14,
+        color: Cesium.Color.fromCssColorString(fill),
+        outlineColor: Cesium.Color.fromCssColorString(line),
+        outlineWidth: 3,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      });
+    added.push(points);
+  }
+  if (fly && box) {
+    // Some room around the areas, so their neighbors show too.
+    const padX = Math.max(0.02, (box[2] - box[0]) * 0.6);
+    const padY = Math.max(0.02, (box[3] - box[1]) * 0.6);
+    viewer.camera.flyTo({
+      destination: Cesium.Rectangle.fromDegrees(
+        box[0] - padX,
+        box[1] - padY,
+        box[2] + padX,
+        box[3] + padY,
+      ),
+      duration: 1.2,
+    });
+  }
+  scene.requestRender?.();
+  return added;
 }
 
 export class UserDataOverlay {

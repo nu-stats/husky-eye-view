@@ -653,11 +653,12 @@ body:has(.data-toggle-row[data-layer-id='alpr-cameras'] .data-toggle-btn.active)
 
 #title-bar .subtitle {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-style: italic;
   letter-spacing: 1.5px;
   color: var(--text-dim);
   margin-top: 8px;
+  text-align: center;
   text-transform: lowercase;
 }
 

@@ -1,5 +1,5 @@
 /**
- * The Stata Analysis and R Analysis panels (Data Layers → Data Analysis) and
+ * The Stata Analysis and R Analysis panels (the Analysis menu) and
  * the controller the voice assistant shares. Commands or an uploaded script
  * run on this computer against a layer's data (counties, a state's tracts,
  * states, or the areas in the current map view); "Open in Stata" / "Open in
@@ -409,6 +409,18 @@ export class AnalysisPanel {
     this.openButton.addEventListener('click', () =>
       this.openStata(this.readForm()),
     );
+    // The layer's data in a table you can pop out and brush on the map,
+    // without running anything (works for every layer, program or not).
+    this.browseButton = element('button', {
+      type: 'button',
+      className: 'curated-button',
+      textContent: 'BROWSE DATA',
+      title:
+        'Open this layer’s data as a table: click rows to highlight them on the map',
+    });
+    this.browseButton.addEventListener('click', () =>
+      this.browse(this.readForm()),
+    );
     this.statusLine = element('p', {
       className: 'curated-status',
       ariaLive: 'polite',
@@ -482,6 +494,7 @@ export class AnalysisPanel {
         element('div', { className: 'curated-options' }, [
           this.runButton,
           this.openButton,
+          this.browseButton,
         ]),
         this.variables,
         element('div', { className: 'stata-moran-row' }, [
@@ -913,6 +926,31 @@ export class AnalysisPanel {
     }
   }
 
+  /**
+   * Browse the chosen layer's data (panel and voice): the table opens popped
+   * out, and clicking rows highlights their areas on the map. No program runs.
+   */
+  async browse(request = {}) {
+    const resolved = this.resolveRequest({
+      ...request,
+      commands: [],
+      doFile: null,
+    });
+    if (resolved.problem) return this.fail([resolved.problem]);
+    this.open();
+    this.setStatus('Loading the data…');
+    const result = await this.post('browse', resolved);
+    if (!result.ok)
+      return this.fail(result.problems || ['The data could not be loaded.']);
+    this.map.reset();
+    this.render(result);
+    this.setStatus(
+      `${result.title.replace(/^Husky Eye View: /, '')}. Click rows to show them on the map; Ctrl-click adds, Shift-click selects a range.`,
+    );
+    await this.popOutLast?.();
+    return { ok: true, title: result.title, areas: result.areas };
+  }
+
   /** Open the program itself with the data loaded (panel and voice). */
   async openStata(request = {}) {
     const resolved = this.resolveRequest({
@@ -946,6 +984,7 @@ export class AnalysisPanel {
   render(result) {
     // A popped-out table belongs to the last run.
     this.undock?.();
+    this.popOutLast = null;
     this.output.textContent = '';
     if (!result.id) return;
     const steps = element(
@@ -1217,6 +1256,7 @@ export class AnalysisPanel {
       this.undock = dock;
     };
     pop.addEventListener('click', () => void popOut());
+    this.popOutLast = popOut;
     return [details];
   }
 

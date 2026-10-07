@@ -470,9 +470,6 @@ export class LayerPanel {
       if (!layer.showInTogglePanel) continue;
       if (!layerListedInProfile(layer, showAll)) continue;
       const group = groupOf(layer);
-      if (previousGroup === RESEARCH_GROUP && group !== previousGroup) {
-        this._appendAnalysisGroup();
-      }
       if (group && group !== previousGroup) this._appendGroupHeading(group);
       previousGroup = group;
       const row = document.createElement('div');
@@ -634,8 +631,7 @@ export class LayerPanel {
           this._buildViewRow(TIME_LENS_ROW, group),
         );
     }
-    // After the research data, also when that group is the last one listed.
-    if (this._groups.has(RESEARCH_GROUP)) this._appendAnalysisGroup();
+    this._renderAnalysisRows();
     this._toggleContainer.appendChild(empty);
     this._toggleContainer.appendChild(this._buildProfileToggle(layers));
     this._applyFilter();
@@ -667,20 +663,24 @@ export class LayerPanel {
   }
 
   /**
-   * Data Analysis, right after the research data: the tools that work on
-   * the layers (Curated Flights, Area Reports, Stata Analysis, R Analysis).
+   * The Analysis menu (its own bottom-row panel, #analysis-rows): the tools
+   * that work on the layers (Curated Flights, Area Reports, Stata Analysis,
+   * R Analysis) and the Surprise. Rebuilt with the Data Layers list, so its
+   * handlers are released with the others.
    */
-  _appendAnalysisGroup() {
-    if (this._groups.has(ANALYSIS_GROUP)) return;
-    this._appendGroupHeading(ANALYSIS_GROUP);
-    this._toggleContainer.appendChild(this._buildCuratedRow());
-    this._toggleContainer.appendChild(this._buildReportsRow());
-    this._toggleContainer.appendChild(this._buildStataRow());
-    this._toggleContainer.appendChild(this._buildRRow());
-    this._toggleContainer.appendChild(this._buildSurpriseRow());
+  _renderAnalysisRows() {
+    const list = globalThis.document?.getElementById?.('analysis-rows');
+    if (!list) return;
+    list.replaceChildren(
+      this._buildCuratedRow(),
+      this._buildReportsRow(),
+      this._buildStataRow(),
+      this._buildRRow(),
+      this._buildSurpriseRow(),
+    );
   }
 
-  /** Data Analysis → Surprise: a random photo of one of the dogs. */
+  /** Analysis menu → Surprise: a random photo of one of the dogs. */
   _buildSurpriseRow() {
     const group = ANALYSIS_GROUP;
     const row = document.createElement('div');
@@ -719,7 +719,7 @@ export class LayerPanel {
   }
 
   /**
-   * Data Analysis → Curated Flights: opens the city-comparison tour panel
+   * Analysis menu → Curated Flights: opens the city-comparison tour panel
    * (src/curated/curatedPanel.js). It has its own key, so it reads LOCKED
    * until that key is in this browser session.
    */
@@ -776,7 +776,7 @@ export class LayerPanel {
   }
 
   /**
-   * Data Analysis → Area Reports: rank counties, tracts or states by any
+   * Analysis menu → Area Reports: rank counties, tracts or states by any
    * layer and save PDF / CSV / XLSX (src/reports/reportPanel.js). No key.
    */
   _buildReportsRow() {
