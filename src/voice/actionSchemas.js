@@ -1,10 +1,16 @@
 // The pure manifest, not layerState.js: these schemas are a portable export,
 // and layerState.js reaches localStorage.
-import { REGISTERED_LAYER_IDS } from '../data/layerManifest.js';
+import {
+  REGISTERED_LAYER_IDS,
+  layerManifestEntry,
+} from '../data/layerManifest.js';
 
 // Every registered data layer is voice-controllable. A layer joins the
 // registry to get a share-link token, so new layers reach voice automatically.
-const VOICE_LAYER_IDS = [...REGISTERED_LAYER_IDS];
+// Layers the manifest turns off (ships, for now) are not offered to voice.
+const VOICE_LAYER_IDS = REGISTERED_LAYER_IDS.filter(
+  (id) => !layerManifestEntry(id)?.off,
+);
 
 // Area Reports measures (src/reports/reportMeasures.js ids; a test keeps the
 // two lists equal). Listed here so the voice schemas stay a portable export.
@@ -791,13 +797,7 @@ const schemas = [
           type: 'array',
           items: {
             type: 'string',
-            enum: [
-              'flights',
-              'military',
-              'ais-live-vessels',
-              'local-firms',
-              'earthquakes',
-            ],
+            enum: ['flights', 'military', 'local-firms', 'earthquakes'],
           },
         },
         scope: {
@@ -896,7 +896,8 @@ const schemas = [
       properties: {
         mode: {
           type: 'string',
-          enum: ['walk', 'drone'],
+          // Walking View is off for now; 'walk' returns with it.
+          enum: ['drone'],
         },
       },
       required: ['mode'],
@@ -943,6 +944,47 @@ const schemas = [
         },
       },
       required: ['rank_by'],
+    },
+  },
+  // Stata on this computer (src/analysis/, server/providers/stata.js). Each
+  // command line is checked against the allowed commands before Stata runs.
+  {
+    name: 'run_stata_analysis',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        geography: {
+          type: 'string',
+          enum: ['view', 'county', 'tract', 'state'],
+        },
+        state: {
+          type: 'string',
+        },
+        commands: {
+          type: 'array',
+          items: { type: 'string', maxLength: 600 },
+          minItems: 1,
+          maxItems: 20,
+        },
+      },
+      required: ['commands'],
+    },
+  },
+  {
+    name: 'open_in_stata',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        geography: {
+          type: 'string',
+          enum: ['view', 'county', 'tract', 'state'],
+        },
+        state: {
+          type: 'string',
+        },
+      },
     },
   },
   // Curated Flights (src/curated/): needs its own key; GVA/MKDB values also

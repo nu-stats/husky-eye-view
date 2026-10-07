@@ -11,7 +11,13 @@ import {
   layerValues,
   rowsToCsv,
 } from './curatedModel.js';
-import { PdfDocument, buildXlsx, buildZip, pdfWrap } from './curatedFiles.js';
+import {
+  PdfDocument,
+  buildXlsx,
+  buildZip,
+  localDate,
+  pdfWrap,
+} from './curatedFiles.js';
 
 /** Chart size in pixels: 16:9, sharp in print and slides. */
 export const CHART_WIDTH = 2400;
@@ -35,11 +41,7 @@ const INK = Object.freeze({
 const FONT =
   '"Real Head Pro", "ff-real-headline-pro", "Lato", "Segoe UI", sans-serif';
 
-/** 2026-10-04 in the viewer's local time (file names, report dates). */
-export function localDate(date = new Date()) {
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
+export { localDate };
 
 /** A "nice" axis maximum and step for values up to `max`. */
 export function niceScale(max, ticks = 5) {

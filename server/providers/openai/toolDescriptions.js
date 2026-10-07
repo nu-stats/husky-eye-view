@@ -122,6 +122,40 @@ export const ACTION_DESCRIPTIONS = {
     description:
       'Start Walking View (first person at street level) or Drone View (hovering 30–120 m up) at the center of the current view. The user then moves with W/A/S/D (Q/E for height) and leaves with Esc. Use only when the user asks to walk, go to street level, or fly a drone.',
   },
+  run_stata_analysis: {
+    description:
+      'Run a statistical analysis in Stata (on this computer) on a layer\'s data: counties, the census tracts of one state, states, or the areas in the current map view. Write each step as one Stata command line. Allowed commands: regress, logit, nbreg, poisson, spregress, spreg, correlate, summarize, tabulate (tab), fre, fs, egen, twoway — with if, in and options, e.g. "regress foreign_born_share poverty unemployment if median_income != ., vce(robust)". Variables: population, foreign_born_count, foreign_born_share (_2010, _2000), poverty, unemployment, bachelors, renters, black, hispanic, no_vehicle, internet, broadband, median_income, life_expectancy (counties; _2000), cluster_status (counties, text), pm25, ozone, park_access, asu_broadband (counties), ntia_internet_use (states), segregation_bw / _hw / _aw (counties, states), plus geoid, state, name, lon, lat. Spatial models: a weights matrix W (inverse distance) is built on the areas with valid values, e.g. "spregress life_expectancy poverty, gs2sls dvarlag(W)". For contiguity weights: "spshape2dta areas" (the session shapefile), then "spmatrix create contiguity W if !missing(y, x)", then the model with the same if; spmatrix also allows summarize, dir, drop, copy, normalize, note, clear, fromdata. The session\'s do-file and log are saved. After it runs, report the key results in plain words (coefficients, significance, N) and any failed step.',
+    parameters: {
+      properties: {
+        geography: {
+          description:
+            'view = the areas in the current map view (tracts zoomed in, counties zoomed out); county (default); tract (needs state); state.',
+        },
+        state: {
+          description:
+            'Limit to one state (name or postal code). Required for tract data unless geography is view.',
+        },
+        commands: {
+          description: 'Stata command lines, run in order.',
+        },
+      },
+    },
+  },
+  open_in_stata: {
+    description:
+      "Open the Stata program itself on this computer with a layer's data loaded and labeled (default: the areas in the current map view), so the user can work in Stata directly. Everything they type and the output are saved as a do-file and a log in the session folder.",
+    parameters: {
+      properties: {
+        geography: {
+          description:
+            'view (default) = the areas in the current map view; county; tract (needs state); state.',
+        },
+        state: {
+          description: 'Limit to one state (name or postal code).',
+        },
+      },
+    },
+  },
   generate_area_report: {
     description:
       'Gather data and generate a report that ranks US counties, census tracts (within one state) or states by one measure and lists other measures as columns, saved as PDF, CSV and XLSX (one ZIP). Use for requests like "a report of the 50 counties with the largest immigrant populations with poverty, unemployment, life expectancy and cluster status". Identifiers (state and county FIPS codes, state and county names) are always included. No key needed. After it runs, say the report title, the file name and the first few areas with their values; mention any problems the result lists.',

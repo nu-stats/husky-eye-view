@@ -10,35 +10,13 @@
 // on-screen altitude strings through that correction, and a live IntelHUD
 // driven across the real cold → resolved geoid transition.
 //
-// hud.js imports `mgrs`, a CommonJS package whose named exports Node's ESM
-// loader cannot see, so the live half installs a module hook that swaps that
-// one specifier for a stub. The import also has to happen BEFORE any DOM
-// globals exist: Cesium's widget bundle probes for a real `document` at module
-// scope and a partial stub sends it down the browser path. Hence hook →
-// import → install DOM, in that order.
+// The import has to happen BEFORE any DOM globals exist: Cesium's widget
+// bundle probes for a real `document` at module scope and a partial stub sends
+// it down the browser path. Hence import → install DOM, in that order.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { registerHooks } from 'node:module';
 import { ensureGeoidReady } from './data/geoid.js';
-
-const MGRS_STUB_URL = 'gev-test-stub:mgrs';
-registerHooks({
-  resolve(specifier, context, next) {
-    if (specifier === 'mgrs') return { url: MGRS_STUB_URL, shortCircuit: true };
-    return next(specifier, context);
-  },
-  load(url, context, next) {
-    if (url === MGRS_STUB_URL) {
-      return {
-        format: 'module',
-        shortCircuit: true,
-        source: 'export function forward() { return "10SEG55776339"; }\nexport default { forward };\n',
-      };
-    }
-    return next(url, context);
-  },
-});
 
 const { IntelHUD } = await import('./hud.js');
 
@@ -153,14 +131,9 @@ test('the summary ALT tag agrees with the corner readout', () => {
 });
 
 test('the sensor model keeps the ellipsoidal height it was tuned against', () => {
-  // GSD/NIIRS and the STREET/CITY/METRO view band are camera-geometry math,
-  // not readouts. Re-datuming them would silently move their thresholds, so
-  // altM stays and altMslM is purely additive.
-  assert.equal(
-    has(/const gsd = Math\.max\(0\.01, altM \* 0\.000375\);/),
-    true,
-    'GSD must keep reading the raw camera height',
-  );
+  // The STREET/CITY/METRO view band is camera-geometry math, not a readout.
+  // Re-datuming it would silently move its thresholds, so altM stays and
+  // altMslM is purely additive.
   assert.equal(
     has(/const band = this\._viewBand\(m\.altM\);/),
     true,

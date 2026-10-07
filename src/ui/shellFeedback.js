@@ -48,7 +48,11 @@ export class ShellFeedback {
       this._loadingVisibilityHandler,
     );
   }
-  _updateTrafficSyncChip(forceShow = false, now = performance.now()) {
+  _updateTrafficSyncChip(
+    forceShow = false,
+    now = performance.now(),
+    layers = undefined,
+  ) {
     if (this.destroyed) return;
     if (
       !this._trafficSyncChip ||
@@ -56,7 +60,7 @@ export class ShellFeedback {
       !this._trafficSyncProgress
     )
       return;
-    const layers = this.readLayers();
+    layers ??= this.readLayers();
     const traffic = Array.isArray(layers)
       ? layers.find((layer) => layer.id === 'traffic')
       : null;
@@ -84,10 +88,10 @@ export class ShellFeedback {
     this._trafficSyncChip.classList.toggle('visible', presentation.visible);
   }
 
-  _updateGlobalLoadingFeedback(now = performance.now()) {
+  _updateGlobalLoadingFeedback(now = performance.now(), layers = undefined) {
     if (this.destroyed) return;
     if (!this._globalLoadingStatus) return;
-    const summary = aggregateLayerLoading(this.readLayers() || []);
+    const summary = aggregateLayerLoading(layers ?? (this.readLayers() || []));
     this._loadingFeedbackState = reduceLoadingFeedback(
       this._loadingFeedbackState,
       summary,
@@ -142,8 +146,11 @@ export class ShellFeedback {
     if (this._trafficChipTicker) return;
     this._trafficChipTicker = setInterval(() => {
       if (document.hidden) return;
-      this._updateTrafficSyncChip();
-      this._updateGlobalLoadingFeedback();
+      // One snapshot of every layer serves both readouts.
+      const layers = this.readLayers() || [];
+      const now = performance.now();
+      this._updateTrafficSyncChip(false, now, layers);
+      this._updateGlobalLoadingFeedback(now, layers);
     }, 500);
   }
 

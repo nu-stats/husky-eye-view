@@ -39,6 +39,45 @@ export const AREA_VOLUME_BOTTOM_M = -120_000;
 export const AREA_VOLUME_TOP_M = 8_000;
 /** Parsed chunks kept after leaving the view, so panning back is instant. */
 const CHUNK_CACHE_LIMIT = 90;
+
+/**
+ * Parsed chunk files shared by every area layer. About eighteen layers draw
+ * from the same 2020 tract chunks and every tract layer's far view reads the
+ * county set, so with two layers on each file used to be downloaded and
+ * parsed twice. Features are read-only here, so one parse serves them all.
+ * Least recently used first out; a failed read is not kept.
+ */
+const sharedChunks = new Map();
+
+function readSharedChunk(url) {
+  let read = sharedChunks.get(url);
+  if (read) {
+    sharedChunks.delete(url);
+    sharedChunks.set(url, read);
+    return read;
+  }
+  read = fetch(url).then(async (response) => {
+    if (!response.ok) throw new Error(`HTTP ${response.status ?? '?'}`);
+    const text = await response.text();
+    return text
+      .split('\n')
+      .filter((line) => line.trim())
+      .map((line) => JSON.parse(line));
+  });
+  read.catch(() => {
+    if (sharedChunks.get(url) === read) sharedChunks.delete(url);
+  });
+  sharedChunks.set(url, read);
+  while (sharedChunks.size > CHUNK_CACHE_LIMIT)
+    sharedChunks.delete(sharedChunks.keys().next().value);
+  return read;
+}
+
+/** Test seams: forget every shared chunk; read one directly. */
+export function _resetSharedChunksForTest() {
+  sharedChunks.clear();
+}
+export { readSharedChunk as readSharedChunkForTest };
 const FILL_ALPHA = 0.4;
 /**
  * Most polygons in one ground primitive. Cesium prepares every instance of a
@@ -539,18 +578,12 @@ export function createChunkedAreaLayer(
       cache.set(chunkId, features); // refresh LRU position
       return features;
     }
-    const response = await fetch(
+    const parsed = await readSharedChunk(
       `${source.base}${encodeURIComponent(fileId)}.geojsonl`,
     );
-    if (!response.ok) throw new Error(`HTTP ${response.status ?? '?'}`);
-    const text = await response.text();
-    const features = text
-      .split('\n')
-      .filter((line) => line.trim())
-      .map((line) => JSON.parse(line))
-      .filter(
-        (feature) => !source.filter || source.filter(feature.properties || {}),
-      );
+    const features = source.filter
+      ? parsed.filter((feature) => source.filter(feature.properties || {}))
+      : parsed;
     cache.set(chunkId, features);
     while (cache.size > CHUNK_CACHE_LIMIT) {
       const oldest = cache.keys().next().value;
@@ -985,6 +1018,10 @@ export function createChunkedAreaLayer(
       moveEndRemover = null;
       frameRemover?.();
       frameRemover = null;
+      // Every live handler costs a layout read per mouse move; enable makes
+      // a new one.
+      clickHandler?.destroy();
+      clickHandler = null;
       releaseAll();
       clearSelectedEntityContextForLayer(id);
       removeEntityContextsForLayer(id);

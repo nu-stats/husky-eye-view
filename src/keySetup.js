@@ -390,6 +390,9 @@ export async function initKeySetup({
       say(
         `${doneVerb} ${storeLabel()}. Restarting — this page reloads itself.`,
       );
+      // The production server needs no restart, only a reload; there is no
+      // Vite client to do it, so the page reloads itself.
+      if (payload.reload) setTimeout(() => globalThis.location?.reload(), 900);
     } catch (error) {
       say(`Save failed: ${error?.message || error}`);
     } finally {

@@ -11,6 +11,8 @@ import fs from 'node:fs';
 import { ShareLinkManager, decodeShareCreatedAtMs } from './sharelink.js';
 import { createDefaultLayerState } from './data/layerState.js';
 
+const NEPAL_OFF = 'The Nepal flood feature is off for now (2026-10-06).';
+
 const uiSource = readShellSource();
 
 function sourceBlock(start, end) {
@@ -78,7 +80,7 @@ test('unknown-only v2 layer tokens are invalid, while historical l fields stay i
   }
 });
 
-test('Nepal locator token is valid in v2 share links', () => {
+test('Nepal locator token is valid in v2 share links', { skip: NEPAL_OFF }, () => {
   const parsed = makeManager('#v=2&lat=10&lon=20&l=z').parseInitialHash();
   assert.deepEqual(parsed.layerState.enabledLayerIds, ['bhote-koshi-locator']);
   assert.equal(parsed.layerStateInvalid, false);

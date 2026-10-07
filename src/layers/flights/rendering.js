@@ -517,6 +517,9 @@ export function createRendering({
       model = await Cesium.Model.fromGltfAsync({
         url: resolveAsset(spec.url),
         asynchronous: false,
+        // No per-model reflection map: Cesium rebuilds it by reading pixels
+        // back from the GPU, a stall on every frame the fleet renders.
+        environmentMapOptions: { enabled: false },
         minimumPixelSize: MODEL_MIN_PX,
         scale: spec.scale,
         color: flightState._irBoost ? Cesium.Color.WHITE : _modelColor(icao24),
@@ -723,6 +726,7 @@ export function createRendering({
       Cesium.Model.fromGltfAsync({
         url: resolveAsset(trackedSpec.url),
         asynchronous: false,
+        environmentMapOptions: { enabled: false },
         minimumPixelSize: TRACKED_MODEL_MIN_PX,
         scale: trackedSpec.scale,
         color: flightState._irBoost ? Cesium.Color.WHITE : Cesium.Color.CYAN,

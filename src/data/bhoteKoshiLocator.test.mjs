@@ -23,6 +23,8 @@ import {
   revealPolylinePositions,
 } from './bhoteKoshiLocator.js';
 
+const NEPAL_OFF = 'The Nepal flood feature is off for now (2026-10-06).';
+
 function viewerFixture() {
   const added = [];
   const removed = [];
@@ -479,7 +481,7 @@ test('Bhote Koshi trigger-record waits for the scene camera, zooms, then orbits'
 });
 
 for (const phase of ['timer', 'move-end', 'approach', 'orbit']) {
-  test(`Scene Stop revokes locator ${phase} and stale callbacks cannot own a successor`, async () => {
+  test(`Scene Stop revokes locator ${phase} and stale callbacks cannot own a successor`, { skip: NEPAL_OFF }, async () => {
     const viewer = viewerFixture();
     const timers = new Map();
     const callbacks = [];

@@ -43,12 +43,6 @@ export function createStandaloneApplication({
         loaderStatus,
       });
       catalog = createStandaloneCatalog({
-        nepalBoundaryResolver: (signal) =>
-          scene.operations.annotationResolver.resolveRegionRingForQuery(
-            'Nepal',
-            signal,
-            placeSearch,
-          ),
         signal: context.signal,
         surface: scene.operations.surface,
       });

@@ -19,6 +19,8 @@ import { SceneDirector } from './director.js';
 import { SCENE_TRACKING_PARAM_KEYS } from './scenePolicy.js';
 import { SCENE_RECIPES, getSceneAppendRecipeById } from './recipes.js';
 
+const NEPAL_OFF = 'The Nepal flood feature is off for now (2026-10-06).';
+
 const NEPAL_ORIGINAL_SHOT_TITLES = [
   'Global Incident Context',
   'Nepal-Focused Globe Rotation',
@@ -97,7 +99,7 @@ function legacyDefaultProjectWithoutNepalFixture() {
 }
 
 
-test('Mailung clip trim estimates seven seconds and its exit, including older saved holds', () => {
+test('Mailung clip trim estimates seven seconds and its exit, including older saved holds', { skip: NEPAL_OFF }, () => {
   const { director, restore } = makeDirector();
   try {
     const scene = director._project.scenes[0];
@@ -120,7 +122,7 @@ test('Mailung clip trim estimates seven seconds and its exit, including older sa
   } finally { restore(); }
 });
 
-test('Incident Corridor gives all overview pins time to reveal without rewriting saved shots', () => {
+test('Incident Corridor gives all overview pins time to reveal without rewriting saved shots', { skip: NEPAL_OFF }, () => {
   const { director, restore } = makeDirector();
   try {
     const scene = director._project.scenes[0];
@@ -197,7 +199,7 @@ test('scene clock subscribers receive authoritative forward playback snapshots',
 });
 
 
-test('the Nepal evidence pack appends once and applies the approved corridor framing', () => {
+test('the Nepal evidence pack appends once and applies the approved corridor framing', { skip: NEPAL_OFF }, () => {
   const project = nepalProjectFixture();
   const originalShots = structuredClone(project.scenes[0].shots);
   const { director, restore } = makeDirector({ project });
@@ -320,7 +322,7 @@ test('the Nepal evidence pack appends once and applies the approved corridor fra
   }
 });
 
-test('installed v12 Nepal pack inserts ten points without replacing renamed cameras', () => {
+test('installed v12 Nepal pack inserts ten points without replacing renamed cameras', { skip: NEPAL_OFF }, () => {
   const first = makeDirector({ project: nepalProjectFixture() });
   let legacy;
   const recipe = getSceneAppendRecipeById('bhote-koshi-nepal-evidence-pack');
@@ -356,7 +358,7 @@ test('installed v12 Nepal pack inserts ten points without replacing renamed came
 });
 
 
-test('a legacy three-shot Nepal browser project bootstraps to the current 25-shot sequence', () => {
+test('a legacy three-shot Nepal browser project bootstraps to the current 25-shot sequence', { skip: NEPAL_OFF }, () => {
   const project = legacyThreeShotNepalProjectFixture();
   const originalIds = project.scenes[0].shots.map(({ id }) => id);
   const originalCameras = project.scenes[0].shots.map(({ camera }) => structuredClone(camera));
@@ -377,7 +379,7 @@ test('a legacy three-shot Nepal browser project bootstraps to the current 25-sho
   }
 });
 
-test('the Nepal evidence pack refuses a partial inventory without mutating the scene', () => {
+test('the Nepal evidence pack refuses a partial inventory without mutating the scene', { skip: NEPAL_OFF }, () => {
   const project = nepalProjectFixture();
   project.scenes[0].shots[3].title = 'Renamed Nearby Cities';
   const { director, restore } = makeDirector({ project });
@@ -397,7 +399,7 @@ test('the Nepal evidence pack refuses a partial inventory without mutating the s
   }
 });
 
-test('the Nepal pack upgrades the upper-valley shots without duplicating evidence beats', () => {
+test('the Nepal pack upgrades the upper-valley shots without duplicating evidence beats', { skip: NEPAL_OFF }, () => {
   const initial = makeDirector({ project: nepalProjectFixture() });
   initial.director.appendShotPack('scene-1', 'bhote-koshi-nepal-evidence-pack');
   const project = structuredClone(initial.director._project);
@@ -455,7 +457,7 @@ test('the Nepal pack upgrades the upper-valley shots without duplicating evidenc
 });
 
 
-test('an older default project gains the complete selectable Nepal scene once', () => {
+test('an older default project gains the complete selectable Nepal scene once', { skip: NEPAL_OFF }, () => {
   const project = legacyDefaultProjectWithoutNepalFixture();
   const { director, restore } = makeDirector({
     project,
@@ -487,13 +489,13 @@ test('a previously installed Nepal scene stays deleted when its marker remains',
   }
 });
 
-test('public defaults include Nepal without an extra standalone flood recipe', () => {
+test('public defaults include Nepal without an extra standalone flood recipe', { skip: NEPAL_OFF }, () => {
   assert.equal(SCENE_RECIPES.some((item) => item.id === 'bhote-koshi-flood'), false);
   assert.equal(SCENE_RECIPES.filter((item) => item.id === 'bhote-koshi-nepal-scene').length, 1);
 });
 
 
-test('an existing public default project gains Nepal without replacing authored shots', () => {
+test('an existing public default project gains Nepal without replacing authored shots', { skip: NEPAL_OFF }, () => {
   const project = structuredClone(PROJECT_FIXTURE);
   project.scenes[0].id = 'flights-radar';
   const original = structuredClone(project.scenes[0].shots);
@@ -507,7 +509,7 @@ test('an existing public default project gains Nepal without replacing authored 
   } finally { restore(); }
 });
 
-test('Nepal comparison shots load Esri beneath Vantor even from a saved OSM or photoreal shot', async () => {
+test('Nepal comparison shots load Esri beneath Vantor even from a saved OSM or photoreal shot', { skip: NEPAL_OFF }, async () => {
   const { director, styleManager, restore } = makeDirector({
     project: nepalProjectFixture(),
     data: { registered: [...REGISTERED, 'bhote-koshi-2026', 'bhote-koshi-locator'] },
@@ -531,7 +533,7 @@ test('Nepal comparison shots load Esri beneath Vantor even from a saved OSM or p
   }
 });
 
-test('all saved Nepal shots choose a usable map in keyed and keyless runtimes without rewriting the project', async () => {
+test('all saved Nepal shots choose a usable map in keyed and keyless runtimes without rewriting the project', { skip: NEPAL_OFF }, async () => {
   let photorealAvailable = false;
   const { director, styleManager, restore } = makeDirector({
     project: nepalProjectFixture(),

@@ -260,8 +260,6 @@ const FRAME_TARGETS = new Map([
   ['military', 'military'],
   ['military flights', 'military'],
   ['satellites', 'satellites'],
-  ['vessels', 'ais-live-vessels'],
-  ['ships', 'ais-live-vessels'],
 ]);
 
 const serviceCaches = new WeakMap();
@@ -970,7 +968,9 @@ export function createGevActionRunner({
     }
 
     if (name === 'generate_area_report') {
-      const reports = styleManager?.areaReports;
+      const reports =
+        (await styleManager?.ensureAreaReports?.()) ||
+        styleManager?.areaReports;
       if (!reports)
         return { ok: false, action: name, error: 'Area Reports unavailable' };
       const result = await reports.generate({
@@ -985,8 +985,34 @@ export function createGevActionRunner({
       return { action: name, ...result };
     }
 
+    if (name === 'run_stata_analysis' || name === 'open_in_stata') {
+      const panel =
+        (await styleManager?.ensureStataAnalysis?.()) ||
+        styleManager?.stataAnalysis;
+      if (!panel)
+        return { ok: false, action: name, error: 'Stata Analysis unavailable' };
+      const request = {
+        geography:
+          args.geography || (name === 'open_in_stata' ? 'view' : 'county'),
+        state: args.state || null,
+      };
+      const result =
+        name === 'open_in_stata'
+          ? await panel.openStata(request)
+          : await panel.run({
+              ...request,
+              commands: Array.isArray(args.commands) ? args.commands : [],
+            });
+      return { action: name, ...result };
+    }
+
     if (name === 'plan_curated_flight' || name === 'control_curated_flight') {
-      return curatedFlightAction(styleManager?.curatedFlights, name, args);
+      return curatedFlightAction(
+        (await styleManager?.ensureCuratedFlights?.()) ||
+          styleManager?.curatedFlights,
+        name,
+        args,
+      );
     }
 
     if (name === 'analyst_query') {

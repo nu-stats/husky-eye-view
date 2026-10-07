@@ -12,9 +12,11 @@ test('explicit build inputs preserve browser-only defines, plugin order and loop
     googleApiKey: 'browser-fixture',
     cesiumToken: 'ion-fixture',
   });
-  // cesium, application HTML, context compression, then the caller's plugins.
+  // cesium, application HTML, context compression, runtime serving, then
+  // the caller's plugins.
   assert.equal(config.plugins[2].name, 'hev-context-compression');
-  assert.equal(config.plugins[3], plugin);
+  assert.equal(config.plugins[3].name, 'hev-runtime-serving');
+  assert.equal(config.plugins[4], plugin);
   assert.equal(config.server.host, 'localhost');
   assert.equal(config.server.port, 4173);
   assert.deepEqual(config.server.allowedHosts, [
@@ -32,6 +34,10 @@ test('explicit build inputs preserve browser-only defines, plugin order and loop
   assert.deepEqual(config.define, {
     'import.meta.env.GOOGLE_MAPS_API_KEY': '"browser-fixture"',
     'import.meta.env.CESIUM_ION_TOKEN': '"ion-fixture"',
+    'import.meta.env.HEV_VERSION': JSON.stringify(
+      JSON.parse(readFileSync(new URL('../../package.json', import.meta.url)))
+        .version,
+    ),
   });
   assert.equal(
     createBrowserViteConfig({ host: '0.0.0.0', port: '4800' }).server
@@ -53,8 +59,9 @@ test('build helper does not discover environment values or construct local provi
       config.define['import.meta.env.GOOGLE_MAPS_API_KEY'],
       undefined,
     );
-    // cesium, application HTML and context compression: no providers.
-    assert.equal(config.plugins.length, 3);
+    // cesium, application HTML, context compression and runtime serving:
+    // no providers.
+    assert.equal(config.plugins.length, 4);
   } finally {
     if (before === undefined) delete process.env.GOOGLE_MAPS_API_KEY;
     else process.env.GOOGLE_MAPS_API_KEY = before;
@@ -66,7 +73,7 @@ test('root config retains existing named exports and standalone provider order',
     assert.equal(compatibility[name], value, name);
   const config = standaloneConfig({ mode: 'test' });
   assert.deepEqual(
-    config.plugins.slice(3, -1).map((plugin) => plugin.name),
+    config.plugins.slice(4, -1).map((plugin) => plugin.name),
     providers.localProviderPlugins().map((plugin) => plugin.name),
   );
   assert.equal(config.plugins.at(-2).name, 'gev-key-setup');

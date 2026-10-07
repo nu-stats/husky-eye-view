@@ -44,7 +44,8 @@ const INTERNET_GROUP = 'Internet Access Over Time';
 const ENVIRONMENT_GROUP = 'Air & Green Space';
 const RESEARCH_DATA_GROUP = 'Restricted Research Data';
 const MIAMI_GROUP = 'City Study: Miami-Dade Homicides';
-const VIEWS_GROUP = 'Fly, Drone & Walk';
+// 'Fly, Drone & Walk' again once Walking View returns (layerPanel.js).
+const VIEWS_GROUP = 'Fly & Drone';
 
 /** One line under each Data Layers group heading: what it holds, and how. */
 export const LAYER_GROUP_NOTES = Object.freeze({
@@ -59,7 +60,7 @@ export const LAYER_GROUP_NOTES = Object.freeze({
   [ENVIRONMENT_GROUP]:
     'Counties from far out, tracts as you zoom in; large parks first, every park closer in.',
   [RESEARCH_DATA_GROUP]: 'Each needs a key from the project owner.',
-  [VIEWS_GROUP]: 'Ride a helicopter, fly a drone, or walk the street.',
+  [VIEWS_GROUP]: 'Ride a helicopter or fly a drone.',
   'Live Feeds': 'Real-time data across the United States.',
 });
 
@@ -516,7 +517,7 @@ export const LAYER_MANIFEST = Object.freeze(
       aliases: ['3d captures', 'splats', 'gaussian splats'],
     },
 
-    // ---- Fly, Drone & Walk: first-person views ----------------------------
+    // ---- Fly & Drone: first-person views ----------------------------
     {
       id: 'lowflyers',
       token: 'lf',
@@ -551,13 +552,6 @@ export const LAYER_MANIFEST = Object.freeze(
       group: 'Live Feeds',
       extra: true,
       aliases: ['military', 'military flights'],
-    },
-    {
-      id: 'ais-live-vessels',
-      token: 'a',
-      group: 'Live Feeds',
-      label: 'Live Vessels',
-      aliases: ['ais', 'ships', 'vessels', 'live vessels'],
     },
     {
       id: 'traffic',
@@ -674,9 +668,20 @@ export const LAYER_MANIFEST = Object.freeze(
     },
 
     // ---- Not listed in Data Layers -------------------------------------------
-    { id: 'bhote-koshi-2026', token: 'h', group: null },
-    { id: 'bhote-koshi-locator', token: 'z', group: null },
+    // Tokens h and z stay reserved for the Nepal flood layers
+    // (bhote-koshi-2026, bhote-koshi-locator), which are off for now.
     { id: 'military-awareness', token: 'g', group: null },
+    // Ships are off for now (2026-10-06): still constructed, because Military
+    // Awareness reads the layer, but hidden, unvoiced and never enabled. To
+    // restore, set group: 'Live Feeds', drop `off` and bring back the aliases
+    // ('ais', 'ships', 'vessels', 'live vessels').
+    {
+      id: 'ais-live-vessels',
+      token: 'a',
+      group: null,
+      off: true,
+      label: 'Live Vessels',
+    },
   ].map((entry) =>
     Object.freeze({
       disposition: 'enabled-only',

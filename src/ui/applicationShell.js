@@ -30,8 +30,6 @@ import * as Cesium from 'cesium';
 import { aircraftTrackingTarget } from '../cockpitTracking.js';
 
 import { ShellFeedback } from './shellFeedback.js';
-import { CuratedFlightsPanel } from '../curated/curatedPanel.js';
-import { AreaReportsPanel } from '../reports/reportPanel.js';
 import { TimeLens } from './timeLens.js';
 import {
   applyDataPanelPlacement,
@@ -59,6 +57,36 @@ import { runCctvLayerEnableTransition } from '../cctvFocusPolicy.js';
  * - Toast notification system.
  * - Intel HUD lifecycle and variant switching.
  */
+
+/**
+ * A panel module loaded on first use. Returns `ensure()`, which loads the
+ * module and constructs the panel once. Until then the shell answers the
+ * panel's open event itself: it loads, then opens. The panel's constructor
+ * takes over the event afterwards.
+ */
+function lazyPanel(shell, openEvent, load, construct) {
+  let pending = null;
+  const ensure = () =>
+    (pending ||= load().then((module) => {
+      // From here the panel's own listener answers the open event.
+      window.removeEventListener(openEvent, onFirstOpen);
+      return shell._lazyPanelsDestroyed ? null : construct(module);
+    }));
+  const onFirstOpen = () => {
+    window.removeEventListener(openEvent, onFirstOpen);
+    void ensure()
+      .then((panel) => panel?.open())
+      .catch((error) => {
+        console.error(`[panels] ${openEvent} failed to load:`, error);
+        shell._showToast?.('That panel could not load. Reload and try again.');
+      });
+  };
+  window.addEventListener(openEvent, onFirstOpen);
+  (shell._lazyPanelRemovers ||= []).push(() =>
+    window.removeEventListener(openEvent, onFirstOpen),
+  );
+  return ensure;
+}
 
 export class StyleManager extends ShellFacade {
   /**
@@ -388,21 +416,60 @@ export class StyleManager extends ShellFacade {
       exitPanels: () => this._panelChrome.exitCockpit(),
     });
 
-    // Curated Flights (Data Layers → Research Data): city-comparison tours
-    // with report, data and chart downloads; panel and voice share it.
-    this.curatedFlights = new CuratedFlightsPanel({
-      viewer,
-      readDataManager: () => this._dataManager,
-      holdRender: services.holdContinuousRender,
-      releaseRender: services.releaseContinuousRender,
-      showToast: (message) => this._showToast(message),
-    });
-
-    // Area Reports (Data Layers → Research Data): rank areas by any layer and
-    // save PDF / CSV / XLSX; panel and voice share it.
-    this.areaReports = new AreaReportsPanel({
-      showToast: (message) => this._showToast(message),
-    });
+    // Curated Flights and Area Reports (Data Layers → Research Data) load on
+    // first use: most sessions never open them, and together they are ~200 KB
+    // of code plus two panels. The first open event (or voice request) loads
+    // the module and opens the panel; after that each panel listens itself.
+    this.curatedFlights = null;
+    this.areaReports = null;
+    this.ensureCuratedFlights = lazyPanel(
+      this,
+      'gev:curated-flights-open',
+      () => import('../curated/curatedPanel.js'),
+      ({ CuratedFlightsPanel }) =>
+        (this.curatedFlights = new CuratedFlightsPanel({
+          viewer,
+          readDataManager: () => this._dataManager,
+          holdRender: services.holdContinuousRender,
+          releaseRender: services.releaseContinuousRender,
+          showToast: (message) => this._showToast(message),
+        })),
+    );
+    this.stataAnalysis = null;
+    this.ensureStataAnalysis = lazyPanel(
+      this,
+      'gev:stata-analysis-open',
+      () => import('../analysis/analysisPanel.js'),
+      ({ StataAnalysisPanel }) =>
+        (this.stataAnalysis = new StataAnalysisPanel({
+          showToast: (message) => this._showToast(message),
+          // The map view as a lon/lat box plus the camera height, for
+          // "analyze what I am looking at".
+          readView: () => {
+            const rect = viewer.camera.computeViewRectangle?.();
+            if (!rect) return null;
+            const deg = (r) => (r * 180) / Math.PI;
+            return {
+              box: {
+                west: deg(rect.west),
+                south: deg(rect.south),
+                east: deg(rect.east),
+                north: deg(rect.north),
+              },
+              heightM: viewer.camera.positionCartographic?.height ?? Infinity,
+            };
+          },
+        })),
+    );
+    this.ensureAreaReports = lazyPanel(
+      this,
+      'gev:area-reports-open',
+      () => import('../reports/reportPanel.js'),
+      ({ AreaReportsPanel }) =>
+        (this.areaReports = new AreaReportsPanel({
+          showToast: (message) => this._showToast(message),
+        })),
+    );
 
     // Time Lens (Data Layers → HOLC row): the 1930s map with a movable
     // window onto a layer of today.
@@ -1570,8 +1637,11 @@ export class StyleManager extends ShellFacade {
     // manager doesn't inherit sensor state (review P2, 2026-08-16).
     this._visualSettings.releaseIrBoost();
     this._cockpitCoordinator.destroy();
+    this._lazyPanelsDestroyed = true;
+    for (const remove of this._lazyPanelRemovers || []) remove();
     this.curatedFlights?.destroy();
     this.areaReports?.destroy();
+    this.stataAnalysis?.destroy();
     this.timeLens?.destroy();
     this._contextControls.disconnect();
     this._layerBindings.disconnect();

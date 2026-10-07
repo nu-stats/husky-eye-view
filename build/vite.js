@@ -1,5 +1,12 @@
 import { applicationHtmlPlugin } from './application-html.js';
 import { contextCompressionPlugin } from './context-compression.js';
+import { runtimeServingPlugin } from './runtime-serving.js';
+import { readFileSync } from 'node:fs';
+
+/** The release shown in the title plate. */
+const APP_VERSION = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+).version;
 import cesium from 'vite-plugin-cesium';
 
 /** Build browser assets with explicit inputs; never load environment or providers. */
@@ -16,6 +23,7 @@ export function createBrowserViteConfig({
       cesium(),
       applicationHtmlPlugin(),
       contextCompressionPlugin(),
+      runtimeServingPlugin(),
       ...plugins,
     ],
     ...(publicDir === undefined ? {} : { publicDir }),
@@ -43,6 +51,7 @@ export function createBrowserViteConfig({
     define: {
       'import.meta.env.GOOGLE_MAPS_API_KEY': JSON.stringify(googleApiKey),
       'import.meta.env.CESIUM_ION_TOKEN': JSON.stringify(cesiumToken),
+      'import.meta.env.HEV_VERSION': JSON.stringify(APP_VERSION),
     },
     build: { chunkSizeWarningLimit: 1500 },
   };

@@ -63,6 +63,18 @@ import {
 /** @constant {string} localStorage key for the serialized project */
 const STORAGE_KEY = 'godsEyeView.sceneProject.v2';
 const STORAGE_CHECKPOINT_KEY = 'godsEyeView.sceneProject.checkpoint.v1';
+/** Layer ids whose saved scenes are hidden while those layers are off. */
+const PARKED_LAYER = /"bhote-koshi-(2026|locator)"/;
+
+/** Remove and return the scenes that mention a parked layer id. */
+function parkScenesUsingLayers(project, pattern) {
+  const parked = project.scenes.filter((scene) =>
+    pattern.test(JSON.stringify(scene)),
+  );
+  if (parked.length)
+    project.scenes = project.scenes.filter((scene) => !parked.includes(scene));
+  return parked;
+}
 /**
  * Orchestrates deterministic cinematic scene playback.
  *
@@ -163,6 +175,9 @@ export class SceneDirector {
     this._lastRunJson = '';
 
     this._project = this._loadProject();
+    // Saved scenes built on the Nepal flood layers (off for now) are kept in
+    // storage but left out of the list; _saveProject writes them back.
+    this._parkedScenes = parkScenesUsingLayers(this._project, PARKED_LAYER);
     this._selectedSceneId = this._project.scenes[0]?.id || null;
     this._selectedShotId = this._project.scenes[0]?.shots[0]?.id || null;
     /** @type {string|null} Scene whose layer state most recently landed. */
@@ -319,7 +334,14 @@ export class SceneDirector {
     }
     this._project.updatedAt = new Date().toISOString();
     try {
-      const payload = JSON.stringify(this._project);
+      const payload = JSON.stringify(
+        this._parkedScenes?.length
+          ? {
+              ...this._project,
+              scenes: [...this._project.scenes, ...this._parkedScenes],
+            }
+          : this._project,
+      );
       parseSceneDocument(payload);
       localStorage.setItem(STORAGE_KEY, payload);
     } catch (e) {
@@ -1994,6 +2016,7 @@ export class SceneDirector {
       )
         return false;
       this._project = project;
+      this._parkedScenes = parkScenesUsingLayers(project, PARKED_LAYER);
       const retainedPaths = new Set(
         project.scenes.flatMap((scene) =>
           (scene.dataPacks || [])

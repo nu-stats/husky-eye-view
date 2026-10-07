@@ -1087,11 +1087,48 @@ STEP 65: Area Reports, by panel or by voice (October 7)
   - Reads the map's own area files in the browser (src/reports/); foreign-born
     and population counts added to the county and tract files.
 
+STEP 66: A leaner, faster app (October 7)
+-------------------------------------------------------------------------------
+  - Pinokio now serves a production build (built once after each install or
+    update, ~7 s): the app is ready in about 1 s instead of 5 s and uses a
+    quarter of the memory. Browser keys are filled in as the server sends the
+    scripts, so the build on disk holds none; Provider Settings still works
+    under Pinokio. HEV_DEV_SERVER=1 keeps the development server.
+  - Idle work cut: one layer-panel refresh per second for all layers, the
+    location readout redraws only when the camera moves, live flights and
+    other slow feeds draw at 30 frames a second while the camera is still,
+    no reflection maps on the 3D aircraft, click handlers released when a
+    layer is switched off. With flights and a tract layer on, the browser is
+    busy 0.8 s in 8 s instead of 4.6 s.
+  - Map data: reloads revalidate instead of downloading again, point layers
+    are compressed, tract layers share one download of each file; Curated
+    Flights and Area Reports load when first opened.
+  - Turned off for now: the Nepal flood (Bhote Koshi) layers and scenes, ships
+    (AIS), and Walk in the "Fly & Drone" group. Area Report dates are local.
+  - Title plate: the version number, and the subtitle "a dynamic research and
+    learning experience".
+
+STEP 67: Stata Analysis (October 7)
+-------------------------------------------------------------------------------
+  - Data Layers -> Research Data -> Stata Analysis, voice (run_stata_analysis,
+    open_in_stata) and scripts/stata-analysis.mjs run Stata 18 or 19 on this
+    computer on a layer's data: counties, a state's tracts, states, or the
+    areas in the map view. Commands: regress, logit, nbreg, poisson,
+    spregress, spreg, correlate, summarize, tab, fre, fs, egen, twoway,
+    spshape2dta, spmatrix, with if, in and options; each line is checked
+    before Stata sees it. Do-files can be uploaded (this computer only).
+  - Spatial weights: inverse distance built on the areas with valid values,
+    or contiguity from the session's own shapefile (areas.shp).
+  - Open in Stata opens the Stata window with the data loaded; session.log
+    and session_commands.do record the session. Every run keeps its do-file,
+    log, data, graphs and results in Documents\HuskyEyeView-Analyses.
+
 
 ===============================================================================
-WHERE THINGS STAND (October 6, 2026)
+WHERE THINGS STAND (October 7, 2026)
 ===============================================================================
-Layers:     77. Newest: Foreign-Born Residents by tract and by county (Step 64);
+Layers:     75 (the Nepal flood layers are off, Step 66). Newest: Foreign-Born
+            Residents by tract and by county (Step 64);
             NTIA internet use by state, ASU broadband by county, and
             segregation by county and by state (Step 63); before them Segregation by
             city (3), Enumeration Districts (4) and Chicago Homicides 1870-1930 (locked,
@@ -1103,7 +1140,9 @@ Curated:    Curated Flights (own key) compares up to 3 cities on up to 6 layers
             (segregation included, and the user's own uploaded data), with PHOTO and
             1-minute REC during the flight and report, data and chart downloads
             (Steps 52, 58, 63).
-Launch:     Pinokio opens http://127.0.0.1:4242 every time.
+Launch:     Pinokio opens http://127.0.0.1:4242 every time, serving the
+            production build (Step 66).
+Analysis:   Area Reports (Step 65) and Stata Analysis (Step 67).
 Look:       Northeastern logo, grey interface, research groups first in Data Layers,
             research profile hides the inherited extras ("Show all layers" to see them),
             first run and Scenes start with Boston.
@@ -1112,14 +1151,16 @@ Not back:   Only the speed rewrite from Step 6 (batched drawing). Large pin laye
             zoomed-out tract views may feel heavier.
 Cockpit:    Zoom 0.5x-8x, look-around, clickable pins, Data Layers menu works inside.
 Location:   The 14 Northeastern campus cities (Step 49).
-Live feeds: US-focused (Step 39).
+Live feeds: US-focused (Step 39). Ships are off for now (Step 66).
 HOLC:       314 cities from Mapping Inequality, Boston included (Step 48); every card
             links to its 1930s area description.
 Media:      Overview video, captions and guide PDF on the latest GitHub release only
             (v0.2.1; video, sample flight and guide from Step 63). The release-media
-            workflow moves them to each new release.
-Tests:      4,379 unit tests, none failing. Format, import-direction and
-            package-boundary checks are clean.
+            workflow moves them to each new release. They still show the old
+            subtitle and Nepal, ships and Walking View.
+Tests:      4,397 unit tests (29 skipped: the Nepal flood tests while it is off),
+            none failing. Format, import-direction and package-boundary checks are
+            clean.
 
 Backups:    C:\Users\jstow\Documents\HuskyEyeView-backups\
               husky-eye-view-2026-09-26-before-optimization.tar.gz
@@ -1134,7 +1175,9 @@ Data exports:
             mkdb_incidents_geocoded.csv
 
 Git history on main (newest first):
-            (release)  Foreign-born residents; Area Reports by panel and voice
+            (release)  Faster app, production build in Pinokio, Stata Analysis
+                       (tagged v0.2.3)
+            3d27b41c   Foreign-born residents; Area Reports by panel and voice
                        (tagged v0.2.2)
             6352c6e7   Your data in Curated Flights; internet and segregation
                        comparisons; Northeastern fonts (tagged v0.2.1)

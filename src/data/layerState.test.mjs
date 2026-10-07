@@ -22,6 +22,8 @@ import {
 import radioLayer from './radio.js';
 import { stampInitialShareGesture } from '../navigationPolicy.js';
 
+const NEPAL_OFF = 'The Nepal flood feature is off for now (2026-10-06).';
+
 function deferred() {
   let resolve;
   let reject;
@@ -194,8 +196,8 @@ function encode(state) {
 
 test('production registry is exact, canonical, and rejects incomplete contracts', async () => {
   assert.equal(validateLayerStateRegistry(), true);
-  assert.equal(REGISTERED_LAYER_IDS.length, 77);
-  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 77);
+  assert.equal(REGISTERED_LAYER_IDS.length, 75);
+  assert.equal(new Set(REGISTERED_LAYER_IDS).size, 75);
   assert.ok(REGISTERED_LAYER_IDS.includes('transit'));
   assert.deepEqual(REGISTERED_LAYER_IDS, [...REGISTERED_LAYER_IDS].sort());
   assert.throws(
@@ -300,7 +302,7 @@ test('unknown enabled-layer tokens reject the payload instead of becoming an emp
   );
 });
 
-test('Nepal event and locator have distinct enabled-only share tokens', () => {
+test('Nepal event and locator have distinct enabled-only share tokens', { skip: NEPAL_OFF }, () => {
   const decoded = decodeLayerStateParams(new URLSearchParams('v=2&l=h.z'));
   assert.deepEqual(decoded.enabledLayerIds, [
     'bhote-koshi-2026',

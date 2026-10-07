@@ -341,3 +341,76 @@
 .data-reports-row .data-icon {
   color: #c8102e;
 }
+
+/* Stata Analysis: same panel, a little wider for the log. */
+.stata-panel {
+  width: min(560px, calc(100vw - 32px));
+}
+.stata-commands {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 96px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  background: #15181d;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  resize: vertical;
+}
+.stata-variables {
+  font-size: 11px;
+}
+.stata-variables summary {
+  cursor: pointer;
+  color: var(--text-secondary, #b6b9be);
+}
+.stata-variables ul {
+  max-height: 160px;
+  margin: 6px 0 0;
+  padding-left: 16px;
+  overflow: auto;
+}
+.stata-variables code,
+.stata-steps code {
+  font-family: var(--font-mono);
+}
+.stata-output:empty {
+  display: none;
+}
+.stata-steps {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+}
+.stata-steps li.failed {
+  color: #ff9a8b;
+}
+.stata-output img {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  border-radius: 4px;
+  background: #fff;
+}
+.stata-log {
+  max-height: 300px;
+  margin: 8px 0;
+  padding: 8px;
+  overflow: auto;
+  border-radius: 4px;
+  background: #0b0d10;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.35;
+  white-space: pre;
+}
+.stata-files {
+  font-size: 11px;
+}
+.stata-files a {
+  color: var(--accent);
+}

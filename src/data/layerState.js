@@ -317,12 +317,13 @@ export const SHARE_TRACKING_RESTORE_POLICIES = Object.freeze({
 export const LAYER_STATE_REGISTRY = Object.freeze(
   [...LAYER_MANIFEST]
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
-    .map(({ id, token, disposition, optionOwner }) =>
+    .map(({ id, token, disposition, optionOwner, off }) =>
       Object.freeze({
         id,
         token,
         disposition,
         ...(optionOwner ? { optionOwner } : {}),
+        ...(off ? { off } : {}),
       }),
     ),
 );

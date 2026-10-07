@@ -75,6 +75,10 @@ export class LayerLifecycle {
     this._activityListeners = new Set();
     this.layers = new Map(); // id → { module, enabled, initialized, intervalId, lifecycleState, lifecycleUncertain }
     this._listeners = new Set();
+    /** When a layer's stats ticker last published a status refresh. */
+    this._statusTickAt = 0;
+    /** Layers the manifest turns off: registered, but never enabled. */
+    this._offLayerIds = new Set();
     this._visibilityRequestListeners = new Set();
     this._beforeDestroyListeners = new Set();
     this._visibilityGuards = new Set();
@@ -189,6 +193,7 @@ export class LayerLifecycle {
         throw new Error(`Invalid layer serialization disposition: ${entry.id}`);
       }
       dispositions.set(entry.id, entry.disposition);
+      if (entry.off) this._offLayerIds.add(entry.id);
     }
     const registeredIds = [...this.layers.keys()];
     const missing = registeredIds.filter((id) => !dispositions.has(id));
@@ -531,10 +536,17 @@ export class LayerLifecycle {
         void this._runPeriodicUpdate(layerId, entry);
       }, refreshInterval);
     } else if (updateInterval === 0) {
+      const every = entry.module.statsRefreshInterval || 1000;
       entry.intervalId = setInterval(() => {
         if (!entry.enabled) return;
+        // Each enabled layer ticks, but one status refresh per interval
+        // serves them all: with ten layers on, the panel refreshes once a
+        // second instead of ten times.
+        const now = Date.now();
+        if (now - this._statusTickAt < every * 0.9) return;
+        this._statusTickAt = now;
         this._publishActivity({ type: 'status' });
-      }, entry.module.statsRefreshInterval || 1000);
+      }, every);
     }
   }
 
@@ -1077,6 +1089,11 @@ export class LayerLifecycle {
     const entry = this.layers.get(layerId);
     if (!entry) return { intentEpoch: null, promise: Promise.resolve() };
     const desiredState = Boolean(shouldEnable);
+    // A layer turned off in the manifest stays off, whoever asks (a share
+    // link, a saved scene, a voice command).
+    if (desiredState && this._offLayerIds.has(layerId)) {
+      return { intentEpoch: null, promise: Promise.resolve(false) };
+    }
     if (entry.destroying) {
       return {
         intentEpoch: null,
@@ -2204,7 +2221,9 @@ export class LayerLifecycle {
         name: entry.module.name,
         icon: entry.module.icon,
         source: entry.module.source,
-        showInTogglePanel: entry.module.showInTogglePanel !== false,
+        showInTogglePanel:
+          entry.module.showInTogglePanel !== false &&
+          !this._offLayerIds.has(id),
         // Registry id of the provider key this layer needs, if any (mirrors
         // showInTogglePanel). The layer reports stats.keyRequired while that
         // key is absent; the panel builds the guidance text from the pair.

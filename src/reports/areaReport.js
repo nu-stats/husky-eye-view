@@ -8,6 +8,7 @@ import {
   PdfDocument,
   buildXlsx,
   buildZip,
+  localDate,
   pdfTextWidth,
   pdfWrap,
 } from '../curated/curatedFiles.js';
@@ -420,7 +421,7 @@ export function reportNotes(plan, { eligible, date = new Date() } = {}) {
     ['Report', reportTitle(plan)],
     [
       'Prepared',
-      `${date.toISOString().slice(0, 10)} with Husky Eye View (Northeastern University)`,
+      `${localDate(date)} with Husky Eye View (Northeastern University)`,
     ],
     [
       'Ranked by',
@@ -504,7 +505,7 @@ export function reportPdf(plan, rows, meta = {}) {
   pdf.text(
     M,
     y + 2,
-    `Prepared ${date.toISOString().slice(0, 10)} with Husky Eye View · ranked among ${Number(meta.eligible || 0).toLocaleString('en-US')} ${plural(plan.geography)} with a value · sources and notes on the last page`,
+    `Prepared ${localDate(date)} with Husky Eye View · ranked among ${Number(meta.eligible || 0).toLocaleString('en-US')} ${plural(plan.geography)} with a value · sources and notes on the last page`,
     { size: 8.5, color: '#52514e' },
   );
   y += 22;
@@ -635,7 +636,7 @@ export function reportPdf(plan, rows, meta = {}) {
 /** husky-eye-view_report_counties_foreign-born-count_top-50_2026-10-06 */
 export function reportFileBase(plan, date = new Date()) {
   const where = plan.state ? `_${STATES[plan.state][0].toLowerCase()}` : '';
-  return `husky-eye-view_report_${plural(plan.geography).replace(/ /g, '-')}${where}_${plan.rankBy.id}_${plan.order === 'desc' ? 'top' : 'bottom'}-${plan.limit}_${date.toISOString().slice(0, 10)}`;
+  return `husky-eye-view_report_${plural(plan.geography).replace(/ /g, '-')}${where}_${plan.rankBy.id}_${plan.order === 'desc' ? 'top' : 'bottom'}-${plan.limit}_${localDate(date)}`;
 }
 
 /** The asked-for files, in one ZIP when there is more than one. */

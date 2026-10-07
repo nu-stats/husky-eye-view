@@ -70,7 +70,14 @@ const DEV_FRESH_EXTERNAL_KEYS_AT_BOOT = new Set(
  * keys exist. Prod builds never register this middleware (apply: 'serve'), so
  * the panel's status fetch fails and the client removes the whole surface.
  */
-function keySetupEndpoint({ sourceRoot = defaultSourceRoot } = {}) {
+function keySetupEndpoint({
+  sourceRoot = defaultSourceRoot,
+  // The Pinokio launcher serves a production build (vite preview) bound to
+  // 127.0.0.1, and Provider Settings is how its users add keys, so under that
+  // launcher — and only there — the endpoints install on the preview server
+  // too. Admission stays loopback-only either way.
+  allowPreview = LAUNCHER_AT_BOOT === 'pinokio',
+} = {}) {
   const respond = (res, statusCode, payload) => {
     res.statusCode = statusCode;
     res.setHeader('Content-Type', 'application/json');
@@ -235,109 +242,122 @@ function keySetupEndpoint({ sourceRoot = defaultSourceRoot } = {}) {
       throw error;
     }
   };
+  const install = (server, { preview }) => {
+    server.middlewares.use('/api/setup/status', (req, res) => {
+      if (req.method !== 'GET')
+        return respond(res, 405, { error: 'Method not allowed' });
+      const admission = admit(req);
+      if (!admission.ok)
+        return respond(res, admission.status, { error: admission.error });
+      respond(res, 200, providerStatus());
+    });
+    server.middlewares.use('/api/setup/keys', (req, res) => {
+      if (req.method !== 'POST')
+        return respond(res, 405, { error: 'Method not allowed' });
+      const admission = admit(req);
+      if (!admission.ok)
+        return respond(res, admission.status, { error: admission.error });
+      let body = '';
+      let overflowed = false;
+      req.on('data', (chunk) => {
+        body += chunk;
+        if (body.length > 8192) {
+          overflowed = true;
+          req.destroy();
+        }
+      });
+      req.on('end', () => {
+        if (overflowed)
+          return respond(res, 413, { error: 'Request too large' });
+        let parsed;
+        try {
+          parsed = JSON.parse(body || '{}');
+        } catch {
+          return respond(res, 400, { error: 'Invalid JSON' });
+        }
+        const verdict = validateKeySetupUpdates(parsed);
+        if (!verdict.ok) return respond(res, 400, { error: verdict.error });
+        // Neither a replace NOR a removal may touch an externally-supplied
+        // credential (shell env, Keychain, another workflow). This backs the
+        // UI's read-only "configured externally" state with a real contract —
+        // and it must guard replace too, not just remove: a clickjacked or
+        // scripted same-origin POST could otherwise overwrite the live value.
+        const inStore = storeValues();
+        for (const name of Object.keys(verdict.updates)) {
+          if (isExternallyManaged(name, inStore)) {
+            return respond(res, 409, {
+              error: `${name} is configured outside Provider Settings and can only be changed where it was set`,
+            });
+          }
+        }
+        try {
+          persistStore(upsertDotenvValues(readStore(), verdict.updates));
+        } catch (error) {
+          // The hardening failure carries its own honest, path-free message —
+          // "saved world-readable" must never be reported as a generic write
+          // error. Everything else returns a fixed message (a raw filesystem
+          // error can carry an absolute path; that stays in the server log).
+          if (
+            error?.code === 'GEV_HARDEN_FAILED' ||
+            error?.code === 'GEV_STORE_UNREADABLE'
+          ) {
+            return respond(res, 500, {
+              error: `The key was not saved: ${error.message}`,
+            });
+          }
+          return respond(res, 500, {
+            error: `Could not write the ${storeName()} store`,
+          });
+        }
+        // Live for the server-side proxies immediately; the restart below is
+        // what re-injects the client-exposed defines (Google, Cesium ion).
+        // Removal sets '' rather than deleting: an empty value stays falsy
+        // through loadEnv after restart, matching the Pinokio launcher's own
+        // blank-field semantics.
+        for (const [name, value] of Object.entries(verdict.updates)) {
+          process.env[name] = value === null ? '' : value;
+        }
+        // The preview server writes browser keys into the scripts as it
+        // sends them (build/runtime-serving.js), so a reload is all it
+        // takes; the page does that itself. The dev server restarts so its
+        // defines re-inject, and Vite's client reloads the page.
+        respond(res, 200, {
+          ok: true,
+          saved: Object.keys(verdict.updates),
+          status: providerStatus(),
+          restarting: !preview,
+          reload: preview,
+        });
+        if (preview) return;
+        // One deliberate restart, after the response has flushed. Vite's own
+        // .env watcher may fire too; a second queued restart is harmless.
+        setTimeout(() => {
+          server.restart().catch((error) => {
+            console.warn(
+              '[KeySetup] Dev-server restart failed:',
+              error?.message || error,
+            );
+          });
+        }, 250);
+      });
+    });
+  };
   return {
     name: 'gev-key-setup',
-    // serve AND not preview: `vite preview` resolves with command 'serve' too,
-    // so a bare apply:'serve' would still configure under preview. The endpoints
-    // only install via configureServer (never configurePreviewServer), so they
-    // are absent from preview today — but pinning apply here makes that a
-    // guarantee rather than an accident of which hook a future edit uses.
+    // serve AND not preview, unless allowPreview: `vite preview` resolves with
+    // command 'serve' too, so a bare apply:'serve' would still configure under
+    // preview. Pinning apply makes "development only" a guarantee rather than
+    // an accident of which hook a future edit uses.
     apply: (_config, { command, isPreview }) =>
-      command === 'serve' && !isPreview,
+      command === 'serve' && (!isPreview || allowPreview),
     configureServer(server) {
-      server.middlewares.use('/api/setup/status', (req, res) => {
-        if (req.method !== 'GET')
-          return respond(res, 405, { error: 'Method not allowed' });
-        const admission = admit(req);
-        if (!admission.ok)
-          return respond(res, admission.status, { error: admission.error });
-        respond(res, 200, providerStatus());
-      });
-      server.middlewares.use('/api/setup/keys', (req, res) => {
-        if (req.method !== 'POST')
-          return respond(res, 405, { error: 'Method not allowed' });
-        const admission = admit(req);
-        if (!admission.ok)
-          return respond(res, admission.status, { error: admission.error });
-        let body = '';
-        let overflowed = false;
-        req.on('data', (chunk) => {
-          body += chunk;
-          if (body.length > 8192) {
-            overflowed = true;
-            req.destroy();
-          }
-        });
-        req.on('end', () => {
-          if (overflowed)
-            return respond(res, 413, { error: 'Request too large' });
-          let parsed;
-          try {
-            parsed = JSON.parse(body || '{}');
-          } catch {
-            return respond(res, 400, { error: 'Invalid JSON' });
-          }
-          const verdict = validateKeySetupUpdates(parsed);
-          if (!verdict.ok) return respond(res, 400, { error: verdict.error });
-          // Neither a replace NOR a removal may touch an externally-supplied
-          // credential (shell env, Keychain, another workflow). This backs the
-          // UI's read-only "configured externally" state with a real contract —
-          // and it must guard replace too, not just remove: a clickjacked or
-          // scripted same-origin POST could otherwise overwrite the live value.
-          const inStore = storeValues();
-          for (const name of Object.keys(verdict.updates)) {
-            if (isExternallyManaged(name, inStore)) {
-              return respond(res, 409, {
-                error: `${name} is configured outside Provider Settings and can only be changed where it was set`,
-              });
-            }
-          }
-          try {
-            persistStore(upsertDotenvValues(readStore(), verdict.updates));
-          } catch (error) {
-            // The hardening failure carries its own honest, path-free message —
-            // "saved world-readable" must never be reported as a generic write
-            // error. Everything else returns a fixed message (a raw filesystem
-            // error can carry an absolute path; that stays in the server log).
-            if (
-              error?.code === 'GEV_HARDEN_FAILED' ||
-              error?.code === 'GEV_STORE_UNREADABLE'
-            ) {
-              return respond(res, 500, {
-                error: `The key was not saved: ${error.message}`,
-              });
-            }
-            return respond(res, 500, {
-              error: `Could not write the ${storeName()} store`,
-            });
-          }
-          // Live for the server-side proxies immediately; the restart below is
-          // what re-injects the client-exposed defines (Google, Cesium ion).
-          // Removal sets '' rather than deleting: an empty value stays falsy
-          // through loadEnv after restart, matching the Pinokio launcher's own
-          // blank-field semantics.
-          for (const [name, value] of Object.entries(verdict.updates)) {
-            process.env[name] = value === null ? '' : value;
-          }
-          respond(res, 200, {
-            ok: true,
-            saved: Object.keys(verdict.updates),
-            status: providerStatus(),
-            restarting: true,
-          });
-          // One deliberate restart, after the response has flushed. Vite's own
-          // .env watcher may fire too; a second queued restart is harmless.
-          setTimeout(() => {
-            server.restart().catch((error) => {
-              console.warn(
-                '[KeySetup] Dev-server restart failed:',
-                error?.message || error,
-              );
-            });
-          }, 250);
-        });
-      });
+      install(server, { preview: false });
     },
+    ...(allowPreview && {
+      configurePreviewServer(server) {
+        install(server, { preview: true });
+      },
+    }),
   };
 }
 

@@ -39,27 +39,19 @@ test('catalogs construct distinct layers and classification from their supplied 
     signal: b.signal,
     surface: fixtureSurface(b.signal),
   });
-  assert.equal(first.layers.length, 77);
+  assert.equal(first.layers.length, 75);
   assert.ok(first.get('transit'));
   const order = first.layers.map(({ id }) => id);
   assert.deepEqual(
     order.slice(order.indexOf('traffic'), order.indexOf('directions') + 1),
     ['traffic', 'cctv', 'radio', 'transit', 'bikeshare', 'directions'],
   );
-  assert.ok(first.get('bhote-koshi-2026'));
-  assert.ok(first.get('bhote-koshi-locator'));
+  // The Nepal flood layers are off for now.
+  assert.equal(first.get('bhote-koshi-2026'), undefined);
+  assert.equal(first.get('bhote-koshi-locator'), undefined);
   const lifecycle = new LayerLifecycle({});
   for (const layer of first.layers) lifecycle.register(layer);
   const rows = lifecycle.getAll();
-  for (const id of ['bhote-koshi-2026', 'bhote-koshi-locator']) {
-    assert.equal(
-      rows.find((row) => row.id === id)?.showInTogglePanel,
-      false,
-      `${id} remains registered for Scenes but is absent from Data Layers`,
-    );
-    assert.equal(typeof first.get(id).enable, 'function');
-    assert.equal(typeof first.get(id).setParams, 'function');
-  }
   assert.equal(
     rows.find((row) => row.id === 'flights')?.showInTogglePanel,
     true,

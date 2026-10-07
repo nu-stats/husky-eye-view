@@ -33,7 +33,8 @@
     "modules": [
       "build/vite.js",
       "build/application-html.js",
-      "build/context-compression.js"
+      "build/context-compression.js",
+      "build/runtime-serving.js"
     ],
     "external": ["vite-plugin-cesium"]
   },
@@ -491,6 +492,8 @@
       "src/reports/areaReport.js",
       "src/reports/reportData.js",
       "src/reports/reportPanel.js",
+      "src/analysis/analysisPanel.js",
+      "src/analysis/stataCommands.js",
       "src/data/foreignBornCountries.js",
       "src/ui/viewCapture.js",
       "src/ui/captureCaption.js",
@@ -592,6 +595,8 @@
       "src/reports/areaReport.js",
       "src/reports/reportData.js",
       "src/reports/reportPanel.js",
+      "src/analysis/analysisPanel.js",
+      "src/analysis/stataCommands.js",
       "src/data/foreignBornCountries.js",
       "src/ui/viewCapture.js",
       "src/ui/captureCaption.js",
@@ -1773,6 +1778,8 @@
       "src/reports/areaReport.js",
       "src/reports/reportData.js",
       "src/reports/reportPanel.js",
+      "src/analysis/analysisPanel.js",
+      "src/analysis/stataCommands.js",
       "src/data/foreignBornCountries.js",
       "src/ui/viewCapture.js",
       "src/ui/captureCaption.js",

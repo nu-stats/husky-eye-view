@@ -5,6 +5,12 @@
  * Everything returns bytes; nothing is uploaded or stored anywhere.
  */
 
+/** 2026-10-04 in the viewer's local time (file names, report dates). */
+export function localDate(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 // ---------- ZIP (stored, no compression; PNG/JPEG are compressed already) ----------
 
 const CRC_TABLE = (() => {

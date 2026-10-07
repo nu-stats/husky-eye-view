@@ -1,10 +1,11 @@
 // Nationwide chunked area layers (HOLC redlining, tract life expectancy):
 // only the county chunks in view are fetched and drawn, zoomed-out views ask
 // the user to zoom in, and clicking an area selects it for the details card.
-import test from 'node:test';
+import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as Cesium from 'cesium';
 import {
+  _resetSharedChunksForTest,
   chunksInView,
   createChunkedAreaLayer,
   getChunkedAreaFillAlpha,
@@ -12,6 +13,34 @@ import {
   setChunkedAreaFillAlpha,
   viewPoseMoved,
 } from './chunkedAreaLayer.js';
+
+// Parsed chunks are shared across layers; each test brings its own files.
+beforeEach(() => _resetSharedChunksForTest());
+
+test('two layers on the same chunks download and parse each file once', async () => {
+  const fetched = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    fetched.push(String(url));
+    return {
+      ok: true,
+      text: async () =>
+        '{"type":"Feature","properties":{"a":1},"geometry":null}\n',
+    };
+  };
+  try {
+    const { readSharedChunkForTest } = await import('./chunkedAreaLayer.js');
+    const [first, second] = await Promise.all([
+      readSharedChunkForTest('/context/t/25025.geojsonl'),
+      readSharedChunkForTest('/context/t/25025.geojsonl'),
+    ]);
+    assert.equal(fetched.length, 1);
+    assert.equal(first, second);
+    assert.equal(first[0].properties.a, 1);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
 
 class MockEvent {
   constructor() {

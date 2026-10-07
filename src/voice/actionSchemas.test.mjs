@@ -4,6 +4,12 @@ import { createHash } from 'node:crypto';
 import { GEV_ACTION_SCHEMAS, createActionTools } from './actionSchemas.js';
 import { GEV_REALTIME_TOOLS } from '../../server/providers/openai/tools.js';
 import { REGISTERED_LAYER_IDS } from '../data/layerState.js';
+import { layerManifestEntry } from '../data/layerManifest.js';
+
+// Every registered layer except those the manifest turns off (ships, for now).
+const VOICE_LAYER_IDS = REGISTERED_LAYER_IDS.filter(
+  (id) => !layerManifestEntry(id)?.off,
+);
 
 const stable = (value) =>
   Array.isArray(value)
@@ -19,7 +25,7 @@ const stable = (value) =>
 test('the complete Realtime tool payload retains its pre-extraction contract and wording', () => {
   // The layer enums are the layer registry (pinned by the next test), so a
   // newly registered layer does not move this digest.
-  const registry = REGISTERED_LAYER_IDS.join();
+  const registry = VOICE_LAYER_IDS.join();
   const layerList = (key, value) =>
     Array.isArray(value) && value.join() === registry
       ? 'REGISTERED_LAYER_IDS'
@@ -34,7 +40,11 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     // (layers include the ACS 2020–2024 social measures). 2026-10-06: the
     // flight layers add the three segregation indices, then 'my-data' (the
     // user's uploaded file). 2026-10-07: generate_area_report (Area Reports).
-    '1421744539110367cb9d5626d0b65714c1e875894f4960dd81a7970a1e7a436b',
+    // 2026-10-06 (later): ships and Walking View off, so the frame-layers enum
+    // drops 'ais-live-vessels' and start_ground_view offers only 'drone'.
+    // 2026-10-07: run_stata_analysis and open_in_stata (Stata on this computer),
+    // then spshape2dta / spmatrix contiguity weights in its description.
+    '9c1727621a5a9db6739de2a28dd1874737a6064171acf629019abf6e2fec7eff',
   );
 });
 
@@ -47,7 +57,7 @@ test('every registered data layer is voice-controllable, including future ones',
     const schema = GEV_ACTION_SCHEMAS.find((item) => item.name === name);
     assert.deepEqual(
       [...schema.parameters.properties.layerId.enum],
-      [...REGISTERED_LAYER_IDS],
+      [...VOICE_LAYER_IDS],
       name,
     );
   }

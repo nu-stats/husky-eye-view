@@ -23,8 +23,9 @@ import { createApplicationCables } from './layers/submarineCables.js';
 import { createInfrastructureLayers } from '../data/infrastructure.js';
 import { createSplatCapturesLayer } from '../data/splatCaptures.js';
 import { localGeoJsonServices } from './localGeojsonServices.js';
-import { createBhoteKoshiEventLayer } from '../data/bhoteKoshiEvent.js';
-import { createBhoteKoshiLocatorLayer } from '../data/bhoteKoshiLocator.js';
+// The Nepal flood (Bhote Koshi) event and locator layers are off for now
+// (2026-10-06); their modules stay in src/data. Restoring them means adding
+// them back here, in layerManifest.js and in scenes/recipes.js.
 
 const SOURCE_METHODS = Object.freeze({
   flights: ['getSnapshot'],
@@ -61,7 +62,6 @@ export function createApplicationCatalog({
   metadata = LAYER_STATE_REGISTRY,
   vesselOptions,
   resolveAsset,
-  nepalBoundaryResolver,
 }) {
   if (!signal?.addEventListener)
     throw new TypeError('An application lifetime signal is required');
@@ -118,10 +118,6 @@ export function createApplicationCatalog({
     });
     const catalog = createLayerCatalog(
       [
-        createBhoteKoshiEventLayer(),
-        createBhoteKoshiLocatorLayer({
-          boundaryResolver: nepalBoundaryResolver,
-        }),
         flights,
         military,
         lowflyers,

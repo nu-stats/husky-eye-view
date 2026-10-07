@@ -33,6 +33,8 @@ import { LayerLifecycle } from './lifecycle.js';
 import { createBhoteKoshiEmbeddedMedia } from './bhoteKoshiEmbeddedMedia.js';
 import { SceneDirector } from '../scenes/director.js';
 
+const NEPAL_OFF = 'The Nepal flood feature is off for now (2026-10-06).';
+
 const eventUrl = new URL('../../public/events/bhote-koshi-2026/event.json', import.meta.url);
 const eventModuleUrl = new URL('./bhoteKoshiEvent.js', import.meta.url);
 
@@ -1483,7 +1485,7 @@ test('Nepal hybrid comparison preserves native split and terrain-clamped flood t
   }
 });
 
-test('Bhote Koshi event pack keeps observations separate from reconstruction', async () => {
+test('Bhote Koshi event pack keeps observations separate from reconstruction', { skip: NEPAL_OFF }, async () => {
   const event = JSON.parse(await readFile(eventUrl, 'utf8'));
   assert.equal(BHOTE_KOSHI_LAYER_ID, event.id);
   assert.equal(event.imagery.before.observedAt, '2021-10-16');

@@ -472,6 +472,7 @@ export class LayerPanel {
       if (previousGroup === RESEARCH_GROUP && group !== previousGroup) {
         this._toggleContainer.appendChild(this._buildCuratedRow());
         this._toggleContainer.appendChild(this._buildReportsRow());
+        this._toggleContainer.appendChild(this._buildStataRow());
       }
       if (group && group !== previousGroup) {
         const heading = document.createElement('button');
@@ -658,6 +659,7 @@ export class LayerPanel {
     if (previousGroup === RESEARCH_GROUP) {
       this._toggleContainer.appendChild(this._buildCuratedRow());
       this._toggleContainer.appendChild(this._buildReportsRow());
+      this._toggleContainer.appendChild(this._buildStataRow());
     }
     this._toggleContainer.appendChild(empty);
     this._toggleContainer.appendChild(this._buildProfileToggle(layers));
@@ -760,6 +762,44 @@ export class LayerPanel {
     const meta = document.createElement('div');
     meta.className = 'data-toggle-meta';
     meta.textContent = 'Rank areas by any layer · PDF, CSV and XLSX';
+    row.append(top, meta);
+    return row;
+  }
+
+  _buildStataRow() {
+    const group = RESEARCH_GROUP;
+    const row = document.createElement('div');
+    row.className =
+      'data-toggle-row data-view-row data-curated-row data-stata-row';
+    row.dataset.group = group;
+    this._groups.get(group)?.rows.push({ row, label: 'stata analysis' });
+    const top = document.createElement('div');
+    top.className = 'data-toggle-top';
+    const left = document.createElement('div');
+    left.className = 'data-toggle-left';
+    const icon = document.createElement('span');
+    icon.className = 'data-icon';
+    icon.textContent = 'Σ';
+    const name = document.createElement('span');
+    name.className = 'data-name';
+    name.textContent = 'Stata Analysis';
+    left.append(icon, name);
+    const right = document.createElement('div');
+    right.className = 'data-toggle-right';
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'data-toggle-btn data-view-start';
+    open.setAttribute('aria-label', 'Open Stata Analysis');
+    open.textContent = 'OPEN';
+    open.title = 'Run Stata on any layer, or open Stata with the data in view';
+    this._bind(open, 'click', () =>
+      window.dispatchEvent(new CustomEvent('gev:stata-analysis-open')),
+    );
+    right.appendChild(open);
+    top.append(left, right);
+    const meta = document.createElement('div');
+    meta.className = 'data-toggle-meta';
+    meta.textContent = 'Stata 18 or 19 on this computer · do-file and log kept';
     row.append(top, meta);
     return row;
   }
@@ -1036,15 +1076,19 @@ export class LayerPanel {
         this._syncToggleButton(btn, layer);
       }
 
+      // Write text only when it changed: this runs every second while any
+      // layer is on, and a rewrite replaces the text node every time.
       const count = row.querySelector('.data-count');
       if (count) {
-        count.textContent = this._layerCountText(layer.stats);
+        const text = this._layerCountText(layer.stats);
+        if (count.textContent !== text) count.textContent = text;
       }
       this._syncZoomPrompt(row, count, layer);
 
       const meta = row.querySelector('.data-toggle-meta');
       if (meta) {
-        meta.textContent = this._buildMetaText(layer);
+        const text = this._buildMetaText(layer);
+        if (meta.textContent !== text) meta.textContent = text;
       }
 
       this._syncRowControls(

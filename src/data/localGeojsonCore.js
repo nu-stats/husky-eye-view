@@ -55,6 +55,26 @@ function researchKeyHeaders(lock = DATASET_LOCKS.research) {
   }
   return key ? { [lock.header]: key } : {};
 }
+
+/** In-flight lock-status reads, by URL and key headers. */
+const lockStatusReads = new Map();
+
+/**
+ * Read the research lock status. Layers asking with the same key at the same
+ * moment (GVA and MKDB at startup, or after a key change) share one request;
+ * nothing is cached once it settles, so a later key is always asked afresh.
+ */
+function readLockStatus(url, headers) {
+  const id = `${url} ${JSON.stringify(headers)}`;
+  let read = lockStatusReads.get(id);
+  if (!read) {
+    read = fetch(url, { cache: 'no-store', headers })
+      .then((response) => (response.ok ? response.json() : null))
+      .finally(() => lockStatusReads.delete(id));
+    lockStatusReads.set(id, read);
+  }
+  return read;
+}
 const DEFAULT_LABEL_GRID_PX = 132;
 const VISIBILITY_UPDATE_MS = 450;
 // Each source keeps its own bounded cohort; the host sums their ambient-card
@@ -860,6 +880,10 @@ export function createLocalGeoJsonLayer(
       _cameraMoveEndRemover();
       _cameraMoveEndRemover = null;
     }
+    if (_clickHandler) {
+      _clickHandler.destroy();
+      _clickHandler = null;
+    }
   };
 
   // Locked until the server says this session's research key opens it.
@@ -867,11 +891,10 @@ export function createLocalGeoJsonLayer(
   const refreshLock = async () => {
     if (!lockedDataset) return;
     try {
-      const response = await fetch(lockStatusUrl, {
-        cache: 'no-store',
-        headers: researchKeyHeaders(lockKey),
-      });
-      const status = response.ok ? await response.json() : null;
+      const status = await readLockStatus(
+        lockStatusUrl,
+        researchKeyHeaders(lockKey),
+      );
       _locked = status?.datasets?.[lockedDataset] !== 'unlocked';
     } catch {
       _locked = true;
@@ -1357,35 +1380,6 @@ export function createLocalGeoJsonLayer(
               _areaRecords = [];
               console.error(`Failed to load ${id}:`, e);
             }
-
-            if (_destroyed) return;
-            // 2. Install native global click handler
-            if (!_clickHandler) {
-              _clickHandler = screenSpaceEventHandlerFactory(
-                viewer.scene.canvas,
-              );
-              _clickHandler.setInputAction((click) => {
-                // A tool owns the pointer (src/data/inputOwnership.js).
-                if (!isPointerFree()) return;
-                if (!_enabled) return;
-                // A clickable local card (one with source notes) sits above
-                // the globe, so it wins the click. Every local layer resolves
-                // it identically and only the card's own layer acts on it.
-                const card = overlayHost.hitTest?.(
-                  click.position.x,
-                  click.position.y,
-                  { filter: isLocalCardAction },
-                );
-                if (card) {
-                  if (card.sourceId === id) card.entry.activate();
-                  return;
-                }
-                const target = pickLocalEntity(viewer.scene, click.position);
-                if (target && target.__localLayerId === id) {
-                  focusFeature(viewer, target);
-                }
-              }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-            }
           })();
         try {
           await _loadPromise;
@@ -1396,6 +1390,32 @@ export function createLocalGeoJsonLayer(
       }
 
       if (_destroyed) return;
+      // 2. Install native global click handler. Disable releases it: every
+      // live handler costs a layout read on each mouse move.
+      if (_enabled && !_clickHandler) {
+        _clickHandler = screenSpaceEventHandlerFactory(viewer.scene.canvas);
+        _clickHandler.setInputAction((click) => {
+          // A tool owns the pointer (src/data/inputOwnership.js).
+          if (!isPointerFree()) return;
+          if (!_enabled) return;
+          // A clickable local card (one with source notes) sits above
+          // the globe, so it wins the click. Every local layer resolves
+          // it identically and only the card's own layer acts on it.
+          const card = overlayHost.hitTest?.(
+            click.position.x,
+            click.position.y,
+            { filter: isLocalCardAction },
+          );
+          if (card) {
+            if (card.sourceId === id) card.entry.activate();
+            return;
+          }
+          const target = pickLocalEntity(viewer.scene, click.position);
+          if (target && target.__localLayerId === id) {
+            focusFeature(viewer, target);
+          }
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+      }
       // 3. Add an incredibly fast pre-render occluder to hide points behind the globe
       if (_enabled && !_preRenderRemover) {
         _preRenderRemover = viewer.scene.preRender.addEventListener(() => {

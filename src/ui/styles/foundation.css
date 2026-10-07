@@ -636,13 +636,29 @@ body:has(.data-toggle-row[data-layer-id='alpr-cameras'] .data-toggle-btn.active)
   font-weight: 300;
 }
 
+/* The release, beside the name (package.json version, set by main.js). */
+#title-bar .title-version {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  vertical-align: super;
+}
+
+#title-bar .title-version:empty {
+  display: none;
+}
+
 #title-bar .subtitle {
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 5px;
+  font-size: 10px;
+  font-style: italic;
+  letter-spacing: 1.5px;
   color: var(--text-dim);
   margin-top: 8px;
-  text-transform: uppercase;
+  text-transform: lowercase;
 }
 
 #title-bar .frame-rate-readout {

@@ -1,12 +1,9 @@
 import { applicationServices } from './services/application.js';
 /**
  * @module hud
- * @description Intelligence HUD Overlay — NRO/NGA Satellite Aesthetic.
- *
- * Renders authentic reconnaissance metadata over the Cesium canvas:
- * classification banners, live MGRS/lat-lon coordinates, sensor metrics
- * (GSD, NIIRS, ONA), timestamps, and orbital data — all updating in
- * real-time at configurable cadences.
+ * @description Location HUD over the Cesium canvas: the camera's latitude and
+ * longitude, height above sea level, sun elevation, and a short summary of
+ * the view. The readout refreshes only when the camera moves.
  *
  * The HUD auto-activates when a military-style shader (NVG, FLIR, CRT) is
  * selected and supports three layout variants: tactical, operator, minimal.
@@ -15,7 +12,6 @@ import { applicationServices } from './services/application.js';
  */
 
 import * as Cesium from 'cesium';
-import { forward as toMGRS } from 'mgrs';
 import { CITY_POIS } from './locations.js';
 import { composeLocalityTag } from './hudLocality.js';
 import {
@@ -168,6 +164,7 @@ export class IntelHUD {
     this._el = document.getElementById('intel-hud');
     if (!this._el) return;
 
+    // The AIS line stays hidden while ships are off (layerManifest.js).
     // A plain location readout. The spy-satellite dressing this HUD used to
     // carry (classification banners, mission/sensor IDs, REC, orbit/pass,
     // MGRS, GSD/NIIRS, band strips, mode line) is gone; the update code below
@@ -191,7 +188,7 @@ export class IntelHUD {
       <div class="hud-corner hud-bottom-right">
         <div class="hud-content" style="text-align:right">
           <div id="hud-alt">ALT: --m   SUN: --° EL</div>
-          <div id="hud-ais-vessel" class="hud-ais-vessel">AIS: --</div>
+          <div id="hud-ais-vessel" class="hud-ais-vessel" hidden>AIS: --</div>
         </div>
       </div>
     `;
@@ -212,7 +209,7 @@ export class IntelHUD {
 
     // Semantic summary refresh cadence
     this._summaryInterval = setInterval(() => {
-      if (!this._visible) return;
+      if (!this._visible || document.hidden) return;
       void this._updateSummary(true);
     }, HUD_SUMMARY_INTERVAL_MS);
   }
@@ -227,13 +224,24 @@ export class IntelHUD {
     if (!this._geoidReady) {
       if (!this._geoidRequested) {
         this._geoidRequested = true;
-        ensureGeoidReady()
-          .then(() => {
-            this._geoidReady = true;
-          })
-          .catch(() => {
-            /* readout falls back to the uncorrected height */
-          });
+        const load = () =>
+          ensureGeoidReady()
+            .then(() => {
+              this._geoidReady = true;
+            })
+            .catch(() => {
+              /* readout falls back to the uncorrected height */
+            });
+        // The grid is a 2.7 MB script; in the browser, fetch it once startup
+        // has settled instead of beside the first globe tiles.
+        if (typeof requestIdleCallback === 'function') {
+          this._geoidTimer = setTimeout(
+            () => requestIdleCallback(load, { timeout: 2000 }),
+            3000,
+          );
+        } else {
+          load();
+        }
       }
       return null;
     }
@@ -263,44 +271,21 @@ export class IntelHUD {
     const lonDeg = Cesium.Math.toDegrees(cartographic.longitude);
     const latDeg = Cesium.Math.toDegrees(cartographic.latitude);
     const altM = cartographic.height;
-    const latDMS = this._toDMS(latDeg, 'lat');
-    const lonDMS = this._toDMS(lonDeg, 'lon');
-    let mgrsLabel = '---';
+    const pitchDeg = Cesium.Math.toDegrees(camera.pitch);
 
-    // MGRS
-    try {
-      const mgrsStr = toMGRS([lonDeg, latDeg], 4); // 4 = 10m precision
-      // Format: 18SUJ23370716 → 18S UJ 2337 0716
-      const formatted = this._formatMGRS(mgrsStr);
-      mgrsLabel = formatted;
-      const el = document.getElementById('hud-mgrs');
-      if (el) el.textContent = `MGRS: ${formatted}`;
-    } catch {
-      const el = document.getElementById('hud-mgrs');
-      if (el) el.textContent = 'MGRS: ---';
-    }
+    // This runs four times a second; a camera at rest (most of the time)
+    // changes nothing on screen. The minute keeps the sun elevation current
+    // and the geoid flag lets the corrected height land when the grid does.
+    const poseKey = `${latDeg.toFixed(6)},${lonDeg.toFixed(6)},${altM.toFixed(1)},${pitchDeg.toFixed(1)},${this._geoidReady},${Math.floor(Date.now() / 60000)}`;
+    if (poseKey === this._poseKey) return;
+    this._poseKey = poseKey;
 
     // Lat/Lon DMS
     const llEl = document.getElementById('hud-latlon');
-    if (llEl) llEl.textContent = `${latDMS} ${lonDMS}`;
-    const bottomEl = document.getElementById('hud-bottom-line');
-    if (bottomEl) {
-      bottomEl.textContent = `MGRS: ${mgrsLabel}  LAT: ${latDMS}  LON: ${lonDMS}`;
+    if (llEl) {
+      const text = `${this._toDMS(latDeg, 'lat')} ${this._toDMS(lonDeg, 'lon')}`;
+      if (llEl.textContent !== text) llEl.textContent = text;
     }
-
-    // GSD (Ground Sample Distance): approximate resolution in meters per pixel
-    // derived from camera altitude. NIIRS (National Imagery Interpretability
-    // Rating Scale): 0-9 quality rating computed via the General Image Quality
-    // Equation (GIQE) simplified form: NIIRS = 10.25 - 3.32 * log10(GSD_inches).
-    const gsd = Math.max(0.01, altM * 0.000375);
-    const gsdInches = gsd * 39.37;
-    const niirs = Math.max(
-      0,
-      Math.min(9, 10.25 - 3.32 * Math.log10(gsdInches)),
-    );
-    const gsdEl = document.getElementById('hud-gsd');
-    if (gsdEl)
-      gsdEl.textContent = `GSD: ${gsd.toFixed(2)}m  NIIRS: ${niirs.toFixed(1)}`;
 
     // Altitude — reported as height above MEAN SEA LEVEL. `altM` is the raw
     // ellipsoidal camera height, which reads far below zero wherever the geoid
@@ -311,29 +296,18 @@ export class IntelHUD {
     const geoidN = this._geoidUndulationM(latDeg, lonDeg);
     const altMslM = ellipsoidalToMslDisplayM(altM, geoidN);
     const sunEl = this._estimateSunElevation(latDeg, lonDeg);
-    if (altEl)
-      altEl.textContent = `ALT: ${Math.round(altMslM)}m   SUN: ${sunEl.toFixed(1)}° EL`;
-
-    // Collection timestamp
-    const collEl = document.getElementById('hud-coll');
-    if (collEl) {
-      const now = new Date();
-      const h = String(now.getUTCHours()).padStart(2, '0');
-      const m = String(now.getUTCMinutes()).padStart(2, '0');
-      const s = String(now.getUTCSeconds()).padStart(2, '0');
-      collEl.textContent = `COLL: ${h}:${m}:${s}Z`;
+    if (altEl) {
+      const text = `ALT: ${Math.round(altMslM)}m   SUN: ${sunEl.toFixed(1)}° EL`;
+      if (altEl.textContent !== text) altEl.textContent = text;
     }
 
     // Off-nadir angle (ONA): camera pitch of -90 deg is nadir (straight down),
     // so ONA = 90 + pitch gives 0 at nadir and increases toward the horizon.
-    const pitchDeg = Cesium.Math.toDegrees(camera.pitch);
     const ona = Math.max(0, 90 + pitchDeg);
-    const onaEl = document.getElementById('hud-ona');
-    if (onaEl) onaEl.textContent = `ONA: ${ona.toFixed(1)}°`;
 
-    // `altM` stays the raw ellipsoidal camera height the sensor model reads
-    // (GSD/NIIRS, view band). `altMslM` is the ADDITIVE display datum — the
-    // only one any readout string should print.
+    // `altM` stays the raw ellipsoidal camera height the view band reads.
+    // `altMslM` is the ADDITIVE display datum — the only one any readout
+    // string should print.
     this._latestMetrics = {
       latDeg,
       lonDeg,
@@ -366,23 +340,6 @@ export class IntelHUD {
       this._markSummaryDirty();
       this._setSummaryText(this._composeSummary(), false);
     }
-  }
-
-  /**
-   * Insert spaces into a raw MGRS string for human-readable display.
-   * @param {string} mgrs - Raw MGRS string, e.g. `"18SUJ23370716"`.
-   * @returns {string} Formatted string, e.g. `"18S UJ 2337 0716"`.
-   */
-  _formatMGRS(mgrs) {
-    // Regex captures: grid zone designator (1-2 digits + band letter),
-    // 100km square ID (2 letters), numeric easting+northing (split in half).
-    const match = mgrs.match(/^(\d{1,2}[A-Z])\s*([A-Z]{2})\s*(\d+)$/);
-    if (!match) return mgrs;
-    const [, zone, square, coords] = match;
-    const half = coords.length / 2;
-    const easting = coords.slice(0, half);
-    const northing = coords.slice(half);
-    return `${zone} ${square} ${easting} ${northing}`;
   }
 
   /**
@@ -842,6 +799,7 @@ export class IntelHUD {
     clearInterval(this._updateInterval);
     clearInterval(this._summaryInterval);
     clearInterval(this._summaryTypingInterval);
+    clearTimeout(this._geoidTimer);
     this.viewer.camera.moveEnd.removeEventListener(this._onCameraMoveEnd);
     this._dataManagerUnsubscribe?.();
     this._summaryRequest?.abort();

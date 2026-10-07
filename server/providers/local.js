@@ -23,6 +23,7 @@ import { googlePlacesContextProxy } from './places.js';
 import { keySetupEndpoint } from '../standalone/key-setup.js';
 import { researchDataProxy } from './research.js';
 import { curatedFlightsProxy } from './curatedFlights.js';
+import { stataProxy } from './stata.js';
 
 /** Construct the local provider plugins in their established order. */
 function localProviderPlugins() {
@@ -51,6 +52,7 @@ function localProviderPlugins() {
     googlePlacesContextProxy(),
     researchDataProxy(),
     curatedFlightsProxy(),
+    stataProxy(),
     keySetupEndpoint(),
   ];
 }

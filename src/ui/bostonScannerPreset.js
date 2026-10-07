@@ -81,24 +81,28 @@ export function installBostonScannerPreset({
   let rings = null;
   let destroyed = false;
   let lastAvailable = null;
+  let lastMiles = null;
 
   const apply = (miles) => {
     const available = miles <= BOSTON_SCANNER_RADIUS_MILES;
+    const title = available ? scannerPresetTitle(miles) : null;
     // Looked up each time: the Radio and cockpit templates may be (re)rendered
-    // after this is installed.
+    // after this is installed. Attributes are written only when they change.
     for (const link of documentRef.querySelectorAll('[data-boston-scanner]')) {
-      link.hidden = !available;
-      link.href = BOSTON_SCANNER_URL;
-      if (available) link.title = scannerPresetTitle(miles);
+      if (link.hidden !== !available) link.hidden = !available;
+      if (link.href !== BOSTON_SCANNER_URL) link.href = BOSTON_SCANNER_URL;
+      if (title && link.title !== title) link.title = title;
     }
     lastAvailable = available;
+    lastMiles = miles;
   };
+
+  const inCockpit = () =>
+    Boolean(documentRef.body?.classList?.contains('cockpit-mode'));
 
   const refresh = () => {
     if (destroyed || !rings) return;
-    const cockpit = Boolean(
-      documentRef.body?.classList?.contains('cockpit-mode'),
-    );
+    const cockpit = inCockpit();
     const point = scannerViewPoint(viewer, { cockpit });
     apply(point ? milesFromBoston(point.lat, point.lon, rings) : Infinity);
   };
@@ -118,8 +122,14 @@ export function installBostonScannerPreset({
     });
 
   // The cockpit camera moves every frame without moveEnd, so a light poll
-  // covers both modes; moveEnd and mode changes make the common cases instant.
-  const timer = windowRef.setInterval?.(refresh, intervalMs);
+  // measures the distance there. In the map view moveEnd and mode changes
+  // measure it; the poll only reapplies the last answer, so a link rendered
+  // later still shows (or stays hidden) according to the range.
+  const timer = windowRef.setInterval?.(() => {
+    if (destroyed || documentRef.hidden) return;
+    if (inCockpit()) refresh();
+    else if (lastMiles !== null) apply(lastMiles);
+  }, intervalMs);
   const removeMoveEnd = viewer.camera?.moveEnd?.addEventListener?.(refresh);
   windowRef.addEventListener?.('gev:cockpit-mode-changed', refresh);
 

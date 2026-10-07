@@ -61,11 +61,11 @@ test('every research group heading carries a plain-language note', async () => {
     'Internet Access Over Time',
     'Air & Green Space',
     RESEARCH_GROUP,
-    'Fly, Drone & Walk',
+    'Fly & Drone',
   ]) {
     assert.ok(groups.has(group), group);
     assert.ok(LAYER_GROUP_NOTES[group]?.length > 10, group);
   }
   // Helicopters sit with the first-person views, not the live feeds.
-  assert.equal(layerManifestEntry('lowflyers').group, 'Fly, Drone & Walk');
+  assert.equal(layerManifestEntry('lowflyers').group, 'Fly & Drone');
 });

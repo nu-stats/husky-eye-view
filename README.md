@@ -14,7 +14,7 @@ _Husky Eye View is a fork of [God's Eye View](https://github.com/bilawalsidhu/go
 
 Photorealistic 3D globe. Live aircraft, ships, satellites, earthquakes, traffic, and public cameras. Hands-free voice control powered by a realtime AI agent.
 
-_No place left behind._
+_A dynamic research and learning experience._
 
 ![Orbital HUD, a tracked live globe, FLIR terrain — then OPEN SOURCED](docs/media/hero-open-source-reveal.gif)
 
@@ -324,6 +324,22 @@ _The Space Missions layer replaying a Falcon 9 ascent — labeled `RECONSTRUCTED
 ![Diving into the Bahamas and revealing labeled submarine cable routes beneath the globe](docs/media/09-undersea-cables.gif)
 
 **Missing a layer you want?** Open an issue — or add it and send the PR.
+
+---
+
+## 📊 Stata Analysis
+
+With Stata 18 or 19 installed on the same computer, **Data Layers → Research Data → Stata Analysis** runs Stata on a layer's data: counties, the census tracts of one state, states, or the areas in the current map view (tracts when zoomed in, counties when zoomed out).
+
+- **Type commands**, one per line, with `if`, `in` and options: `regress`, `logit`, `nbreg`, `poisson`, `spregress`, `spreg`, `correlate`, `summarize`, `tabulate`, `fre`, `fs`, `egen`, `twoway`. Lines that would reach past the data (macros, `;`, file paths, `shell`, `saving()`) are refused. `fre`, `fs` and `spreg` are SSC packages (`ssc install fre`, `ssc install fs`, `ssc install sppack`).
+- **Spatial models** get an inverse-distance weights matrix `W` built on exactly the areas with valid values for the model, e.g. `spregress life_expectancy poverty, gs2sls dvarlag(W)`.
+- **Contiguity weights:** each session can write its areas as a shapefile (`areas.shp`), so `spshape2dta areas` then `spmatrix create contiguity W if !missing(y, x)` builds queen contiguity from the map outlines; your `W` then replaces the automatic one. The same shapefile opens in GeoDa and QGIS.
+- **Upload a do-file** to run anything else on the same data (accepted only from this computer).
+- **Open in Stata** opens the Stata window itself with the data loaded and labeled; `session.log` and `session_commands.do` record everything you do there.
+- **By voice:** "Regress foreign-born share on poverty and unemployment for Massachusetts tracts", or "Open the counties in view in Stata".
+- **From a terminal:** `node scripts/stata-analysis.mjs --geography tract --state MA "regress foreign_born_share poverty"` (`--do file.do`, `--open`, `--variables`).
+
+Every run is kept in `Documents/HuskyEyeView-Analyses/<date>_<areas>/`: `data.csv`, `data.dta`, the do-file, the log, graphs as PNG and `results.xlsx` for models. `HEV_STATA_PATH` points at Stata if it is installed somewhere unusual; `HEV_ANALYSIS_DIR` moves the sessions folder.
 
 ---
 

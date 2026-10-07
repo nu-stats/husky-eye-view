@@ -56,6 +56,9 @@ export function createLifecycle({
         Cesium.Model.fromGltfAsync({
           url: resolveAsset(JET_MODEL_URL),
           asynchronous: false,
+          // No per-model reflection map: Cesium rebuilds it by reading pixels
+          // back from the GPU, a stall on every frame the fleet renders.
+          environmentMapOptions: { enabled: false },
         })
           .then((m) => {
             if (epoch === flightState._modelEpoch) {
