@@ -1004,6 +1004,7 @@ export function createGevActionRunner({
           : await panel.run({
               ...request,
               commands: Array.isArray(args.commands) ? args.commands : [],
+              plain: typeof args.request === 'string' ? args.request : null,
             });
       return { action: name, ...result };
     }
@@ -1026,6 +1027,7 @@ export function createGevActionRunner({
           : await panel.run({
               ...request,
               commands: Array.isArray(args.lines) ? args.lines : [],
+              plain: typeof args.request === 'string' ? args.request : null,
             });
       return { action: name, ...result };
     }

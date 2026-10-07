@@ -585,6 +585,34 @@ export class AnalysisPanel {
     this.stateLabel.style.display = this.scope.value === 'state' ? '' : 'none';
   }
 
+  /** Show a resolved request's data in the Layer, Areas and State lists. */
+  showChoice(resolved, request = {}) {
+    const choice =
+      request.choice ||
+      this.layerValue(request.layer) ||
+      (resolved.geography && !resolved.baseUrl
+        ? `measures:${resolved.geography}`
+        : null);
+    if (choice && [...this.layer.options].some((o) => o.value === choice))
+      this.layer.value = choice;
+    const wanted = String(request.state || '')
+      .trim()
+      .toLowerCase();
+    const fips = wanted
+      ? Object.entries(STATES).find(
+          ([code, [abbr, name]]) =>
+            code === wanted ||
+            abbr.toLowerCase() === wanted ||
+            name.toLowerCase() === wanted,
+        )?.[0]
+      : null;
+    if (fips) {
+      this.scope.value = 'state';
+      this.state.value = fips;
+    } else this.scope.value = resolved.view ? 'view' : 'all';
+    this.syncScope();
+  }
+
   /** A layer by id or name (voice), as a Layer-list value. */
   layerValue(query) {
     if (!query) return null;
@@ -822,6 +850,21 @@ export class AnalysisPanel {
   async run(request = {}) {
     const resolved = this.resolveRequest(request);
     if (resolved.problem) return this.fail([resolved.problem]);
+    // A request in words (voice): the panel shows the data it asked for,
+    // the sentence and the code the translator writes, then runs that code.
+    if (
+      request.plain &&
+      !(Array.isArray(request.commands) && request.commands.length)
+    ) {
+      this.open();
+      this.showChoice(resolved, request);
+      this.variableList = null;
+      await this.loadVariables();
+      const out = await this.translate(request.plain);
+      if (!out.ok) return this.fail(out.problems);
+      request = { ...request, commands: out.lines };
+      resolved.commands = out.lines;
+    }
     // English typed in the Commands box: show the code it means instead of
     // an error (only when the text is not valid code already).
     if (

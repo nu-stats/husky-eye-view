@@ -964,6 +964,12 @@ const schemas = [
         state: {
           type: 'string',
         },
+        // The user's words: the app writes the code with the same plain-
+        // English translator as the panel (src/analysis/plainEnglish.js).
+        request: {
+          type: 'string',
+          maxLength: 600,
+        },
         commands: {
           type: 'array',
           items: { type: 'string', maxLength: 600 },
@@ -971,7 +977,6 @@ const schemas = [
           maxItems: 20,
         },
       },
-      required: ['commands'],
     },
   },
   {
@@ -1010,6 +1015,10 @@ const schemas = [
         state: {
           type: 'string',
         },
+        request: {
+          type: 'string',
+          maxLength: 600,
+        },
         lines: {
           type: 'array',
           items: { type: 'string', maxLength: 600 },
@@ -1017,7 +1026,6 @@ const schemas = [
           maxItems: 20,
         },
       },
-      required: ['lines'],
     },
   },
   {

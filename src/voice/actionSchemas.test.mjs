@@ -45,8 +45,9 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     // 2026-10-07: run_stata_analysis and open_in_stata (Stata on this computer),
     // then spshape2dta / spmatrix contiguity weights in its description;
     // run_r_analysis and open_in_r (R on this computer); a layer choice for
-    // all four Stata and R tools.
-    '02027e4ba28ed551194b9eaff18a646a6c4daf4db47b71652cd53e14ae3eb7c8',
+    // all four Stata and R tools. Later: run_stata_analysis / run_r_analysis
+    // take the user's words (request) for the plain-English translator.
+    '4fcf295dc79d8dcd7eb42bae876d3d64c6ef8f1972d1d8268ef7f49d0682229b',
   );
 });
 

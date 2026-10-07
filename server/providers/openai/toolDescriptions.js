@@ -124,7 +124,7 @@ export const ACTION_DESCRIPTIONS = {
   },
   run_stata_analysis: {
     description:
-      'Run a statistical analysis in Stata (on this computer) on a layer\'s data: counties, the census tracts of one state, states, or the areas in the current map view. Write each step as one Stata command line. Allowed commands: regress, logit, nbreg, poisson, spregress, spreg, correlate, summarize, tabulate (tab), fre, fs, egen, twoway — with if, in and options, e.g. "regress foreign_born_share poverty unemployment if median_income != ., vce(robust)". Variables: population, foreign_born_count, foreign_born_share (_2010, _2000), poverty, unemployment, bachelors, renters, black, hispanic, no_vehicle, internet, broadband, median_income, life_expectancy (counties; _2000), cluster_status (counties, text), pm25, ozone, park_access, asu_broadband (counties), ntia_internet_use (states), segregation_bw / _hw / _aw (counties, states), plus geoid, state, name, lon, lat. Spatial models: a weights matrix W (inverse distance) is built on the areas with valid values, e.g. "spregress life_expectancy poverty, gs2sls dvarlag(W)". For contiguity weights: "spshape2dta areas" (the session shapefile), then "spmatrix create contiguity W if !missing(y, x)", then the model with the same if; spmatrix also allows summarize, dir, drop, copy, normalize, note, clear, fromdata. The session\'s do-file and log are saved. After it runs, report the key results in plain words (coefficients, significance, N) and any failed step.',
+      'Run a statistical analysis in Stata (on this computer) on a layer\'s data: counties, the census tracts of one state, states, or the areas in the current map view. Pass the user\'s words as request whenever you can: the app turns them into Stata code itself. Only if the user dictates code, write each step as one Stata command line. Allowed commands: regress, logit, nbreg, poisson, spregress, spreg, correlate, summarize, tabulate (tab), fre, fs, egen, twoway — with if, in and options, e.g. "regress foreign_born_share poverty unemployment if median_income != ., vce(robust)". Variables: population, foreign_born_count, foreign_born_share (_2010, _2000), poverty, unemployment, bachelors, renters, black, hispanic, no_vehicle, internet, broadband, median_income, life_expectancy (counties; _2000), cluster_status (counties, text), pm25, ozone, park_access, asu_broadband (counties), ntia_internet_use (states), segregation_bw / _hw / _aw (counties, states), plus geoid, state, name, lon, lat. Spatial models: a weights matrix W (inverse distance) is built on the areas with valid values, e.g. "spregress life_expectancy poverty, gs2sls dvarlag(W)". For contiguity weights: "spshape2dta areas" (the session shapefile), then "spmatrix create contiguity W if !missing(y, x)", then the model with the same if; spmatrix also allows summarize, dir, drop, copy, normalize, note, clear, fromdata. The session\'s do-file and log are saved. After it runs, report the key results in plain words (coefficients, significance, N) and any failed step.',
     parameters: {
       properties: {
         geography: {
@@ -139,8 +139,13 @@ export const ACTION_DESCRIPTIONS = {
           description:
             'Limit to one state (name or postal code). Required for tract data unless geography is view.',
         },
+        request: {
+          description:
+            'Preferred: the user\'s request in their own words, e.g. "spatial regression of the foreign-born share on the poverty rate" or "summarize poverty and unemployment". The app writes the Stata code with its plain-English translator (the same one as the panel), shows it, and runs it. Give request or commands, not both.',
+        },
         commands: {
-          description: 'Stata command lines, run in order.',
+          description:
+            'Stata command lines, run in order — only when the user dictates exact Stata code.',
         },
       },
     },
@@ -166,7 +171,7 @@ export const ACTION_DESCRIPTIONS = {
   },
   run_r_analysis: {
     description:
-      'Run a statistical analysis in R (on this computer) on a layer data set: counties, the census tracts of one state, states, or the areas in the current map view. The data frame is d, with the same variables as run_stata_analysis (foreign_born_share, poverty, unemployment, bachelors, median_income, life_expectancy for counties, and so on, plus geoid, state, name, lon, lat). Write each step as one R expression, e.g. "m <- lm(foreign_born_share ~ poverty + unemployment, data = d)", then "summary(m)". Lines may call models (lm, glm with family = binomial or poisson, glm.nb), summaries, tests (cor.test, t.test, chisq.test), plots (plot, hist, boxplot; saved as PNG) and spatial tools: contiguity weights W are ready, e.g. "moran.test(d$poverty, W)" or "lagsarlm(foreign_born_share ~ poverty, data = d, listw = W)"; spatial models run on the areas with valid values. The script and log are saved. After it runs, report the key results in plain words and any failed line.',
+      'Run a statistical analysis in R (on this computer) on a layer data set: counties, the census tracts of one state, states, or the areas in the current map view. Pass the user\'s words as request whenever you can: the app turns them into R code itself. The data frame is d, with the same variables as run_stata_analysis (foreign_born_share, poverty, unemployment, bachelors, median_income, life_expectancy for counties, and so on, plus geoid, state, name, lon, lat). Write each step as one R expression, e.g. "m <- lm(foreign_born_share ~ poverty + unemployment, data = d)", then "summary(m)". Lines may call models (lm, glm with family = binomial or poisson, glm.nb), summaries, tests (cor.test, t.test, chisq.test), plots (plot, hist, boxplot; saved as PNG) and spatial tools: contiguity weights W are ready, e.g. "moran.test(d$poverty, W)" or "lagsarlm(foreign_born_share ~ poverty, data = d, listw = W)"; spatial models run on the areas with valid values. The script and log are saved. After it runs, report the key results in plain words and any failed line.',
     parameters: {
       properties: {
         geography: {
@@ -181,8 +186,13 @@ export const ACTION_DESCRIPTIONS = {
           description:
             'Limit to one state (name or postal code). Required for tract data unless geography is view.',
         },
+        request: {
+          description:
+            "Preferred: the user's request in their own words; the app writes the R code with its plain-English translator, shows it and runs it. Give request or lines, not both.",
+        },
         lines: {
-          description: 'R expressions, run in order; the data frame is d.',
+          description:
+            'R expressions, run in order (the data frame is d) — only when the user dictates exact R code.',
         },
       },
     },
