@@ -134,11 +134,34 @@ export function findR({
             paths.join(bin, 'x64', 'Rgui.exe'),
           ].find((f) => exists(f)) || null
         : null;
+    // R from a conda environment (<prefix>/lib/R/bin/...) needs that
+    // environment's libraries on PATH, or Windows cannot load its DLLs; its
+    // version is in the r-base package record rather than the folder name.
+    const condaPrefix =
+      (rscript.match(
+        /^(.*?)[\\/]lib[\\/]R[\\/]bin(?:[\\/]x64)?[\\/][^\\/]+$/i,
+      ) || [])[1] || null;
+    const condaVersion = condaPrefix
+      ? (list(paths.join(condaPrefix, 'conda-meta'))
+          .map((name) => name.match(/^r-base-(\d+\.\d+\.\d+)-/)?.[1])
+          .find(Boolean) ?? null)
+      : null;
     return {
       path: rscript,
-      version: versionOf(rscript).join('.') || null,
+      version: versionOf(rscript).join('.') || condaVersion,
       rgui: gui,
       rstudio,
+      pathPrefix: condaPrefix
+        ? platform === 'win32'
+          ? [
+              condaPrefix,
+              paths.join(condaPrefix, 'Library', 'mingw-w64', 'bin'),
+              paths.join(condaPrefix, 'Library', 'usr', 'bin'),
+              paths.join(condaPrefix, 'Library', 'bin'),
+              paths.join(condaPrefix, 'Scripts'),
+            ]
+          : [paths.join(condaPrefix, 'bin')]
+        : [],
     };
   };
   if (env.HEV_R_PATH) {
@@ -181,6 +204,17 @@ export function prepareRSession(request = {}, options = {}) {
   return prepareAnalysisSession(request, { ...options, engine: R_ENGINE });
 }
 
+/** The environment R runs in: its own conda libraries first, when it has them. */
+export function rProcessEnv(r, base = process.env) {
+  if (!r?.pathPrefix?.length) return base;
+  const key =
+    Object.keys(base).find((k) => k.toUpperCase() === 'PATH') || 'PATH';
+  return {
+    ...base,
+    [key]: [...r.pathPrefix, base[key] || ''].join(path.delimiter),
+  };
+}
+
 function killTree(child) {
   if (!child?.pid) return;
   if (process.platform === 'win32')
@@ -210,6 +244,7 @@ export async function runRSession(
       cwd: session.folder,
       stdio: ['ignore', fd, fd],
       windowsHide: true,
+      env: rProcessEnv(r),
     });
     const timer = setTimeout(() => {
       killTree(child);
@@ -267,7 +302,7 @@ export function openRInteractive(session, { r }) {
   const project = path.join(session.folder, 'session.Rproj');
   let command;
   let args;
-  let env = process.env;
+  let env = rProcessEnv(r);
   if (r.rstudio) {
     if (r.rstudio.endsWith('.app'))
       [command, args] = ['open', ['-a', r.rstudio, project]];
@@ -275,7 +310,7 @@ export function openRInteractive(session, { r }) {
   } else if (r.rgui) {
     [command, args] = [r.rgui, ['--no-restore', '--no-save']];
     env = {
-      ...process.env,
+      ...env,
       R_PROFILE_USER: path.join(session.folder, '.Rprofile'),
     };
   } else {

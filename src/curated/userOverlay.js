@@ -121,14 +121,18 @@ export class UserDataOverlay {
         ? entry.values.reduce((a, b) => a + b, 0) / entry.values.length
         : null;
     const valued = options.column;
+    // options.ramp / options.breaks: another palette or class breaks (the
+    // analysis map's diverging residuals); quantiles of the gold ramp otherwise.
+    const ramp = options.ramp || USER_RAMP;
     const breaks = valued
-      ? quantileBreaks(
+      ? options.breaks ||
+        quantileBreaks(
           [...areas.values()].map(areaValue).concat(points.map((p) => p.value)),
         )
       : [];
     const cssFor = (value) =>
       valued && Number.isFinite(value)
-        ? USER_RAMP[Math.min(USER_RAMP.length - 1, classOf(value, breaks))]
+        ? ramp[Math.min(ramp.length - 1, classOf(value, breaks))]
         : null;
     // One ClassificationPrimitive per color, as the area layers batch them.
     const byColor = new Map();
@@ -237,7 +241,7 @@ export class UserDataOverlay {
       ? {
           label: options.label,
           breaks,
-          colors: USER_RAMP.slice(0, breaks.length + 1),
+          colors: ramp.slice(0, breaks.length + 1),
         }
       : {
           label: options.label,

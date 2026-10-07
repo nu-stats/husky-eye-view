@@ -172,6 +172,12 @@ export function layerVariables(areas) {
       label: label.replace(/["`$\\]/g, "'").slice(0, 80),
       kind: numeric.get(key) ? 'numeric' : 'string',
       source: measure?.source,
+      ...(measure && {
+        short: measure.short.replace(/["`$\\]/g, "'"),
+        tableLabel: (measure.tableLabel || measure.label)
+          .replace(/["`$\\]/g, "'")
+          .slice(0, 80),
+      }),
     };
   });
   variables.push(

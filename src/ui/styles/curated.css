@@ -411,6 +411,98 @@
 .stata-files {
   font-size: 11px;
 }
+
+/* Results on the map: a choice, Show / Clear, and the legend. */
+.stata-map {
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.stata-map-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stata-map-label select {
+  width: 100%;
+}
+.stata-map-actions {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+.stata-map-legend p {
+  margin: 4px 0;
+}
+.stata-map-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 10px 2px 0;
+  white-space: nowrap;
+}
+/* The session's data: click rows to highlight their areas on the map. */
+.stata-data {
+  margin: 8px 0;
+  font-size: 12px;
+}
+.stata-data summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.stata-data-tools {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+.stata-data-tools input {
+  flex: 1;
+  min-width: 0;
+}
+.stata-data-scroll {
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+}
+.stata-data table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.stata-data th,
+.stata-data td {
+  padding: 3px 6px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.stata-data th {
+  position: sticky;
+  top: 0;
+  background: rgba(20, 24, 30, 0.96);
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+.stata-data tbody tr {
+  cursor: pointer;
+}
+.stata-data tbody tr:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.stata-data tbody tr.selected {
+  background: rgba(0, 229, 255, 0.28);
+  outline: 1px solid #ffea00;
+}
+.stata-map-key i {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-radius: 2px;
+}
 .stata-files a {
   color: var(--accent);
 }

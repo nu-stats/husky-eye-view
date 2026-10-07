@@ -36,6 +36,10 @@ const TYPES = {
   '.log': 'text/plain; charset=utf-8',
   '.png': 'image/png',
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.docx':
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.pdf': 'application/pdf',
+  '.tex': 'text/plain; charset=utf-8',
   '.dta': 'application/x-stata-dta',
   '.rds': 'application/octet-stream',
   '.rdata': 'application/octet-stream',

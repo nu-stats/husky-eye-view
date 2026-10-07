@@ -10,6 +10,16 @@ import { STATES } from '../reports/areaReport.js';
 import { STATA_COMMAND_NAMES, MAX_DO_FILE_BYTES } from './stataCommands.js';
 import { MAX_R_SCRIPT_BYTES } from './rCommands.js';
 import { LAYER_MANIFEST, layerManifestEntry } from '../data/layerManifest.js';
+import {
+  AnalysisMap,
+  legendRows,
+  mapChoices,
+  tableColumns,
+  variableChoices,
+} from './analysisMap.js';
+
+/** Rows the data table draws at once (filter or sort to reach the rest). */
+const TABLE_ROWS = 200;
 
 /** The datasets that are not one layer: every Area Reports measure. */
 const MEASURE_CHOICES = [
@@ -36,7 +46,15 @@ export const ANALYSIS_ENGINES = Object.freeze({
     scriptLabel: 'Do-file',
     scriptAccept: '.do,text/plain',
     scriptBytes: MAX_DO_FILE_BYTES,
-    files: ['analysis.do', 'analysis.log', 'results.xlsx', 'data.dta'],
+    files: [
+      'analysis.do',
+      'analysis.log',
+      'results.docx',
+      'results.pdf',
+      'results.tex',
+      'results.xlsx',
+      'data.dta',
+    ],
     sessionFiles: 'session_commands.do, session.log',
     missing:
       'Stata was not found on this computer (looked for Stata 18 and 19). Set HEV_STATA_PATH to its program file.',
@@ -96,6 +114,7 @@ export class AnalysisPanel {
     readDataManager = () => null,
     showToast = () => {},
     fetchImpl,
+    viewer = null,
   } = {}) {
     this.engine = ANALYSIS_ENGINES[engine];
     this.readView = readView;
@@ -103,6 +122,8 @@ export class AnalysisPanel {
     this.layerChosen = false;
     this.showToast = showToast;
     this.fetch = fetchImpl || ((...args) => globalThis.fetch(...args));
+    // Results back on the map (fitted values, residuals, new variables).
+    this.map = new AnalysisMap({ viewer, fetchImpl: this.fetch });
     this.busy = false;
     this.last = null;
     this.doFile = null;
@@ -522,6 +543,7 @@ export class AnalysisPanel {
     this.setStatus(`Running in ${this.engine.name}…`);
     try {
       const result = await this.post('run', resolved);
+      this.map.reset();
       this.render(result);
       this.last = result.ok || result.id ? result : this.last;
       this.setStatus(
@@ -614,9 +636,270 @@ export class AnalysisPanel {
           ]
         : []),
       ...graphs,
+      ...this.mapControls(result, base),
+      ...this.dataTable(result, base),
       element('pre', { className: 'stata-log', textContent: result.log || '' }),
       links,
     );
+  }
+
+  /**
+   * The session's data as a table: click a row to highlight that area on
+   * the map (Ctrl/⌘-click adds or removes one, Shift-click a range); sort by
+   * a column heading, filter by any text.
+   */
+  dataTable(result, base) {
+    if (!result.files?.includes('data.csv')) return [];
+    const commandText = this.commands.value;
+    const details = element('details', { className: 'stata-data' });
+    const summary = element('summary', {
+      textContent: 'Data — click rows to show them on the map',
+    });
+    const filter = element('input', {
+      type: 'search',
+      placeholder: 'Filter rows (any text)',
+      ariaLabel: 'Filter rows',
+    });
+    const clear = element('button', {
+      type: 'button',
+      className: 'curated-button',
+      textContent: 'Clear highlight',
+    });
+    const scroll = element('div', { className: 'stata-data-scroll' });
+    const note = element('p', { className: 'curated-hint' });
+    details.append(
+      summary,
+      element('div', { className: 'stata-data-tools' }, [filter, clear]),
+      scroll,
+      note,
+    );
+    const state = {
+      table: null,
+      columns: [],
+      sort: null,
+      desc: false,
+      selected: new Set(),
+      anchor: null,
+      shown: [],
+    };
+    const cellText = (value) => {
+      if (typeof value === 'number')
+        return value.toLocaleString('en-US', { maximumFractionDigits: 3 });
+      return String(value ?? '');
+    };
+    const numeric = (column) =>
+      state.table.rows.some(
+        (row) => row[column] !== '' && Number.isFinite(Number(row[column])),
+      );
+    const draw = () => {
+      const needle = filter.value.trim().toLowerCase();
+      let rows = state.table.rows;
+      if (needle)
+        rows = rows.filter((row) =>
+          state.columns.some((c) =>
+            cellText(row[c]).toLowerCase().includes(needle),
+          ),
+        );
+      if (state.sort) {
+        const c = state.sort;
+        const asNumber = numeric(c);
+        const missing = (row) => row[c] === '' || row[c] === undefined;
+        // Missing values stay at the bottom in either direction.
+        rows = [...rows].sort((a, b) => {
+          if (missing(a) || missing(b)) return missing(a) - missing(b);
+          const order = asNumber
+            ? Number(a[c]) - Number(b[c])
+            : String(a[c]).localeCompare(String(b[c]));
+          return state.desc ? -order : order;
+        });
+      }
+      state.shown = rows;
+      const head = element(
+        'tr',
+        {},
+        state.columns.map((c) => {
+          const th = element('th', {
+            textContent:
+              c + (state.sort === c ? (state.desc ? ' ▼' : ' ▲') : ''),
+            title: 'Sort',
+          });
+          th.addEventListener('click', () => {
+            state.desc = state.sort === c ? !state.desc : false;
+            state.sort = c;
+            draw();
+          });
+          return th;
+        }),
+      );
+      const body = rows.slice(0, TABLE_ROWS).map((row, i) => {
+        const tr = element(
+          'tr',
+          {
+            className: state.selected.has(row.hev_id) ? 'selected' : '',
+          },
+          state.columns.map((c) =>
+            element('td', { textContent: cellText(row[c]) }),
+          ),
+        );
+        tr.addEventListener('click', (event) => choose(row, i, event));
+        return tr;
+      });
+      scroll.textContent = '';
+      scroll.append(
+        element('table', {}, [
+          element('thead', {}, head),
+          element('tbody', {}, body),
+        ]),
+      );
+      const total = state.table.rows.length;
+      note.textContent =
+        `${rows.length.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} rows` +
+        (rows.length > TABLE_ROWS
+          ? ` (first ${TABLE_ROWS} shown; filter or sort to find others)`
+          : '') +
+        (state.selected.size
+          ? ` · ${state.selected.size} highlighted on the map`
+          : '') +
+        '.';
+    };
+    // Rows are chosen by hev_id (their data.csv row), so every layer works.
+    const highlight = async () => {
+      const rows = state.table.rows.filter((r) => state.selected.has(r.hev_id));
+      const drawn = await this.map.highlight(base, rows);
+      if (drawn.problem) note.textContent = drawn.problem;
+    };
+    const choose = (row, index, event) => {
+      const id = row.hev_id;
+      if (event.shiftKey && state.anchor !== null) {
+        const [from, to] = [state.anchor, index].sort((a, b) => a - b);
+        for (const r of state.shown.slice(from, to + 1))
+          state.selected.add(r.hev_id);
+      } else if (event.ctrlKey || event.metaKey) {
+        if (state.selected.has(id)) state.selected.delete(id);
+        else state.selected.add(id);
+        state.anchor = index;
+      } else {
+        const only = state.selected.size === 1 && state.selected.has(id);
+        state.selected = new Set(only ? [] : [id]);
+        state.anchor = index;
+      }
+      draw();
+      highlight();
+    };
+    filter.addEventListener('input', () => draw());
+    clear.addEventListener('click', () => {
+      state.selected.clear();
+      draw();
+      highlight();
+    });
+    details.addEventListener('toggle', async () => {
+      if (!details.open || state.table) return;
+      note.textContent = 'Loading the data…';
+      try {
+        state.table = await this.map.table(base, result.files);
+        state.columns = tableColumns(
+          state.table.columns,
+          commandText,
+          state.table.rows,
+        );
+        draw();
+      } catch (error) {
+        note.textContent = `Could not read the data: ${error.message}`;
+      }
+    });
+    return [details];
+  }
+
+  /**
+   * "Show on map": a run's fitted values, residuals and new variables tint
+   * the areas it used (one way: the map shows what the program computed).
+   */
+  mapControls(result, base) {
+    const choices = mapChoices(result);
+    const varsFile = (result.files || []).find((f) => f === 'map_vars.csv');
+    if (!choices.length && !varsFile) return [];
+    const select = element('select', {
+      ariaLabel: 'Result to show on the map',
+    });
+    const fill = (list) => {
+      for (const choice of list)
+        select.append(
+          element('option', {
+            value: String(select.options.length),
+            textContent: choice.label,
+          }),
+        );
+    };
+    fill(choices);
+    if (varsFile)
+      this.map.read(`${base}/${varsFile}`).then(({ columns }) => {
+        const extra = variableChoices(columns, varsFile);
+        choices.push(...extra);
+        fill(extra);
+      });
+    const show = element('button', {
+      type: 'button',
+      className: 'curated-button',
+      textContent: 'Show on map',
+    });
+    const clear = element('button', {
+      type: 'button',
+      className: 'curated-button',
+      textContent: 'Clear',
+    });
+    const legend = element('div', { className: 'stata-map-legend' });
+    show.addEventListener('click', async () => {
+      const choice = choices[Number(select.value)];
+      if (!choice) return;
+      show.disabled = true;
+      legend.textContent = 'Drawing…';
+      try {
+        const drawn = await this.map.show(base, choice);
+        legend.textContent = '';
+        if (!drawn.ok) {
+          legend.textContent = drawn.problem;
+          return;
+        }
+        legend.append(
+          element('p', {
+            textContent: `${choice.label} · ${drawn.areas.toLocaleString('en-US')} areas`,
+          }),
+          ...legendRows(drawn.legend).map((row) =>
+            element('span', { className: 'stata-map-key' }, [
+              element('i', { style: `background:${row.color}` }),
+              row.label,
+            ]),
+          ),
+          ...(choice.residual
+            ? [
+                element('p', {
+                  className: 'curated-hint',
+                  textContent:
+                    'Red: higher than the model predicts. Blue: lower. Gray: close to the prediction.',
+                }),
+              ]
+            : []),
+        );
+      } catch (error) {
+        legend.textContent = `Could not draw it: ${error.message}`;
+      } finally {
+        show.disabled = false;
+      }
+    });
+    clear.addEventListener('click', () => {
+      this.map.clear();
+      legend.textContent = '';
+    });
+    return [
+      element('div', { className: 'stata-map' }, [
+        element('label', { className: 'stata-map-label' }, [
+          'Results on the map ',
+          select,
+        ]),
+        element('div', { className: 'stata-map-actions' }, [show, clear]),
+        legend,
+      ]),
+    ];
   }
 
   /** What the voice assistant reads back: steps and the start of the output. */
@@ -643,6 +926,7 @@ export class AnalysisPanel {
   }
 
   destroy() {
+    this.map.clear();
     for (const remove of this.removers.splice(0)) remove();
     this.root.remove();
   }

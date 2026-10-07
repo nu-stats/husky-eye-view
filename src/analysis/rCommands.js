@@ -384,16 +384,24 @@ function loadData(variables, folder) {
   ];
 }
 
-/** Contiguity weights from the session shapefile, when sf and spdep exist. */
+/**
+ * Contiguity weights from the session shapefile, when sf and spdep exist.
+ * Neighbors come from planar geometry (as Stata's do): the map's simplified
+ * outlines can cross themselves slightly, which spherical (s2) checks
+ * reject. A failure here is reported and the rest of the script still runs.
+ */
 const SPATIAL_SETUP = [
   'hev_spatial <- requireNamespace("sf", quietly = TRUE) && requireNamespace("spdep", quietly = TRUE)',
   'if (hev_spatial) {',
   '  suppressPackageStartupMessages(library(spdep))',
   '  if (requireNamespace("spatialreg", quietly = TRUE)) suppressPackageStartupMessages(library(spatialreg))',
-  '  areas <- sf::st_read("areas.shp", quiet = TRUE)',
-  '  nb <- spdep::poly2nb(areas, queen = TRUE)',
-  '  W <- spdep::nb2listw(nb, style = "W", zero.policy = TRUE)',
-  '  cat("Contiguity weights W (queen, row-standardized) and neighbors nb are ready.\\n")',
+  '  tryCatch({',
+  '    invisible(sf::sf_use_s2(FALSE))',
+  '    areas <- sf::st_read("areas.shp", quiet = TRUE)',
+  '    nb <- spdep::poly2nb(areas, queen = TRUE)',
+  '    W <- spdep::nb2listw(nb, style = "W", zero.policy = TRUE)',
+  '    cat("Contiguity weights W (queen, row-standardized) and neighbors nb are ready.\\n")',
+  '  }, error = function(e) message("Contiguity weights could not be built: ", conditionMessage(e)))',
   '} else {',
   '  message("Spatial functions need the sf and spdep packages (and spatialreg for lagsarlm): install.packages(c(\\"sf\\", \\"spdep\\", \\"spatialreg\\"))")',
   '}',

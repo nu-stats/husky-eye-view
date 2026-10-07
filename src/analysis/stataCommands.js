@@ -114,6 +114,8 @@ export function analysisVariables(geography) {
     vars.push({
       name: variableName(m.id),
       label: labelText(`${m.label}, ${m.years}`),
+      short: labelText(m.short),
+      tableLabel: labelText(m.tableLabel || m.label),
       kind: m.format === 'category' ? 'string' : 'numeric',
       key: m.key,
       measureId: m.id,
@@ -121,6 +123,30 @@ export function analysisVariables(geography) {
     });
   }
   return vars;
+}
+
+/**
+ * A line's `if` condition: from "if" to " in " or the options comma, where
+ * that comma is outside parentheses and quotes (`!missing(a, b)` keeps its
+ * commas). Null when there is none.
+ */
+export function readIfClause(body) {
+  const start = String(body).search(/(?:^|\s)if\s/);
+  if (start < 0) return null;
+  const text = body.slice(start).replace(/^\s*if\s+/, '');
+  let depth = 0;
+  let quoted = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const c = text[i];
+    if (c === '"') quoted = !quoted;
+    if (quoted) continue;
+    if (c === '(' || c === '[') depth += 1;
+    else if (c === ')' || c === ']') depth -= 1;
+    else if (depth === 0 && c === ',') return text.slice(0, i).trim() || null;
+    else if (depth === 0 && /^\s+in\s/.test(text.slice(i)))
+      return text.slice(0, i).trim() || null;
+  }
+  return text.trim() || null;
 }
 
 /** Split a line into quoted strings and everything else. */
@@ -194,8 +220,7 @@ export function checkCommandLine(raw, known = new Set()) {
       token.replace(/^(?:[icbo]+[0-9]*\.|L[0-9]*\.|D[0-9]*\.)/, ''),
     )
     .filter((token) => IDENTIFIER.test(token) && known.has(token));
-  const ifClause =
-    (body.match(/(?:^|\s)if\s+(.+?)(?=\s+in\s|,|$)/) || [])[1] || null;
+  const ifClause = readIfClause(body);
   if (spec.name === 'spshape2dta') {
     const m = body.match(
       /^(?:([A-Za-z_][A-Za-z0-9_]*))?\s*(?:,\s*(replace)?\s*)?$/,
@@ -397,10 +422,47 @@ export function buildDoFile({
   // from the shapefile) uses them; otherwise each spatial model gets
   // inverse-distance weights on its complete cases.
   const userWeights = commands.some((c) => c.userWeights || c.needsShapes);
+  // Results go back to the map by row (hev_id) and, for census areas, GEOID.
+  const mapKeys = variables.some((v) => v.name === 'geoid')
+    ? 'hev_id geoid'
+    : 'hev_id';
 
   let graphs = 0;
   let models = 0;
-  out.push('', 'local hev_models');
+  out.push('', 'local hev_models', 'local hev_n = 0');
+  // How the results table names a model's estimation and its outcome.
+  const methodOf = (c) => {
+    const options = c.line.split(',').slice(1).join(',');
+    if (c.name === 'regress')
+      return /vce\(\s*(robust|r|cluster)/.test(options)
+        ? 'OLS regression (robust standard errors)'
+        : 'OLS regression';
+    if (c.name === 'spregress') {
+      const lag = /dvarlag\(/.test(options);
+      const error = /errorlag\(/.test(options);
+      const kind =
+        lag && error
+          ? 'Spatial autoregressive model with spatial errors'
+          : lag
+            ? 'Spatial lag model'
+            : error
+              ? 'Spatial error model'
+              : 'Spatial regression';
+      return `${kind} (${/\bml\b/.test(options) ? 'maximum likelihood' : 'GS2SLS'})`;
+    }
+    return (
+      {
+        logit: 'Logistic regression',
+        poisson: 'Poisson regression',
+        nbreg: 'Negative binomial regression',
+        spreg: 'Spatial regression',
+      }[c.name] || c.name
+    );
+  };
+  const outcomeOf = (c) => {
+    const v = variables.find((x) => x.name === c.vars[0]);
+    return labelText(v?.tableLabel || v?.label || c.vars[0] || '');
+  };
   commands.forEach((c, i) => {
     const n = i + 1;
     out.push('', `* Step ${n}: ${c.line}`);
@@ -461,6 +523,14 @@ export function buildDoFile({
         `if \`hev_rc' == 0 {`,
         `  estimates store m${models}`,
         `  local hev_models \`hev_models' m${models}`,
+        "  local hev_n = `hev_n' + 1",
+        `  local hev_col\`hev_n' "(\`hev_n') ${methodOf(c)}"`,
+        // For the map: each area's fitted value and residual.
+        '  capture drop hev_fit hev_res',
+        '  capture predict double hev_fit if e(sample)',
+        "  capture generate double hev_res = `e(depvar)' - hev_fit if e(sample)",
+        `  capture export delimited ${mapKeys} hev_fit hev_res using "${MAP_FILE_PREFIX}m${models}.csv" if e(sample), replace`,
+        '  capture drop hev_fit hev_res',
         '}',
       );
     }
@@ -475,15 +545,158 @@ export function buildDoFile({
       ...STEP(n, '_rc'),
     );
   }
+  // One row per regressor across models: each model's main equation is
+  // named after its dependent variable, so those are merged (W rows stay).
+  const depvars = [
+    ...new Set(
+      commands
+        .filter((c) => c.kind === 'model' && c.vars[0])
+        .map((c) => c.vars[0]),
+    ),
+  ];
+  // Outcomes of spatial lag models: their W row is the spatial lag.
+  const spatialDepvars = [
+    ...new Set(
+      commands
+        .filter((c) => c.name === 'spregress' && /dvarlag\(/.test(c.line))
+        .map((c) => c.vars[0])
+        .filter(Boolean),
+    ),
+  ];
+  const eqrecode = depvars.length
+    ? ` eqrecode(${depvars.map((d) => `${d} = xb`).join(' ')})`
+    : '';
+  // Title: the estimation, then the dependent variable.
+  const modelCommands = commands.filter((c) => c.kind === 'model');
+  const methods = [...new Set(modelCommands.map(methodOf))];
+  const outcomes = [...new Set(modelCommands.map(outcomeOf))];
+  // Titles and notes may run past a variable label's 80 characters.
+  const tableText = (text) =>
+    String(text ?? '')
+      .replace(/["`$\\]/g, "'")
+      .replace(/[\r\n]+/g, ' ')
+      .slice(0, 240);
+  const tableTitle = tableText(
+    `Table 1. ${methods.join('; ')}: ${outcomes.join(', ')}`,
+  );
+  // The PDF table is wide enough to keep the title on one line (a 65%-wide
+  // table holds about 67 characters of the bold title).
+  const pdfWidth = Math.min(100, Math.max(65, Math.ceil(tableTitle.length)));
+  // One heading per model: the outcome for a single model, "(n) method"
+  // when there are several (the outcome is in the title).
+  const singleHeading = modelCommands.length === 1 ? outcomes[0] : null;
+  // Notes, one per line: stars, standard errors, sources, spatial weights.
+  const usedVars = new Set(modelCommands.flatMap((c) => c.vars));
+  const sources = [
+    ...new Set(
+      variables
+        .filter((v) => usedVars.has(v.name) && v.source)
+        .map((v) => v.source),
+    ),
+  ];
+  const contiguity = commands.find(
+    (c) =>
+      c.name === 'spmatrix' && /^spmatrix\s+create\s+contiguity/.test(c.line),
+  );
+  const weightsNote = modelCommands.some((c) => c.spatial)
+    ? contiguity
+      ? `Spatial weights: ${/\brook\b/.test(contiguity.line) ? 'rook' : 'queen'} contiguity, ${/normalize\(\s*row/.test(contiguity.line) ? 'row-standardized' : 'spectral normalization'}.`
+      : userWeights
+        ? null
+        : 'Spatial weights: inverse distance (miles), on the areas with valid values.'
+    : null;
+  const tableNotes = [
+    '*** p < .001, ** p < .01, * p < .05.',
+    'Standard errors in parentheses.',
+    sources.length ? `Data: ${sources.join('; ')}.` : null,
+    weightsNote,
+  ]
+    .filter(Boolean)
+    .map(tableText);
   if (models)
     out.push(
       '',
-      '* The models that ran, side by side.',
-      `if "\`hev_models'" != "" capture noisily etable, estimates(\`hev_models') export("results.xlsx", replace)`,
+      '* The models that ran, side by side, as a publication table: estimation',
+      '* and outcome in the title, variable labels, coefficients to 3 decimals',
+      '* with stars, standard errors in parentheses, observations and fit, and',
+      '* notes one per line. Saved for Word, LaTeX, PDF and Excel.',
+      `if "\`hev_models'" != "" {`,
+      ...variables
+        .filter((v) => v.tableLabel && usedVars.has(v.name))
+        .map(
+          (v) =>
+            `  capture label variable ${v.name} "${labelText(v.tableLabel)}"`,
+        ),
+      `  capture noisily etable, estimates(\`hev_models')${eqrecode} column(index) cstat(_r_b, nformat(%9.3f)) cstat(_r_se, nformat(%9.3f) sformat("(%s)")) cstat(_r_p) mstat(N, nformat(%12.0fc) label("Observations")) mstat(r2, nformat(%5.3f) label("R²")) mstat(r2_p, nformat(%5.3f) label("Pseudo R²")) mstat(ll, nformat(%12.1fc) label("Log likelihood")) title("${tableTitle}")`,
+      '  if _rc == 0 {',
+      '    capture collect stars _r_p 0.001 "***" 0.01 "**" 0.05 "*", attach(_r_b)',
+      ...tableNotes.map((n) => `    capture collect notes "${n}"`),
+      ...(singleHeading
+        ? [
+            `    capture collect label levels cmdset 1 "${singleHeading}", modify`,
+          ]
+        : [
+            "    forvalues hev_i = 1/`hev_n' {",
+            "      capture collect label levels cmdset `hev_i' \"`hev_col`hev_i''\", modify",
+            '    }',
+          ]),
+      '    capture collect style header cmdset, level(label)',
+      // The spatial lag row named as such; the residual variance left out
+      // (moved off the row dimension, so the layout skips it).
+      ...spatialDepvars.flatMap((d) => [
+        `    capture collect recode colname ${d} = hev_rho, fortags(coleq[W])`,
+        `    capture collect recode colname "var(e.${d})" = hev_sigma2`,
+      ]),
+      ...(spatialDepvars.length
+        ? ['    capture collect remap colname[hev_sigma2] = hev_omitted']
+        : []),
+      '    capture collect label levels colname hev_rho "Spatial lag (ρ)" _cons "Constant", modify',
+      '    capture collect layout (coleq#colname#result[_r_b _r_se] result[N r2 r2_p ll]) (cmdset#stars)',
+      '    capture collect style header stars, level(hide)',
+      '    capture collect style cell, font("Times New Roman", size(10))',
+      '    capture collect style title, font("Times New Roman", size(11) bold)',
+      '    capture collect style notes, font("Times New Roman", size(9))',
+      '    capture collect style cell cell_type[column-header], halign(center)',
+      '    capture collect style cell cell_type[item]#stars[value], halign(right)',
+      '    capture collect style cell cell_type[item]#stars[label], halign(left)',
+      '    capture collect style cell stars[label], margin(left, width(0))',
+      '    capture collect style cell stars[value], margin(right, width(0))',
+      `    capture collect style putpdf, width(${pdfWidth}%)`,
+      '    capture collect style putdocx, layout(autofitcontents)',
+      '    capture noisily collect export "results.docx", replace',
+      '    capture noisily collect export "results.tex", tableonly replace',
+      '    capture noisily collect export "results.pdf", replace',
+      '    capture noisily collect export "results.xlsx", replace',
+      '  }',
+      '}',
+    );
+  // Variables the session made (egen), for the map too.
+  const created = [...new Set(commands.map((c) => c.creates).filter(Boolean))];
+  if (created.length)
+    out.push(
+      '',
+      `capture export delimited ${mapKeys} ${created.join(' ')} using "${MAP_FILE_PREFIX}vars.csv", replace`,
     );
   out.push('', 'display as text "HEV_DONE"', '');
   return out.join('\n');
 }
+
+/**
+ * Results the map can show, written by the do-file: map_m<k>.csv (hev_id —
+ * the data.csv row — and geoid when the areas have one, then hev_fit and
+ * hev_res for model k) and map_vars.csv (the same keys and the variables
+ * egen made).
+ */
+export const MAP_FILE_PREFIX = 'map_';
+
+/**
+ * One geometry (JSON) per data.csv row, saved for layers whose areas are not
+ * census tracts, counties or states, so their rows can be shown on the map.
+ */
+export const SESSION_SHAPES_FILE = 'shapes.geojsonl';
+
+/** More areas than this are not saved as session shapes (too large). */
+export const MAX_SESSION_SHAPES = 20000;
 
 /** Read the HEV_STEP markers from a log: [{step, rc}]. */
 export function stepResults(log) {
@@ -507,9 +720,11 @@ export function readableLog(log) {
   return (start >= 0 ? lines.slice(start) : [])
     .filter(
       (line) =>
-        !/^\s*(?:\.\s+|>\s*)?(label variable|notes:|display as text "HEV_|capture which|local hev_|if `hev_|estimates store|if _rc|else \{|\}$|\d+\. )/.test(
+        !/^\s*(?:\.\s+|>\s*)?((?:capture )?label variable|capture collect|forvalues hev_|notes:|display as text "HEV_|capture which|local hev_|if `hev_|estimates store|if _rc|else \{|\}$|\d+\. |capture (?:drop hev_|predict double hev_|generate double hev_|export delimited hev_id))/.test(
           line,
-        ) && !/^HEV_(STEP|DONE)/.test(line.trim()),
+        ) &&
+        !/^HEV_(STEP|DONE)/.test(line.trim()) &&
+        !/^\(?file map_\S+ saved/.test(line.trim()),
     )
     .join('\n')
     .replace(/\n{3,}/g, '\n\n');

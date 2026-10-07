@@ -274,6 +274,8 @@
   "src/reports/reportData.js",
   "src/reports/reportPanel.js",
   "src/analysis/stataCommands.js",
+  "src/analysis/analysisMap.js",
+  "src/analysis/analysisMap.test.mjs",
   "src/analysis/layerData.test.mjs",
   "server/analysis/layerData.js",
   "src/analysis/rCommands.js",

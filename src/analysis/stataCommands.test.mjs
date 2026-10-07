@@ -6,6 +6,7 @@ import {
   buildDoFile,
   checkCommandLine,
   checkCommandLines,
+  readIfClause,
   readableLog,
   stepResults,
   variableName,
@@ -300,6 +301,87 @@ test('spshape2dta links the session shapefile and spmatrix builds the weights', 
   assert.match(text, /spset, modify shpfile\(areas_shp\)/);
   // The user's W is used: no automatic distance weights replace it.
   assert.doesNotMatch(text, /spmatrix create idistance/);
+});
+
+test('an if condition keeps the commas inside its parentheses', () => {
+  assert.equal(
+    readIfClause('y x if !missing(y, x), vce(robust)'),
+    '!missing(y, x)',
+  );
+  assert.equal(
+    readIfClause('y x if inlist(state, "MA", "RI") in 1/50'),
+    'inlist(state, "MA", "RI")',
+  );
+  assert.equal(readIfClause('y x if poverty != .'), 'poverty != .');
+  assert.equal(readIfClause('y x, robust'), null);
+  const { commands } = checkCommandLines(
+    [
+      'spregress poverty bachelors if !missing(poverty, bachelors), gs2sls dvarlag(W)',
+    ],
+    vars,
+  );
+  const text = buildDoFile({
+    title: 'If',
+    variables: vars,
+    commands,
+    areaCount: 100,
+  });
+  assert.ok(
+    text.includes(
+      'keep if !missing(poverty, bachelors) & (!missing(poverty, bachelors))\n',
+    ),
+  );
+});
+
+test('the results table names the estimation and outcome, with notes one per line', () => {
+  const { commands } = checkCommandLines(
+    [
+      'regress poverty bachelors',
+      'spregress poverty bachelors if !missing(poverty, bachelors), ml dvarlag(W)',
+    ],
+    vars,
+  );
+  const text = buildDoFile({
+    title: 'Table',
+    variables: vars,
+    commands,
+    areaCount: 100,
+  });
+  assert.ok(text.includes('column(index)'));
+  assert.ok(text.includes('eqrecode(poverty = xb)'));
+  assert.ok(
+    text.includes(
+      'title("Table 1. OLS regression; Spatial lag model (maximum likelihood): ',
+    ),
+  );
+  assert.ok(!text.includes('Husky Eye View:'));
+  assert.ok(text.includes('"(`hev_n\') OLS regression"'));
+  assert.ok(text.includes('collect stars _r_p 0.001 "***"'));
+  assert.ok(
+    text.includes(
+      'collect recode colname poverty = hev_rho, fortags(coleq[W])',
+    ),
+  );
+  assert.ok(text.includes('"Spatial lag (ρ)"'));
+  assert.ok(
+    text.includes('collect recode colname "var(e.poverty)" = hev_sigma2'),
+  );
+  assert.ok(text.includes('collect remap colname[hev_sigma2] = hev_omitted'));
+  assert.ok(!/Residual variance/.test(text));
+  // Notes: no N line; stars, then standard errors, each its own note.
+  assert.ok(!/collect notes "N /.test(text));
+  const notes = text.match(/collect notes "[^"]*"/g);
+  assert.equal(
+    notes[0],
+    'collect notes "*** p < .001, ** p < .01, * p < .05."',
+  );
+  assert.equal(notes[1], 'collect notes "Standard errors in parentheses."');
+  assert.ok(text.includes('result[N r2 r2_p ll]'));
+  assert.ok(
+    text.indexOf('collect label levels cmdset') <
+      text.indexOf('collect export "results.docx"'),
+    'labels are set before the table is saved',
+  );
 });
 
 test('the shapefile is a polygon file with clockwise outer rings and one row per area', () => {

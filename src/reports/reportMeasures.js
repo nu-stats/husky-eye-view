@@ -29,6 +29,9 @@ const CS = ['county', 'state'];
 
 const measure = (id, spec) => Object.freeze({ id, decimals: 1, ...spec });
 
+// tableLabel: how a results table names the measure, when not its label.
+const TABLE_LABELS = { poverty: 'Poverty Rate' };
+
 export const REPORT_MEASURES = Object.freeze([
   // ---- Population and immigration -----------------------------------------
   measure('population', {
@@ -63,6 +66,7 @@ export const REPORT_MEASURES = Object.freeze([
   measure('foreign-born-share', {
     label: 'Foreign-born, % of residents',
     short: 'Foreign-born %',
+    tableLabel: '%Foreign-born',
     key: 'fb24',
     format: 'percent',
     years: '2020–24',
@@ -209,6 +213,7 @@ export const REPORT_MEASURES = Object.freeze([
       geographies: CT,
       layerId,
       aliases,
+      ...(TABLE_LABELS[id] && { tableLabel: TABLE_LABELS[id] }),
     }),
   ),
   measure('median-income', {

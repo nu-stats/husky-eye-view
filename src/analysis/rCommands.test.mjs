@@ -10,7 +10,11 @@ import {
   checkRLines,
   readableRLog,
 } from './rCommands.js';
-import { findR, prepareRSession } from '../../server/analysis/rSession.js';
+import {
+  findR,
+  prepareRSession,
+  rProcessEnv,
+} from '../../server/analysis/rSession.js';
 
 const vars = analysisVariables('tract');
 const dataVars = new Set(vars.map((v) => v.name));
@@ -197,4 +201,26 @@ test('an R session folder holds the data, the script and, to open it, an RStudio
     { env },
   );
   assert.equal(refused.ok, false);
+});
+
+test('R from a conda environment gets its version and its libraries on PATH', () => {
+  const rscript = 'C:\\envs\\hev-r\\lib\\R\\bin\\x64\\Rscript.exe';
+  const r = findR({
+    env: { HEV_R_PATH: rscript },
+    platform: 'win32',
+    exists: (f) => f === rscript,
+    list: (dir) =>
+      dir.endsWith('conda-meta')
+        ? ['r-base-4.4.3-h1234_0.json', 'r-sf-1.1.3.json']
+        : [],
+  });
+  assert.equal(r.version, '4.4.3');
+  assert.ok(r.pathPrefix.includes('C:\\envs\\hev-r\\Library\\bin'));
+  const env = rProcessEnv(r, { Path: 'C:\\Windows' });
+  assert.match(env.Path, /^C:\\envs\\hev-r;/);
+  assert.match(env.Path, /C:\\Windows$/);
+  // A standard install needs nothing added.
+  assert.deepEqual(rProcessEnv({ pathPrefix: [] }, { Path: 'x' }), {
+    Path: 'x',
+  });
 });

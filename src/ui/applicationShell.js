@@ -458,6 +458,7 @@ export class StyleManager extends ShellFacade {
       () => import('../analysis/analysisPanel.js'),
       ({ RAnalysisPanel }) =>
         (this.rAnalysis = new RAnalysisPanel({
+          viewer,
           showToast: (message) => this._showToast(message),
           readView,
           readDataManager: () => this._dataManager,
@@ -470,6 +471,7 @@ export class StyleManager extends ShellFacade {
       () => import('../analysis/analysisPanel.js'),
       ({ StataAnalysisPanel }) =>
         (this.stataAnalysis = new StataAnalysisPanel({
+          viewer,
           showToast: (message) => this._showToast(message),
           readDataManager: () => this._dataManager,
           readView,

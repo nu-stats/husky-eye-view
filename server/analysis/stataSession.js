@@ -24,6 +24,8 @@ import { STATES, findState } from '../../src/reports/areaReport.js';
 import { REPORT_GEOGRAPHIES } from '../../src/reports/reportMeasures.js';
 import {
   MAX_DO_FILE_BYTES,
+  MAX_SESSION_SHAPES,
+  SESSION_SHAPES_FILE,
   SHAPEFILE_NAME,
   analysisVariables,
   buildDoFile,
@@ -400,16 +402,24 @@ export function prepareAnalysisSession(
   let areas;
   let rows;
   let shapeAreas;
+  // Layers whose areas are not census tracts, counties or states keep their
+  // shapes with the session, so the panel can show its rows on the map.
+  let saveShapes = false;
   if (layerMode) {
-    const read = needsShapes
-      ? readLayerAreas({
-          baseUrl: request.baseUrl,
-          publicDir: dataDir,
-          state,
-          view,
-          withGeometry: true,
-        })
-      : layerRead;
+    const geoids = layerRead.areas.map((a) => String(a.properties.geoid ?? ''));
+    const lengths = new Set(geoids.map((g) => g.length));
+    const census = lengths.size === 1 && [2, 5, 11].includes([...lengths][0]);
+    saveShapes = !census && layerRead.areas.length <= MAX_SESSION_SHAPES;
+    const read =
+      needsShapes || saveShapes
+        ? readLayerAreas({
+            baseUrl: request.baseUrl,
+            publicDir: dataDir,
+            state,
+            view,
+            withGeometry: true,
+          })
+        : layerRead;
     areas = read.areas;
     rows = layerRows(variables, areas);
     shapeAreas = areas.map((a, i) => ({
@@ -462,6 +472,12 @@ export function prepareAnalysisSession(
     datasetCsv(variables, rows),
     'utf8',
   );
+  if (saveShapes)
+    writeFileSync(
+      path.join(folder, SESSION_SHAPES_FILE),
+      areas.map((a) => JSON.stringify(a.geometry ?? null)).join('\n'),
+      'utf8',
+    );
   if (doFile) writeFileSync(path.join(folder, engine.userFile), doFile, 'utf8');
   if (needsShapes) {
     const shapes = writeShapefile(shapeAreas);
