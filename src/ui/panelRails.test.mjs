@@ -273,6 +273,39 @@ test('beside the dock, the row lifts just enough to clear a low obstacle beneath
   );
 });
 
+test('the rows either side of the dock stay level when one must rise', () => {
+  const right = bottomRow();
+  const left = bottomRow();
+  // The Power Up chip lifts the right-hand row (as above); nothing is under
+  // the left-hand row.
+  right.options.obstacles = [
+    element('key-setup-chip', { left: 1300, width: 226, top: 850, height: 36 }),
+  ];
+  left.options.partner = right.stack;
+  right.options.partner = left.stack;
+  layoutBottomPanelRow({ ...left.options, side: 'left' });
+  assert.equal(
+    left.stack.style.getPropertyValue('--bottom-rail-offset'),
+    '18.0px',
+  );
+  right.run();
+  // The right row rises, and the left one with it.
+  assert.equal(
+    right.stack.style.getPropertyValue('--bottom-rail-offset'),
+    '60.8px',
+  );
+  assert.equal(
+    left.stack.style.getPropertyValue('--bottom-rail-offset'),
+    '60.8px',
+  );
+  // A later left pass keeps the shared height.
+  layoutBottomPanelRow({ ...left.options, side: 'left' });
+  assert.equal(
+    left.stack.style.getPropertyValue('--bottom-rail-offset'),
+    '60.8px',
+  );
+});
+
 test('with no room beside the dock the row moves to the corner, above what is beneath it', () => {
   const f = bottomRow({ dockRight: 1400 });
   const chip = element('key-setup-chip', {

@@ -292,6 +292,7 @@ export class PanelLayoutController {
       onCollapse: (panel) => this._syncPanelCollapseButton(panel),
       displayPanel: this._ppToggles,
       readDisplayScrollTop: this.readDisplayScrollTop,
+      partner: this._leftPanelStack,
     });
   }
 
@@ -426,6 +427,7 @@ export class PanelLayoutController {
       obstacles: document.querySelectorAll(RIGHT_STACK_OBSTACLE_SELECTOR),
       windowRef: window,
       onCollapse: (panel) => this._syncPanelCollapseButton(panel),
+      partner: this._rightPanelStack,
     });
     if (this._leftPanelStack.dataset.layoutMode === 'bottom') return;
     layoutLeftPanelRail({

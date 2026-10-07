@@ -74,6 +74,7 @@ export function layoutBottomPanelRow({
   displayPanel = null,
   readDisplayScrollTop = () => 0,
   getComputedStyle = (element) => windowRef.getComputedStyle(element),
+  partner = null,
 }) {
   if (!stack) return;
   const heightVar = `--${side}-stack-max-height`;
@@ -197,7 +198,24 @@ export function layoutBottomPanelRow({
       ),
     };
   }
-  const { offset } = placement;
+  // The rows either side of the dock stay level: when one must rise (the
+  // Power Up chip under the right-hand row on a narrower window), the other
+  // rises with it.
+  const ownOffset = placement.offset;
+  stack.dataset.ownOffset = ownOffset.toFixed(1);
+  const partnerDocked =
+    partner?.dataset?.layoutMode === 'bottom' &&
+    partner.dataset.placement === 'docked' &&
+    placement.mode === 'docked';
+  const partnerOwn = partnerDocked ? Number(partner.dataset.ownOffset) || 0 : 0;
+  const offset = Math.max(ownOffset, partnerOwn);
+  if (
+    partnerDocked &&
+    ownOffset > (Number(partner.dataset.bottomOffset) || 0)
+  ) {
+    setIfChanged(partner, '--bottom-rail-offset', `${ownOffset.toFixed(1)}px`);
+    partner.dataset.bottomOffset = ownOffset.toFixed(1);
+  }
   const topReserve = Math.max(96, viewportHeight * BOTTOM_ROW_TOP_RESERVE);
   const maxHeight = Math.max(160, viewportHeight - offset - topReserve);
   const cornerRight = placement.mode === 'corner' && side === 'right';
