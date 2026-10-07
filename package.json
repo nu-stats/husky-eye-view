@@ -1,8 +1,8 @@
 {
   "name": "gods-eye-view",
   "private": true,
-  "version": "0.2.4",
-  "description": "Husky Eye View \u2014 a Northeastern University research fork of God's Eye View: photorealistic 3D globe with US-focused live aircraft, ships, fires, radio and CCTV, encrypted research datasets, and hands-free voice control. Runs in a browser.",
+  "version": "0.2.5",
+  "description": "Husky Eye View — a Northeastern University research fork of God's Eye View: photorealistic 3D globe with US-focused live aircraft, ships, fires, radio and CCTV, encrypted research datasets, and hands-free voice control. Runs in a browser.",
   "type": "module",
   "license": "MIT",
   "author": "Northeastern University researchers (nu-stats); based on God's Eye View by Bilawal Sidhu",
