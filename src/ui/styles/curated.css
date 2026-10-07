@@ -414,3 +414,40 @@
 .stata-files a {
   color: var(--accent);
 }
+
+/* Variables: names (what you type) in bold monospace, labels beside them. */
+.stata-variables {
+  font-size: 12.5px;
+}
+.stata-variables summary {
+  font-size: 12px;
+}
+.stata-variable-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  max-height: 240px;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  overflow: auto;
+  border-radius: 4px;
+  background: #0f1115;
+}
+.stata-variable-list dt {
+  margin: 0;
+}
+.stata-variable-list dt code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #e8eaed);
+}
+.stata-variable-list dd {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text-secondary, #b6b9be);
+}
+.stata-layer select {
+  max-width: 340px;
+}

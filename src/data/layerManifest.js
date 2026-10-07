@@ -60,6 +60,8 @@ export const LAYER_GROUP_NOTES = Object.freeze({
   [ENVIRONMENT_GROUP]:
     'Counties from far out, tracts as you zoom in; large parks first, every park closer in.',
   [RESEARCH_DATA_GROUP]: 'Each needs a key from the project owner.',
+  'Data Analysis':
+    'Compare cities, rank areas, and run statistics on any layer.',
   [VIEWS_GROUP]: 'Ride a helicopter or fly a drone.',
   'Live Feeds': 'Real-time data across the United States.',
 });
@@ -693,6 +695,13 @@ export const LAYER_MANIFEST = Object.freeze(
 
 /** The group whose locked research rows never start folded. */
 export const RESEARCH_GROUP = RESEARCH_DATA_GROUP;
+
+/**
+ * The tools that work on the layers rather than being one (Curated Flights,
+ * Area Reports, Stata Analysis, R Analysis): their own group, listed right after
+ * the research data, never folded at first.
+ */
+export const ANALYSIS_GROUP = 'Data Analysis';
 
 /** Every layer id, in share-link (sorted id) order. */
 export const REGISTERED_LAYER_IDS = Object.freeze(

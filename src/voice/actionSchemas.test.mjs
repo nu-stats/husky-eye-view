@@ -43,8 +43,10 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     // 2026-10-06 (later): ships and Walking View off, so the frame-layers enum
     // drops 'ais-live-vessels' and start_ground_view offers only 'drone'.
     // 2026-10-07: run_stata_analysis and open_in_stata (Stata on this computer),
-    // then spshape2dta / spmatrix contiguity weights in its description.
-    '9c1727621a5a9db6739de2a28dd1874737a6064171acf629019abf6e2fec7eff',
+    // then spshape2dta / spmatrix contiguity weights in its description;
+    // run_r_analysis and open_in_r (R on this computer); a layer choice for
+    // all four Stata and R tools.
+    '02027e4ba28ed551194b9eaff18a646a6c4daf4db47b71652cd53e14ae3eb7c8',
   );
 });
 

@@ -97,6 +97,34 @@ test('a refusal moves to the next mirror instead of ending the fan-out', async (
   assert.deepEqual(tried, ENDPOINTS.slice(0, 2), 'the healthy mirror must be reached, and no further');
 });
 
+test('a silent mirror is joined by the next, and the first answer wins', async () => {
+  let aborted = false;
+  const fetchImpl = (url, options) =>
+    url === ENDPOINTS[0]
+      ? new Promise((_, reject) => {
+          // Never answers on its own; only the abort ends it.
+          options.signal.addEventListener('abort', () => {
+            aborted = true;
+            reject(new Error('aborted'));
+          });
+        })
+      : Promise.resolve({
+          status: 200,
+          headers: { get: () => 'application/json' },
+        });
+  const started = Date.now();
+  const payload = await fetchOverpassPayload('data=x', 1e6, {
+    endpoints: ENDPOINTS,
+    fetchImpl,
+    readBody: async () => '{"elements":[]}',
+    simplify: (body) => body,
+    staggerMs: 30,
+  });
+  assert.equal(payload.endpoint, ENDPOINTS[1]);
+  assert.ok(Date.now() - started < 1000, 'no 22-second wait on a silent mirror');
+  assert.equal(aborted, true, 'the silent mirror is cancelled');
+});
+
 test('every mirror is asked with a User-Agent that identifies the application', async () => {
   // The OSM API usage policy asks for a "Valid User-Agent identifying
   // application and version". Every outbound request must carry it, not just
@@ -124,7 +152,7 @@ test('every mirror is asked with a User-Agent that identifies the application', 
     const agent = String(request.agent || '');
     assert.match(
       agent,
-      /^gods-eye-view\/\d/,
+      /^husky-eye-view\/\d/,
       `${request.url} must name the application and its version`,
     );
     assert.ok(
@@ -133,7 +161,7 @@ test('every mirror is asked with a User-Agent that identifies the application', 
     );
     assert.match(
       agent,
-      /github\.com\/bilawalsidhu\/gods-eye-view/,
+      /github\.com\/nu-stats\/husky-eye-view/,
       `${request.url} must carry a route back to the project`,
     );
   }

@@ -6,6 +6,7 @@ import { OWN_KEY_PROMPTS, openResearchKeyPrompt } from './researchKeyPrompt.js';
 import {
   LAYER_GROUP_NOTES,
   LAYER_MANIFEST,
+  ANALYSIS_GROUP,
   RESEARCH_GROUP,
 } from '../data/layerManifest.js';
 import {
@@ -470,32 +471,9 @@ export class LayerPanel {
       if (!layerListedInProfile(layer, showAll)) continue;
       const group = groupOf(layer);
       if (previousGroup === RESEARCH_GROUP && group !== previousGroup) {
-        this._toggleContainer.appendChild(this._buildCuratedRow());
-        this._toggleContainer.appendChild(this._buildReportsRow());
-        this._toggleContainer.appendChild(this._buildStataRow());
+        this._appendAnalysisGroup();
       }
-      if (group && group !== previousGroup) {
-        const heading = document.createElement('button');
-        heading.type = 'button';
-        heading.className = 'data-layer-group-heading';
-        heading.dataset.group = group;
-        const label = document.createElement('span');
-        label.className = 'data-group-label';
-        label.textContent = group;
-        const count = document.createElement('span');
-        count.className = 'data-group-on';
-        heading.appendChild(label);
-        heading.appendChild(count);
-        if (LAYER_GROUP_NOTES[group]) {
-          const note = document.createElement('span');
-          note.className = 'data-group-note';
-          note.textContent = LAYER_GROUP_NOTES[group];
-          heading.appendChild(note);
-        }
-        this._bind(heading, 'click', () => this._toggleGroup(group));
-        this._toggleContainer.appendChild(heading);
-        this._groups.set(group, { heading, count, rows: [] });
-      }
+      if (group && group !== previousGroup) this._appendGroupHeading(group);
       previousGroup = group;
       const row = document.createElement('div');
       row.className = 'data-toggle-row';
@@ -656,24 +634,58 @@ export class LayerPanel {
           this._buildViewRow(TIME_LENS_ROW, group),
         );
     }
-    if (previousGroup === RESEARCH_GROUP) {
-      this._toggleContainer.appendChild(this._buildCuratedRow());
-      this._toggleContainer.appendChild(this._buildReportsRow());
-      this._toggleContainer.appendChild(this._buildStataRow());
-    }
+    // After the research data, also when that group is the last one listed.
+    if (this._groups.has(RESEARCH_GROUP)) this._appendAnalysisGroup();
     this._toggleContainer.appendChild(empty);
     this._toggleContainer.appendChild(this._buildProfileToggle(layers));
     this._applyFilter();
     this._syncOnState(layers);
   }
 
+  /** A group's heading button (label, switched-on count, note). */
+  _appendGroupHeading(group) {
+    const heading = document.createElement('button');
+    heading.type = 'button';
+    heading.className = 'data-layer-group-heading';
+    heading.dataset.group = group;
+    const label = document.createElement('span');
+    label.className = 'data-group-label';
+    label.textContent = group;
+    const count = document.createElement('span');
+    count.className = 'data-group-on';
+    heading.appendChild(label);
+    heading.appendChild(count);
+    if (LAYER_GROUP_NOTES[group]) {
+      const note = document.createElement('span');
+      note.className = 'data-group-note';
+      note.textContent = LAYER_GROUP_NOTES[group];
+      heading.appendChild(note);
+    }
+    this._bind(heading, 'click', () => this._toggleGroup(group));
+    this._toggleContainer.appendChild(heading);
+    this._groups.set(group, { heading, count, rows: [] });
+  }
+
   /**
-   * Research Data → Curated Flights: opens the city-comparison tour panel
+   * Data Analysis, right after the research data: the tools that work on
+   * the layers (Curated Flights, Area Reports, Stata Analysis, R Analysis).
+   */
+  _appendAnalysisGroup() {
+    if (this._groups.has(ANALYSIS_GROUP)) return;
+    this._appendGroupHeading(ANALYSIS_GROUP);
+    this._toggleContainer.appendChild(this._buildCuratedRow());
+    this._toggleContainer.appendChild(this._buildReportsRow());
+    this._toggleContainer.appendChild(this._buildStataRow());
+    this._toggleContainer.appendChild(this._buildRRow());
+  }
+
+  /**
+   * Data Analysis → Curated Flights: opens the city-comparison tour panel
    * (src/curated/curatedPanel.js). It has its own key, so it reads LOCKED
    * until that key is in this browser session.
    */
   _buildCuratedRow() {
-    const group = RESEARCH_GROUP;
+    const group = ANALYSIS_GROUP;
     const row = document.createElement('div');
     row.className = 'data-toggle-row data-view-row data-curated-row';
     row.dataset.group = group;
@@ -725,11 +737,11 @@ export class LayerPanel {
   }
 
   /**
-   * Research Data → Area Reports: rank counties, tracts or states by any
+   * Data Analysis → Area Reports: rank counties, tracts or states by any
    * layer and save PDF / CSV / XLSX (src/reports/reportPanel.js). No key.
    */
   _buildReportsRow() {
-    const group = RESEARCH_GROUP;
+    const group = ANALYSIS_GROUP;
     const row = document.createElement('div');
     row.className =
       'data-toggle-row data-view-row data-curated-row data-reports-row';
@@ -767,7 +779,7 @@ export class LayerPanel {
   }
 
   _buildStataRow() {
-    const group = RESEARCH_GROUP;
+    const group = ANALYSIS_GROUP;
     const row = document.createElement('div');
     row.className =
       'data-toggle-row data-view-row data-curated-row data-stata-row';
@@ -800,6 +812,43 @@ export class LayerPanel {
     const meta = document.createElement('div');
     meta.className = 'data-toggle-meta';
     meta.textContent = 'Stata 18 or 19 on this computer · do-file and log kept';
+    row.append(top, meta);
+    return row;
+  }
+
+  _buildRRow() {
+    const group = ANALYSIS_GROUP;
+    const row = document.createElement('div');
+    row.className = 'data-toggle-row data-view-row data-curated-row data-r-row';
+    row.dataset.group = group;
+    this._groups.get(group)?.rows.push({ row, label: 'r analysis' });
+    const top = document.createElement('div');
+    top.className = 'data-toggle-top';
+    const left = document.createElement('div');
+    left.className = 'data-toggle-left';
+    const icon = document.createElement('span');
+    icon.className = 'data-icon';
+    icon.textContent = 'R';
+    const name = document.createElement('span');
+    name.className = 'data-name';
+    name.textContent = 'R Analysis';
+    left.append(icon, name);
+    const right = document.createElement('div');
+    right.className = 'data-toggle-right';
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'data-toggle-btn data-view-start';
+    open.setAttribute('aria-label', 'Open R Analysis');
+    open.textContent = 'OPEN';
+    open.title = 'Run R on any layer, or open RStudio with the data in view';
+    this._bind(open, 'click', () =>
+      window.dispatchEvent(new CustomEvent('gev:r-analysis-open')),
+    );
+    right.appendChild(open);
+    top.append(left, right);
+    const meta = document.createElement('div');
+    meta.className = 'data-toggle-meta';
+    meta.textContent = 'R on this computer · script and log kept';
     row.append(top, meta);
     return row;
   }

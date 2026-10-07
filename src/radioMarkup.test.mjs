@@ -53,11 +53,11 @@ function realtimeTools() {
   return GEV_REALTIME_TOOLS;
 }
 
-test('Realtime schema exposes the authoritative 34-tool inventory', () => {
+test('Realtime schema exposes the authoritative 36-tool inventory', () => {
   const tools = realtimeTools();
-  assert.equal(tools.length, 34);
+  assert.equal(tools.length, 36);
   const names = tools.map((tool) => tool.name);
-  assert.equal(new Set(names).size, 34, 'tool names are unique');
+  assert.equal(new Set(names).size, 36, 'tool names are unique');
   assert.ok(names.includes('set_context_mode'));
   assert.ok(names.includes('control_cockpit'));
   assert.ok(names.includes('select_nearest_aircraft'));
@@ -297,6 +297,8 @@ test('no unchanged Realtime tool definition drifts silently', () => {
     'generate_area_report',
     'run_stata_analysis',
     'open_in_stata',
+    'run_r_analysis',
+    'open_in_r',
   ]);
   const unchanged = realtimeTools()
     .filter((tool) => !TOUCHED.has(tool.name))

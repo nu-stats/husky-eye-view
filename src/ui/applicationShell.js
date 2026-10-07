@@ -416,7 +416,7 @@ export class StyleManager extends ShellFacade {
       exitPanels: () => this._panelChrome.exitCockpit(),
     });
 
-    // Curated Flights and Area Reports (Data Layers → Research Data) load on
+    // Curated Flights and Area Reports (Data Layers → Data Analysis) load on
     // first use: most sessions never open them, and together they are ~200 KB
     // of code plus two panels. The first open event (or voice request) loads
     // the module and opens the panel; after that each panel listens itself.
@@ -435,6 +435,34 @@ export class StyleManager extends ShellFacade {
           showToast: (message) => this._showToast(message),
         })),
     );
+    // The map view as a lon/lat box plus the camera height, for "analyze
+    // what I am looking at" (Stata and R).
+    const readView = () => {
+      const rect = viewer.camera.computeViewRectangle?.();
+      if (!rect) return null;
+      const deg = (r) => (r * 180) / Math.PI;
+      return {
+        box: {
+          west: deg(rect.west),
+          south: deg(rect.south),
+          east: deg(rect.east),
+          north: deg(rect.north),
+        },
+        heightM: viewer.camera.positionCartographic?.height ?? Infinity,
+      };
+    };
+    this.rAnalysis = null;
+    this.ensureRAnalysis = lazyPanel(
+      this,
+      'gev:r-analysis-open',
+      () => import('../analysis/analysisPanel.js'),
+      ({ RAnalysisPanel }) =>
+        (this.rAnalysis = new RAnalysisPanel({
+          showToast: (message) => this._showToast(message),
+          readView,
+          readDataManager: () => this._dataManager,
+        })),
+    );
     this.stataAnalysis = null;
     this.ensureStataAnalysis = lazyPanel(
       this,
@@ -443,22 +471,8 @@ export class StyleManager extends ShellFacade {
       ({ StataAnalysisPanel }) =>
         (this.stataAnalysis = new StataAnalysisPanel({
           showToast: (message) => this._showToast(message),
-          // The map view as a lon/lat box plus the camera height, for
-          // "analyze what I am looking at".
-          readView: () => {
-            const rect = viewer.camera.computeViewRectangle?.();
-            if (!rect) return null;
-            const deg = (r) => (r * 180) / Math.PI;
-            return {
-              box: {
-                west: deg(rect.west),
-                south: deg(rect.south),
-                east: deg(rect.east),
-                north: deg(rect.north),
-              },
-              heightM: viewer.camera.positionCartographic?.height ?? Infinity,
-            };
-          },
+          readDataManager: () => this._dataManager,
+          readView,
         })),
     );
     this.ensureAreaReports = lazyPanel(
@@ -1642,6 +1656,7 @@ export class StyleManager extends ShellFacade {
     this.curatedFlights?.destroy();
     this.areaReports?.destroy();
     this.stataAnalysis?.destroy();
+    this.rAnalysis?.destroy();
     this.timeLens?.destroy();
     this._contextControls.disconnect();
     this._layerBindings.disconnect();

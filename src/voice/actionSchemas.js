@@ -958,6 +958,9 @@ const schemas = [
           type: 'string',
           enum: ['view', 'county', 'tract', 'state'],
         },
+        layer: {
+          type: 'string',
+        },
         state: {
           type: 'string',
         },
@@ -980,6 +983,55 @@ const schemas = [
         geography: {
           type: 'string',
           enum: ['view', 'county', 'tract', 'state'],
+        },
+        layer: {
+          type: 'string',
+        },
+        state: {
+          type: 'string',
+        },
+      },
+    },
+  },
+  // R on this computer (src/analysis/rCommands.js, server/providers/r.js).
+  {
+    name: 'run_r_analysis',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        geography: {
+          type: 'string',
+          enum: ['view', 'county', 'tract', 'state'],
+        },
+        layer: {
+          type: 'string',
+        },
+        state: {
+          type: 'string',
+        },
+        lines: {
+          type: 'array',
+          items: { type: 'string', maxLength: 600 },
+          minItems: 1,
+          maxItems: 20,
+        },
+      },
+      required: ['lines'],
+    },
+  },
+  {
+    name: 'open_in_r',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        geography: {
+          type: 'string',
+          enum: ['view', 'county', 'tract', 'state'],
+        },
+        layer: {
+          type: 'string',
         },
         state: {
           type: 'string',

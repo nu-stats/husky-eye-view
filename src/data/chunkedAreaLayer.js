@@ -992,6 +992,10 @@ export function createChunkedAreaLayer(
     name,
     icon,
     source,
+    // The folder the Stata and R boxes read when this layer is analyzed.
+    analysisSource: Object.freeze({
+      baseUrl: String(baseUrl).replace(/\/?$/, '/'),
+    }),
     updateInterval: 0,
     statsRefreshInterval: 1000,
 

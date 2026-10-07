@@ -1124,6 +1124,23 @@ STEP 67: Stata Analysis (October 7)
     log, data, graphs and results in Documents\HuskyEyeView-Analyses.
 
 
+STEP 68: Data Analysis, R, layers in Stata, faster traffic (October 7)
+-------------------------------------------------------------------------------
+  - Live traffic: the OpenStreetMap road servers refused the inherited
+    "gods-eye-view/0.1" name and the backups were silent, so roads never
+    came. The app now names itself (husky-eye-view, with this repo), asks the
+    fastest server first and the next after 3 s of silence: roads in 2 s,
+    all in 5 s.
+  - Data Layers -> Data Analysis: Curated Flights, Area Reports, Stata
+    Analysis and R Analysis together.
+  - Stata (and R): a Layer list (starting on the layer that is on) that uses
+    every field in that layer's files, an Areas choice (map view, one state,
+    everywhere), and a larger variable list with names beside labels.
+  - R Analysis (panel, voice run_r_analysis / open_in_r,
+    scripts/r-analysis.mjs): R 4.x on this computer; typed lines may call
+    only listed functions; spatial models with contiguity weights; Open in R
+    (RStudio). Built and unit-tested; not yet run on a computer with R.
+
 ===============================================================================
 WHERE THINGS STAND (October 7, 2026)
 ===============================================================================
@@ -1142,7 +1159,8 @@ Curated:    Curated Flights (own key) compares up to 3 cities on up to 6 layers
             (Steps 52, 58, 63).
 Launch:     Pinokio opens http://127.0.0.1:4242 every time, serving the
             production build (Step 66).
-Analysis:   Area Reports (Step 65) and Stata Analysis (Step 67).
+Analysis:   Data Layers -> Data Analysis: Curated Flights, Area Reports (Step 65),
+            Stata Analysis (Step 67) and R Analysis (Step 68).
 Look:       Northeastern logo, grey interface, research groups first in Data Layers,
             research profile hides the inherited extras ("Show all layers" to see them),
             first run and Scenes start with Boston.
@@ -1175,7 +1193,9 @@ Data exports:
             mkdb_incidents_geocoded.csv
 
 Git history on main (newest first):
-            (release)  Faster app, production build in Pinokio, Stata Analysis
+            (release)  Data Analysis group, R Analysis, layers in Stata, faster
+                       traffic (tagged v0.2.4)
+            e5058bfd   Faster app, production build in Pinokio, Stata Analysis
                        (tagged v0.2.3)
             3d27b41c   Foreign-born residents; Area Reports by panel and voice
                        (tagged v0.2.2)

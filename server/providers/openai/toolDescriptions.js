@@ -131,6 +131,10 @@ export const ACTION_DESCRIPTIONS = {
           description:
             'view = the areas in the current map view (tracts zoomed in, counties zoomed out); county (default); tract (needs state); state.',
         },
+        layer: {
+          description:
+            'Analyze one area layer instead (all of its fields), by its Data Layers name or id, e.g. "Foreign-Born Residents (tracts)" or "local-acs-poverty". Use with geography view (the default) or a state.',
+        },
         state: {
           description:
             'Limit to one state (name or postal code). Required for tract data unless geography is view.',
@@ -149,6 +153,52 @@ export const ACTION_DESCRIPTIONS = {
         geography: {
           description:
             'view (default) = the areas in the current map view; county; tract (needs state); state.',
+        },
+        layer: {
+          description:
+            'Analyze one area layer instead (all of its fields), by its Data Layers name or id, e.g. "Foreign-Born Residents (tracts)" or "local-acs-poverty". Use with geography view (the default) or a state.',
+        },
+        state: {
+          description: 'Limit to one state (name or postal code).',
+        },
+      },
+    },
+  },
+  run_r_analysis: {
+    description:
+      'Run a statistical analysis in R (on this computer) on a layer data set: counties, the census tracts of one state, states, or the areas in the current map view. The data frame is d, with the same variables as run_stata_analysis (foreign_born_share, poverty, unemployment, bachelors, median_income, life_expectancy for counties, and so on, plus geoid, state, name, lon, lat). Write each step as one R expression, e.g. "m <- lm(foreign_born_share ~ poverty + unemployment, data = d)", then "summary(m)". Lines may call models (lm, glm with family = binomial or poisson, glm.nb), summaries, tests (cor.test, t.test, chisq.test), plots (plot, hist, boxplot; saved as PNG) and spatial tools: contiguity weights W are ready, e.g. "moran.test(d$poverty, W)" or "lagsarlm(foreign_born_share ~ poverty, data = d, listw = W)"; spatial models run on the areas with valid values. The script and log are saved. After it runs, report the key results in plain words and any failed line.',
+    parameters: {
+      properties: {
+        geography: {
+          description:
+            'view = the areas in the current map view; county (default); tract (needs state); state.',
+        },
+        layer: {
+          description:
+            'Analyze one area layer instead (all of its fields), by its Data Layers name or id, e.g. "Foreign-Born Residents (tracts)" or "local-acs-poverty". Use with geography view (the default) or a state.',
+        },
+        state: {
+          description:
+            'Limit to one state (name or postal code). Required for tract data unless geography is view.',
+        },
+        lines: {
+          description: 'R expressions, run in order; the data frame is d.',
+        },
+      },
+    },
+  },
+  open_in_r: {
+    description:
+      'Open R itself on this computer (RStudio when installed) with a layer data set loaded as the data frame d (default: the areas in the current map view), so the user can work in R directly. Output is saved as session.log and the commands as session_commands.R.',
+    parameters: {
+      properties: {
+        geography: {
+          description:
+            'view (default) = the areas in the current map view; county; tract (needs state); state.',
+        },
+        layer: {
+          description:
+            'Analyze one area layer instead (all of its fields), by its Data Layers name or id, e.g. "Foreign-Born Residents (tracts)" or "local-acs-poverty". Use with geography view (the default) or a state.',
         },
         state: {
           description: 'Limit to one state (name or postal code).',

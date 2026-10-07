@@ -329,7 +329,7 @@ _The Space Missions layer replaying a Falcon 9 ascent — labeled `RECONSTRUCTED
 
 ## 📊 Stata Analysis
 
-With Stata 18 or 19 installed on the same computer, **Data Layers → Research Data → Stata Analysis** runs Stata on a layer's data: counties, the census tracts of one state, states, or the areas in the current map view (tracts when zoomed in, counties when zoomed out).
+With Stata 18 or 19 installed on the same computer, **Data Layers → Data Analysis → Stata Analysis** runs Stata on a layer's data. Pick the **layer** (it starts on the one you have switched on) and get every field in that layer's files, or pick "all measures" for counties, a state's tracts or states; then choose the **areas**: the map view, one state, or everywhere. The panel lists the layer's variables, names beside labels.
 
 - **Type commands**, one per line, with `if`, `in` and options: `regress`, `logit`, `nbreg`, `poisson`, `spregress`, `spreg`, `correlate`, `summarize`, `tabulate`, `fre`, `fs`, `egen`, `twoway`. Lines that would reach past the data (macros, `;`, file paths, `shell`, `saving()`) are refused. `fre`, `fs` and `spreg` are SSC packages (`ssc install fre`, `ssc install fs`, `ssc install sppack`).
 - **Spatial models** get an inverse-distance weights matrix `W` built on exactly the areas with valid values for the model, e.g. `spregress life_expectancy poverty, gs2sls dvarlag(W)`.
@@ -338,6 +338,15 @@ With Stata 18 or 19 installed on the same computer, **Data Layers → Research D
 - **Open in Stata** opens the Stata window itself with the data loaded and labeled; `session.log` and `session_commands.do` record everything you do there.
 - **By voice:** "Regress foreign-born share on poverty and unemployment for Massachusetts tracts", or "Open the counties in view in Stata".
 - **From a terminal:** `node scripts/stata-analysis.mjs --geography tract --state MA "regress foreign_born_share poverty"` (`--do file.do`, `--open`, `--variables`).
+
+## 📈 R Analysis
+
+**Data Layers → Data Analysis → R Analysis** is the same box for R (4.x; RStudio if installed): pick a layer and areas, type R lines with the data frame `d` (`m <- lm(foreign_born_share ~ poverty, data = d)`, `summary(m)`, `plot(d$poverty, d$foreign_born_share)`), or upload an R script.
+
+- Typed lines may call only models (`lm`, `glm`, `glm.nb`), summaries, tests, plots and spatial tools (`moran.test`, `lagsarlm` with queen contiguity weights `W` from the session's shapefile; needs `sf`, `spdep`, `spatialreg`). Anything else goes in an uploaded script, accepted only from this computer.
+- **Open in R** opens RStudio (or R's window) on the session folder with `d` loaded; `session.log` and `session_commands.R` record the session.
+- **By voice** ("run a regression in R…", "open the tracts in view in R") and **from a terminal**: `node scripts/r-analysis.mjs --geography tract --state MA "summary(d$poverty)"`.
+- `HEV_R_PATH` points at Rscript if R is somewhere unusual.
 
 Every run is kept in `Documents/HuskyEyeView-Analyses/<date>_<areas>/`: `data.csv`, `data.dta`, the do-file, the log, graphs as PNG and `results.xlsx` for models. `HEV_STATA_PATH` points at Stata if it is installed somewhere unusual; `HEV_ANALYSIS_DIR` moves the sessions folder.
 

@@ -33,6 +33,7 @@ import {
 } from '../../src/analysis/stataCommands.js';
 import { buildZip } from '../../src/curated/curatedFiles.js';
 import { writeShapefile } from './shapefile.js';
+import { layerRows, layerVariables, readLayerAreas } from './layerData.js';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -67,9 +68,12 @@ export function findStata({
     }
   },
 } = {}) {
+  // Paths follow the platform being searched, not the one running this
+  // (tests search a Windows install from Linux CI).
+  const paths = platform === 'win32' ? path.win32 : path.posix;
   const describe = (file) => {
-    const base = path.basename(file);
-    const folder = path.basename(path.dirname(file));
+    const base = paths.basename(file);
+    const folder = paths.basename(paths.dirname(file));
     const version = Number((folder.match(/(\d{2})/) || [])[1]) || null;
     const edition = (base.match(/stata[-_]?(mp|se|be|ic)/i) || [])[1];
     return {
@@ -100,7 +104,7 @@ export function findStata({
         /^Stata(Now)?\s?\d{2}$/i.test(d),
       )) {
         for (const edition of EDITIONS) {
-          candidates.push(path.join(base, folder, `Stata${edition}-64.exe`));
+          candidates.push(paths.join(base, folder, `Stata${edition}-64.exe`));
         }
       }
     }
@@ -111,7 +115,7 @@ export function findStata({
       for (const edition of EDITIONS.filter(Boolean)) {
         const app = `Stata${edition}.app`;
         candidates.push(
-          path.join(
+          paths.join(
             '/Applications',
             folder,
             app,
@@ -128,7 +132,7 @@ export function findStata({
     )) {
       for (const edition of EDITIONS) {
         candidates.push(
-          path.join(
+          paths.join(
             '/usr/local',
             folder,
             edition ? `stata-${edition.toLowerCase()}` : 'stata',
@@ -283,7 +287,7 @@ export function datasetCsv(variables, rows) {
 const pad = (n) => String(n).padStart(2, '0');
 
 /** A new, unique session folder name and path. */
-function newSessionFolder(root, label, now = new Date()) {
+export function newSessionFolder(root, label, now = new Date()) {
   const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   let id = `${stamp}_${label}`;
   for (let n = 2; existsSync(path.join(root, id)); n += 1)
@@ -293,24 +297,49 @@ function newSessionFolder(root, label, now = new Date()) {
   return { id, folder };
 }
 
+/** What a session needs from Stata; R brings its own (rSession.js). */
+export const STATA_ENGINE = Object.freeze({
+  name: 'Stata',
+  checkLines: checkCommandLines,
+  scriptBytes: MAX_DO_FILE_BYTES,
+  scriptWord: 'do-file',
+  userFile: 'user.do',
+  script: 'analysis.do',
+  openScript: 'open.do',
+  build: ({ userFile, ...options }) =>
+    buildDoFile({ ...options, userDoFile: userFile }),
+  extraFiles: () => ({}),
+});
+
 /**
- * Validate a request and write the session folder: data.csv, analysis.do and
- * the uploaded do-file. Returns {ok, problems, session} without running Stata.
+ * Validate a request and write the session folder: data.csv, the script and
+ * the uploaded script. Returns {ok, problems, session} without running it.
  */
-export function prepareSession(
+export function prepareSession(request = {}, options = {}) {
+  return prepareAnalysisSession(request, { ...options, engine: STATA_ENGINE });
+}
+
+/** The same for any engine (Stata here, R in rSession.js). */
+export function prepareAnalysisSession(
   request = {},
-  { env = process.env, publicDir, now } = {},
+  { engine = STATA_ENGINE, env = process.env, publicDir, now } = {},
 ) {
   const problems = [];
-  const geography = ['county', 'tract', 'state'].includes(request.geography)
-    ? request.geography
-    : request.geography
-      ? null
-      : 'county';
+  const dataDir = publicDir ?? path.join(ROOT, 'public');
+  // A chosen layer (its own files, every field) or, without one, every Area
+  // Reports measure for counties, a state's tracts or states.
+  const layerMode = Boolean(request.baseUrl);
+  const geography = layerMode
+    ? 'layer'
+    : ['county', 'tract', 'state'].includes(request.geography)
+      ? request.geography
+      : request.geography
+        ? null
+        : 'county';
   if (!geography)
     return {
       ok: false,
-      problems: [`No Stata dataset for “${request.geography}”.`],
+      problems: [`No ${engine.name} dataset for “${request.geography}”.`],
     };
   let state = null;
   if (request.state) {
@@ -328,41 +357,101 @@ export function prepareSession(
     problems.push(
       'Tract data needs a state or the current view (all US tracts are too many).',
     );
-  const variables = analysisVariables(geography);
-  const checked = checkCommandLines(request.commands || [], variables);
+  let layerRead = null;
+  let variables;
+  if (layerMode) {
+    if (problems.length) return { ok: false, problems };
+    layerRead = readLayerAreas({
+      baseUrl: request.baseUrl,
+      publicDir: dataDir,
+      state,
+      view,
+    });
+    if (layerRead.problems.length)
+      return { ok: false, problems: layerRead.problems };
+    if (!layerRead.areas.length)
+      return {
+        ok: false,
+        problems: ['No areas of this layer match; nothing to analyze.'],
+      };
+    variables = layerVariables(layerRead.areas);
+  } else {
+    variables = analysisVariables(geography);
+  }
+  const checked = engine.checkLines(request.commands || [], variables);
   problems.push(...checked.problems);
   let doFile = null;
   if (request.doFile) {
     const text = String(request.doFile);
-    if (Buffer.byteLength(text) > MAX_DO_FILE_BYTES)
-      problems.push(`A do-file may be at most ${MAX_DO_FILE_BYTES / 1024} KB.`);
+    if (Buffer.byteLength(text) > engine.scriptBytes)
+      problems.push(
+        `A ${engine.scriptWord} may be at most ${engine.scriptBytes / 1024} KB.`,
+      );
     else doFile = text;
   }
   if (!request.interactive && !checked.commands.length && !doFile)
-    problems.push('Give at least one command or a do-file.');
+    problems.push(`Give at least one command or a ${engine.scriptWord}.`);
   if (problems.length) return { ok: false, problems };
 
   // Outlines only when a shapefile is written: spshape2dta, or the Stata
   // window (where GeoDa and QGIS can open the same areas too).
   const needsShapes =
     Boolean(request.interactive) || checked.commands.some((c) => c.needsShapes);
-  const areas = readAreas({
-    geography,
-    state,
-    view,
-    publicDir,
-    withGeometry: needsShapes,
-  });
-  if (!areas.length)
-    return { ok: false, problems: ['No areas match; nothing to analyze.'] };
-  const rows = datasetRows(geography, variables, areas);
-  const where = state ? STATES[state][0] : view ? 'view' : 'US';
-  const plural = { county: 'counties', tract: 'tracts', state: 'states' }[
-    geography
-  ];
+  let areas;
+  let rows;
+  let shapeAreas;
+  if (layerMode) {
+    const read = needsShapes
+      ? readLayerAreas({
+          baseUrl: request.baseUrl,
+          publicDir: dataDir,
+          state,
+          view,
+          withGeometry: true,
+        })
+      : layerRead;
+    areas = read.areas;
+    rows = layerRows(variables, areas);
+    shapeAreas = areas.map((a, i) => ({
+      geoid: a.properties.geoid ?? a.properties.name ?? String(i + 1),
+      geometry: a.geometry,
+    }));
+  } else {
+    areas = readAreas({
+      geography,
+      state,
+      view,
+      publicDir: dataDir,
+      withGeometry: needsShapes,
+    });
+    if (!areas.length)
+      return { ok: false, problems: ['No areas match; nothing to analyze.'] };
+    rows = datasetRows(geography, variables, areas);
+    shapeAreas = areas;
+  }
+  const stateUsed = layerMode ? (layerRead.stateApplied ? state : null) : state;
+  const where = stateUsed ? STATES[stateUsed][0] : view ? 'view' : 'US';
+  const layerName = String(request.layerName || 'layer').slice(0, 80);
+  const plural = layerMode
+    ? 'areas'
+    : { county: 'counties', tract: 'tracts', state: 'states' }[geography];
+  const label = layerMode
+    ? layerName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 40) || 'layer'
+    : plural;
   const root = analysisRoot(env);
-  const { id, folder } = newSessionFolder(root, `${plural}-${where}`, now);
-  const title = `Husky Eye View: ${rows.length} ${plural}${state ? ` in ${STATES[state][1]}` : view ? ' in the map view' : ''}`;
+  const { id, folder } = newSessionFolder(root, `${label}-${where}`, now);
+  const scope = stateUsed
+    ? ` in ${STATES[stateUsed][1]}`
+    : view
+      ? ' in the map view'
+      : '';
+  const title = layerMode
+    ? `Husky Eye View: ${layerName}, ${rows.length} areas${scope}`
+    : `Husky Eye View: ${rows.length} ${plural}${scope}`;
   const notes = [
     ...new Set(
       variables.filter((v) => v.source).map((v) => `${v.name}: ${v.source}`),
@@ -373,24 +462,29 @@ export function prepareSession(
     datasetCsv(variables, rows),
     'utf8',
   );
-  if (doFile) writeFileSync(path.join(folder, 'user.do'), doFile, 'utf8');
+  if (doFile) writeFileSync(path.join(folder, engine.userFile), doFile, 'utf8');
   if (needsShapes) {
-    const shapes = writeShapefile(areas);
+    const shapes = writeShapefile(shapeAreas);
     for (const [ext, data] of Object.entries(shapes))
       writeFileSync(path.join(folder, `${SHAPEFILE_NAME}.${ext}`), data);
   }
-  const doText = buildDoFile({
+  const doText = engine.build({
     title,
     variables,
     commands: checked.commands,
-    userDoFile: doFile ? 'user.do' : null,
+    userFile: doFile ? engine.userFile : null,
     areaCount: rows.length,
     notes,
     folder,
+    needsShapes,
     interactive: Boolean(request.interactive),
   });
-  const doName = request.interactive ? 'open.do' : 'analysis.do';
+  const doName = request.interactive ? engine.openScript : engine.script;
   writeFileSync(path.join(folder, doName), doText, 'utf8');
+  for (const [name, text] of Object.entries(
+    engine.extraFiles({ interactive: Boolean(request.interactive) }),
+  ))
+    writeFileSync(path.join(folder, name), text, 'utf8');
   return {
     ok: true,
     problems: [],
@@ -400,7 +494,8 @@ export function prepareSession(
       doName,
       title,
       geography,
-      state,
+      state: stateUsed,
+      layer: layerMode ? layerName : null,
       areas: rows.length,
       commands: checked.commands.map((c) => c.line),
       uploaded: Boolean(doFile),

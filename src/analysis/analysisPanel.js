@@ -1,24 +1,80 @@
 /**
- * The Stata Analysis panel (Data Layers → Research Data → Stata Analysis) and
- * the controller the voice assistant shares. Commands or an uploaded do-file
- * run in Stata on this computer against a layer's data (counties, a state's
- * tracts, states, or the areas in the current map view); "Open in Stata"
- * opens the Stata window itself with that data loaded. Each run is kept as
- * a session folder with its do-file and log (server/providers/stata.js).
+ * The Stata Analysis and R Analysis panels (Data Layers → Data Analysis) and
+ * the controller the voice assistant shares. Commands or an uploaded script
+ * run on this computer against a layer's data (counties, a state's tracts,
+ * states, or the areas in the current map view); "Open in Stata" / "Open in
+ * R" opens the program itself with that data loaded. Each run is kept as a
+ * session folder with its script and log (server/providers/analysis.js).
  */
 import { STATES } from '../reports/areaReport.js';
 import { STATA_COMMAND_NAMES, MAX_DO_FILE_BYTES } from './stataCommands.js';
+import { MAX_R_SCRIPT_BYTES } from './rCommands.js';
+import { LAYER_MANIFEST, layerManifestEntry } from '../data/layerManifest.js';
 
-export const ANALYSIS_OPEN_EVENT = 'gev:stata-analysis-open';
+/** The datasets that are not one layer: every Area Reports measure. */
+const MEASURE_CHOICES = [
+  ['measures:county', 'Counties: all measures'],
+  ['measures:tract', 'Census tracts: all measures'],
+  ['measures:state', 'States: all measures'],
+];
+
+/** What differs between the two programs; everything else is shared. */
+export const ANALYSIS_ENGINES = Object.freeze({
+  stata: {
+    id: 'stata',
+    name: 'Stata',
+    event: 'gev:stata-analysis-open',
+    api: '/api/stata',
+    panelId: 'stata-analysis-panel',
+    lineLabel: 'Commands (one per line)',
+    examples: [
+      'summarize foreign_born_share poverty median_income',
+      'regress foreign_born_share poverty unemployment bachelors if median_income != ., vce(robust)',
+      'twoway scatter foreign_born_share poverty',
+    ],
+    hint: `${STATA_COMMAND_NAMES.join(', ')} — with if, in and options. Spatial models get inverse-distance weights W built on the areas with valid values. Anything else: upload a do-file.`,
+    scriptLabel: 'Do-file',
+    scriptAccept: '.do,text/plain',
+    scriptBytes: MAX_DO_FILE_BYTES,
+    files: ['analysis.do', 'analysis.log', 'results.xlsx', 'data.dta'],
+    sessionFiles: 'session_commands.do, session.log',
+    missing:
+      'Stata was not found on this computer (looked for Stata 18 and 19). Set HEV_STATA_PATH to its program file.',
+    found: (s) => `Stata ${s.version ?? ''} ${s.edition ?? ''} found.`,
+    failed: (rc) => `r(${rc})`,
+  },
+  r: {
+    id: 'r',
+    name: 'R',
+    event: 'gev:r-analysis-open',
+    api: '/api/r',
+    panelId: 'r-analysis-panel',
+    lineLabel: 'R lines (one per line; the data frame is d)',
+    examples: [
+      'summary(d$foreign_born_share)',
+      'm <- lm(foreign_born_share ~ poverty + unemployment, data = d)',
+      'summary(m)',
+      'plot(d$poverty, d$foreign_born_share)',
+    ],
+    hint: 'Models (lm, glm, glm.nb), summaries, tests, plots and spatial tools (moran.test, lagsarlm with contiguity weights W). Lines may call only these functions; anything else: upload an R script.',
+    scriptLabel: 'R script',
+    scriptAccept: '.R,.r,text/plain',
+    scriptBytes: MAX_R_SCRIPT_BYTES,
+    files: ['analysis.R', 'analysis.log', 'data.rds', 'session.RData'],
+    sessionFiles: 'session_commands.R, session.log',
+    missing:
+      'R was not found on this computer. Install it from cran.r-project.org, or set HEV_R_PATH to Rscript.',
+    found: (s) =>
+      `R ${s.version ?? ''} found${s.rstudio ? ' (RStudio too)' : ''}.`,
+    failed: () => 'error',
+  },
+});
+
+/** Kept for existing imports: the Stata panel's open event. */
+export const ANALYSIS_OPEN_EVENT = ANALYSIS_ENGINES.stata.event;
 
 /** Zoomed in closer than this, "the current view" means tracts. */
 const TRACT_VIEW_HEIGHT_M = 250_000;
-
-const EXAMPLES = [
-  'summarize foreign_born_share poverty median_income',
-  'regress foreign_born_share poverty unemployment bachelors if median_income != ., vce(robust)',
-  'twoway scatter foreign_born_share poverty',
-].join('\n');
 
 function element(tag, props = {}, children = []) {
   const node = document.createElement(tag);
@@ -33,9 +89,18 @@ function element(tag, props = {}, children = []) {
   return node;
 }
 
-export class StataAnalysisPanel {
-  constructor({ readView = () => null, showToast = () => {}, fetchImpl } = {}) {
+export class AnalysisPanel {
+  constructor({
+    engine = 'stata',
+    readView = () => null,
+    readDataManager = () => null,
+    showToast = () => {},
+    fetchImpl,
+  } = {}) {
+    this.engine = ANALYSIS_ENGINES[engine];
     this.readView = readView;
+    this.readDataManager = readDataManager;
+    this.layerChosen = false;
     this.showToast = showToast;
     this.fetch = fetchImpl || ((...args) => globalThis.fetch(...args));
     this.busy = false;
@@ -44,24 +109,24 @@ export class StataAnalysisPanel {
     this.removers = [];
     this.build();
     const onOpen = () => this.open();
-    window.addEventListener(ANALYSIS_OPEN_EVENT, onOpen);
+    window.addEventListener(this.engine.event, onOpen);
     this.removers.push(() =>
-      window.removeEventListener(ANALYSIS_OPEN_EVENT, onOpen),
+      window.removeEventListener(this.engine.event, onOpen),
     );
   }
 
   build() {
     this.root = element('section', {
-      id: 'stata-analysis-panel',
+      id: this.engine.panelId,
       className: 'curated-panel area-reports-panel stata-panel',
       role: 'dialog',
-      ariaLabel: 'Stata Analysis',
+      ariaLabel: `${this.engine.name} Analysis`,
       hidden: true,
     });
     const close = element('button', {
       type: 'button',
       className: 'curated-close',
-      ariaLabel: 'Close Stata Analysis',
+      ariaLabel: `Close ${this.engine.name} Analysis`,
       textContent: '×',
     });
     close.addEventListener('click', () => this.close());
@@ -73,11 +138,13 @@ export class StataAnalysisPanel {
           element('option', { value, textContent: text }),
         ),
       );
-    this.geography = select('Data', [
-      ['view', 'Areas in the map view'],
-      ['county', 'Counties'],
-      ['tract', 'Census tracts (one state)'],
-      ['state', 'States'],
+    // Which data: one of the map's area layers (all of its fields), or every
+    // Area Reports measure. Filled from the loaded layers when opened.
+    this.layer = element('select', { ariaLabel: 'Layer' });
+    this.scope = select('Areas', [
+      ['view', 'In the map view'],
+      ['state', 'In one state'],
+      ['all', 'Everywhere'],
     ]);
     this.state = select('State', [
       ['', 'All states'],
@@ -89,28 +156,27 @@ export class StataAnalysisPanel {
       className: 'stata-commands',
       rows: 6,
       spellcheck: false,
-      ariaLabel: 'Stata commands, one per line',
-      placeholder: EXAMPLES,
+      ariaLabel: this.engine.lineLabel,
+      placeholder: this.engine.examples.join('\n'),
     });
     this.doInput = element('input', {
       type: 'file',
-      accept: '.do,text/plain',
-      ariaLabel: 'Upload a do-file',
+      accept: this.engine.scriptAccept,
+      ariaLabel: `Upload a ${this.engine.scriptLabel.toLowerCase()}`,
     });
     this.doName = element('span', { className: 'curated-hint' });
     this.doInput.addEventListener('change', () => this.readDoFile());
     this.runButton = element('button', {
       type: 'button',
       className: 'curated-button curated-start',
-      textContent: 'RUN IN STATA',
+      textContent: `RUN IN ${this.engine.name.toUpperCase()}`,
     });
     this.runButton.addEventListener('click', () => this.run(this.readForm()));
     this.openButton = element('button', {
       type: 'button',
       className: 'curated-button',
-      textContent: 'OPEN IN STATA',
-      title:
-        'Open the Stata window with this data loaded; your commands and results are saved as you work',
+      textContent: `OPEN IN ${this.engine.name.toUpperCase()}`,
+      title: `Open ${this.engine.name} with this data loaded; your commands and results are saved as you work`,
     });
     this.openButton.addEventListener('click', () =>
       this.openStata(this.readForm()),
@@ -123,30 +189,45 @@ export class StataAnalysisPanel {
       element('summary', { textContent: 'Variables' }),
     ]);
     this.output = element('div', { className: 'stata-output' });
-    this.geography.addEventListener('change', () => this.loadVariables());
+    this.layer.addEventListener('change', () => {
+      this.layerChosen = true;
+      void this.loadVariables();
+    });
+    this.scope.addEventListener('change', () => this.syncScope());
     this.root.append(
       element('header', { className: 'curated-header' }, [
         element('span', { className: 'curated-kicker', textContent: 'DATA' }),
-        element('strong', { textContent: 'STATA ANALYSIS' }),
+        element('strong', {
+          textContent: `${this.engine.name.toUpperCase()} ANALYSIS`,
+        }),
         close,
       ]),
       element('div', { className: 'curated-form' }, [
-        element('label', { className: 'curated-check' }, [
-          'Data ',
-          this.geography,
+        element('label', { className: 'curated-check stata-layer' }, [
+          'Layer ',
+          this.layer,
         ]),
-        element('label', { className: 'curated-check' }, ['In ', this.state]),
+        element('div', { className: 'curated-options' }, [
+          element('label', { className: 'curated-check' }, [
+            'Areas ',
+            this.scope,
+          ]),
+          (this.stateLabel = element('label', { className: 'curated-check' }, [
+            'State ',
+            this.state,
+          ])),
+        ]),
         element('label', {
           className: 'curated-label',
-          textContent: 'Commands (one per line)',
+          textContent: this.engine.lineLabel,
         }),
         this.commands,
         element('p', {
           className: 'curated-hint',
-          textContent: `${STATA_COMMAND_NAMES.join(', ')} — with if, in and options. Spatial models get inverse-distance weights W built on the areas with valid values. Anything else: upload a do-file.`,
+          textContent: this.engine.hint,
         }),
         element('label', { className: 'curated-check' }, [
-          'Do-file ',
+          `${this.engine.scriptLabel} `,
           this.doInput,
         ]),
         this.doName,
@@ -160,6 +241,90 @@ export class StataAnalysisPanel {
       this.output,
     );
     document.body.append(this.root);
+    this.refreshLayers();
+    this.syncScope();
+  }
+
+  /** The area layers this box can analyze, by Data Layers group. */
+  analyzableLayers() {
+    const manager = this.readDataManager?.();
+    const modules = manager?.layers;
+    if (!modules?.get) return [];
+    const rows = new Map(
+      (manager.getAll?.() || []).map((row) => [row.id, row]),
+    );
+    return LAYER_MANIFEST.filter((entry) => entry.group && !entry.off)
+      .map((entry) => {
+        const module = modules.get(entry.id)?.module;
+        const row = rows.get(entry.id);
+        if (!module?.analysisSource || row?.showInTogglePanel === false)
+          return null;
+        return {
+          id: entry.id,
+          name: entry.label || module.name,
+          group: entry.group,
+          baseUrl: module.analysisSource.baseUrl,
+          enabled: Boolean(row?.enabled),
+        };
+      })
+      .filter(Boolean);
+  }
+
+  /** Fill the Layer list; until the user picks, follow a layer that is on. */
+  refreshLayers() {
+    const layers = this.analyzableLayers();
+    this.layerInfo = new Map(layers.map((l) => [`layer:${l.id}`, l]));
+    const previous = this.layer.value;
+    const groups = new Map();
+    for (const l of layers) {
+      if (!groups.has(l.group)) groups.set(l.group, []);
+      groups.get(l.group).push(l);
+    }
+    this.layer.replaceChildren(
+      ...[...groups].map(([group, list]) =>
+        element(
+          'optgroup',
+          { label: group },
+          list.map((l) =>
+            element('option', {
+              value: `layer:${l.id}`,
+              textContent: l.enabled ? `${l.name} (on)` : l.name,
+            }),
+          ),
+        ),
+      ),
+      element(
+        'optgroup',
+        { label: 'Every Area Reports measure' },
+        MEASURE_CHOICES.map(([value, text]) =>
+          element('option', { value, textContent: text }),
+        ),
+      ),
+    );
+    const on = layers.find((l) => l.enabled);
+    this.layer.value =
+      this.layerChosen &&
+      [...this.layer.options].some((o) => o.value === previous)
+        ? previous
+        : on
+          ? `layer:${on.id}`
+          : 'measures:county';
+  }
+
+  syncScope() {
+    // The label's flex display would override the hidden attribute.
+    this.stateLabel.style.display = this.scope.value === 'state' ? '' : 'none';
+  }
+
+  /** A layer by id or name (voice), as a Layer-list value. */
+  layerValue(query) {
+    if (!query) return null;
+    const wanted = String(query).toLowerCase();
+    for (const [value, l] of this.layerInfo || [])
+      if (l.id === query || l.name.toLowerCase() === wanted) return value;
+    for (const [value, l] of this.layerInfo || [])
+      if (l.name.toLowerCase().includes(wanted)) return value;
+    return null;
   }
 
   async readDoFile() {
@@ -167,9 +332,9 @@ export class StataAnalysisPanel {
     this.doFile = null;
     this.doName.textContent = '';
     if (!file) return;
-    if (file.size > MAX_DO_FILE_BYTES) {
+    if (file.size > this.engine.scriptBytes) {
       this.setStatus(
-        `A do-file may be at most ${MAX_DO_FILE_BYTES / 1024} KB.`,
+        `A script may be at most ${this.engine.scriptBytes / 1024} KB.`,
       );
       this.doInput.value = '';
       return;
@@ -180,7 +345,8 @@ export class StataAnalysisPanel {
 
   readForm() {
     return {
-      geography: this.geography.value,
+      choice: this.layer.value,
+      scope: this.scope.value,
       state: this.state.value || null,
       commands: this.commands.value,
       doFile: this.doFile,
@@ -193,6 +359,36 @@ export class StataAnalysisPanel {
    */
   resolveRequest(request) {
     const out = { ...request };
+    // Voice may name a layer; the panel sends its Layer and Areas choices.
+    const choice =
+      request.choice || (request.layer && this.layerValue(request.layer));
+    if (request.layer && !choice)
+      return { ...out, problem: `No area layer matches “${request.layer}”.` };
+    if (choice) {
+      delete out.choice;
+      delete out.layer;
+      const scope =
+        request.scope ||
+        (request.state
+          ? 'state'
+          : !request.geography || request.geography === 'view'
+            ? 'view'
+            : 'all');
+      if (choice.startsWith('layer:')) {
+        const info = this.layerInfo?.get(choice);
+        if (!info) return { ...out, problem: 'That layer is not loaded.' };
+        out.baseUrl = info.baseUrl;
+        out.layerName = info.name;
+        delete out.geography;
+      } else {
+        out.geography = choice.slice('measures:'.length);
+      }
+      delete out.scope;
+      if (scope !== 'state') out.state = null;
+      if (scope === 'state' && !out.state)
+        return { ...out, problem: 'Choose a state.' };
+      if (scope === 'view') out.useView = true;
+    }
     if (out.geography === 'view' || out.useView) {
       const view = this.readView();
       if (!view) return { ...out, problem: 'The map view is not available.' };
@@ -208,50 +404,71 @@ export class StataAnalysisPanel {
     return out;
   }
 
+  /** The Layer choice the variable list shows. */
+  variablesQuery() {
+    const choice = this.layer.value;
+    if (choice.startsWith('layer:')) {
+      const info = this.layerInfo?.get(choice);
+      return info
+        ? {
+            query: `baseUrl=${encodeURIComponent(info.baseUrl)}`,
+            title: info.name,
+          }
+        : null;
+    }
+    const geography = choice.slice('measures:'.length) || 'county';
+    return {
+      query: `geography=${encodeURIComponent(geography)}`,
+      title:
+        MEASURE_CHOICES.find(([value]) => value === choice)?.[1] || geography,
+    };
+  }
+
   async loadVariables() {
-    const geography =
-      this.geography.value === 'view'
-        ? (this.resolveRequest({ geography: 'view' }).geography ?? 'county')
-        : this.geography.value;
+    const query = this.variablesQuery();
+    if (!query) return;
     try {
       const response = await this.fetch(
-        `/api/stata/variables?geography=${encodeURIComponent(geography)}`,
+        `${this.engine.api}/variables?${query.query}`,
       );
       const { variables = [] } = await response.json();
+      // Names (what you type) and labels (what they mean), side by side.
       this.variables.replaceChildren(
-        element('summary', { textContent: `Variables (${geography})` }),
+        element('summary', {
+          textContent: `Variables: ${query.title} (${variables.length})`,
+        }),
         element(
-          'ul',
-          {},
-          variables.map((v) =>
-            element('li', {}, [
-              element('code', { textContent: v.name }),
-              ` ${v.label}`,
-            ]),
-          ),
+          'dl',
+          { className: 'stata-variable-list' },
+          variables.flatMap((v) => [
+            element('dt', {}, [element('code', { textContent: v.name })]),
+            element('dd', { textContent: v.label === v.name ? '' : v.label }),
+          ]),
         ),
       );
+      this.variables.open = true;
     } catch {
       /* the list is a convenience */
     }
   }
 
-  async checkStata() {
+  async checkProgram() {
+    const { name } = this.engine;
     try {
-      const response = await this.fetch('/api/stata/status');
+      const response = await this.fetch(`${this.engine.api}/status`);
       const status = await response.json();
       if (!response.ok) {
-        this.setStatus(status.error || 'Stata is not available here.');
+        this.setStatus(status.error || `${name} is not available here.`);
         return status;
       }
       this.setStatus(
         status.found
-          ? `Stata ${status.version ?? ''} ${status.edition ?? ''} found. Sessions are saved in ${status.folder}.`
-          : 'Stata was not found on this computer (looked for Stata 18 and 19). Set HEV_STATA_PATH to its program file.',
+          ? `${this.engine.found(status)} Sessions are saved in ${status.folder}.`
+          : this.engine.missing,
       );
       return status;
     } catch {
-      this.setStatus('Stata is not available here.');
+      this.setStatus(`${name} is not available here.`);
       return { found: false };
     }
   }
@@ -261,9 +478,10 @@ export class StataAnalysisPanel {
   }
 
   open() {
+    this.refreshLayers();
     this.root.hidden = false;
     this.root.classList.add('visible');
-    void this.checkStata();
+    void this.checkProgram();
     void this.loadVariables();
   }
 
@@ -273,7 +491,7 @@ export class StataAnalysisPanel {
   }
 
   async post(route, body) {
-    const response = await this.fetch(`/api/stata/${route}`, {
+    const response = await this.fetch(`${this.engine.api}/${route}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -292,12 +510,16 @@ export class StataAnalysisPanel {
     const resolved = this.resolveRequest(request);
     if (resolved.problem) return this.fail([resolved.problem]);
     if (this.busy)
-      return this.fail(['Stata is still working on the last run.']);
+      return this.fail([
+        `${this.engine.name} is still working on the last run.`,
+      ]);
     this.busy = true;
     this.open();
     if (Array.isArray(request.commands))
       this.commands.value = request.commands.join('\n');
-    this.setStatus('Running in Stata…');
+    const shown = request.choice || this.layerValue(request.layer);
+    if (shown) this.layer.value = shown;
+    this.setStatus(`Running in ${this.engine.name}…`);
     try {
       const result = await this.post('run', resolved);
       this.render(result);
@@ -309,13 +531,13 @@ export class StataAnalysisPanel {
       );
       return this.summary(result);
     } catch (error) {
-      return this.fail([`Stata run failed: ${error.message}`]);
+      return this.fail([`${this.engine.name} run failed: ${error.message}`]);
     } finally {
       this.busy = false;
     }
   }
 
-  /** Open the Stata window with the data loaded (panel and voice). */
+  /** Open the program itself with the data loaded (panel and voice). */
   async openStata(request = {}) {
     const resolved = this.resolveRequest({
       ...request,
@@ -323,14 +545,15 @@ export class StataAnalysisPanel {
       doFile: null,
     });
     if (resolved.problem) return this.fail([resolved.problem]);
-    this.setStatus('Opening Stata…');
+    const { name } = this.engine;
+    this.setStatus(`Opening ${name}…`);
     const result = await this.post('open', resolved);
     if (!result.ok)
-      return this.fail(result.problems || ['Stata did not open.']);
+      return this.fail(result.problems || [`${name} did not open.`]);
     this.setStatus(
-      `Stata is opening with ${result.title.replace(/^Husky Eye View: /, '')}. Your commands and results are saved in ${result.folder} (session_commands.do, session.log).`,
+      `${name} is opening with ${result.title.replace(/^Husky Eye View: /, '')}. Your commands and results are saved in ${result.folder} (${this.engine.sessionFiles}).`,
     );
-    this.showToast('Stata is opening with the data loaded.');
+    this.showToast(`${name} is opening with the data loaded.`);
     return {
       ok: true,
       title: result.title,
@@ -352,18 +575,18 @@ export class StataAnalysisPanel {
       { className: 'stata-steps' },
       (result.steps || []).map((s) =>
         element('li', { className: s.rc ? 'failed' : 'ok' }, [
-          s.rc ? `✗ r(${s.rc}) ` : '✓ ',
+          s.rc ? `✗ ${this.engine.failed(s.rc)} ` : '✓ ',
           element('code', { textContent: s.line }),
         ]),
       ),
     );
-    const base = `/api/stata/sessions/${encodeURIComponent(result.id)}`;
+    const base = `${this.engine.api}/sessions/${encodeURIComponent(result.id)}`;
     const graphs = (result.files || [])
       .filter((f) => /^graph\d+\.png$/.test(f))
       .map((f) =>
         element('img', {
           src: `${base}/${f}`,
-          alt: `Stata graph ${f}`,
+          alt: `${this.engine.name} graph ${f}`,
           loading: 'lazy',
         }),
       );
@@ -373,7 +596,7 @@ export class StataAnalysisPanel {
         download: `${result.id}.zip`,
         textContent: 'Download this session (.zip)',
       }),
-      ...['analysis.do', 'analysis.log', 'results.xlsx', 'data.dta']
+      ...this.engine.files
         .filter((f) => result.files?.includes(f))
         .flatMap((f) => [
           ' · ',
@@ -422,5 +645,24 @@ export class StataAnalysisPanel {
   destroy() {
     for (const remove of this.removers.splice(0)) remove();
     this.root.remove();
+  }
+}
+
+/** The Stata panel (kept as its own name for the shell and older imports). */
+export class StataAnalysisPanel extends AnalysisPanel {
+  constructor(options = {}) {
+    super({ ...options, engine: 'stata' });
+  }
+}
+
+/** The R panel. */
+export class RAnalysisPanel extends AnalysisPanel {
+  constructor(options = {}) {
+    super({ ...options, engine: 'r' });
+  }
+
+  /** Voice and the panel call it the same way as Stata's. */
+  openR(request) {
+    return this.openStata(request);
   }
 }

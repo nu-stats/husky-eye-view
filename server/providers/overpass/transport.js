@@ -3,6 +3,7 @@ import {
   OVERPASS_UPSTREAMS,
   OVERPASS_USER_AGENT,
   OVERPASS_TIMEOUT_MS,
+  OVERPASS_STAGGER_MS,
 } from './constants.js';
 import { readResponseTextCapped } from '../common/http.js';
 import { simplifyOverpassPayloadBody } from './geometry.js';
@@ -61,15 +62,18 @@ function overpassPayloadIsData(payload) {
 }
 
 /**
- * Try each mirror once, retaining response-size and per-mirror timeout caps.
- * Refusals and body-level failures rotate; total failure returns the last
- * rate-limit payload, otherwise the first refusal, or throws a network error.
+ * Ask the mirrors, retaining response-size and per-mirror timeout caps. A
+ * mirror that fails starts the next at once; one still silent after
+ * `staggerMs` is joined by the next, and the first real answer wins (the
+ * others are cancelled). Refusals and body-level failures never win; total
+ * failure returns the last rate-limit payload, otherwise the first refusal,
+ * or throws a network error.
  * @param {string} body URL-encoded Overpass QL query body.
  * @param {number} [maxResponseBytes] Endpoint-specific response cap.
  * @param {object} [options] Server-only endpoint and I/O overrides for tests.
  * @returns {Promise<{status:number,body:string,contentType:string,endpoint:string,rateLimited:boolean}>}
  */
-async function fetchOverpassPayload(
+function fetchOverpassPayload(
   body,
   maxResponseBytes = OVERPASS_MAX_RESPONSE_BYTES,
   {
@@ -77,14 +81,18 @@ async function fetchOverpassPayload(
     fetchImpl = fetch,
     readBody = readResponseTextCapped,
     simplify = simplifyOverpassPayloadBody,
+    staggerMs = OVERPASS_STAGGER_MS,
   } = {},
 ) {
   let lastError = null;
   let lastRateLimitPayload = null;
   let lastRefusalPayload = null;
+  const controllers = new Set();
 
-  for (const endpoint of endpoints) {
+  /** One mirror: the data payload, or null after recording why not. */
+  const ask = async (endpoint) => {
     const controller = new AbortController();
+    controllers.add(controller);
     const timeoutId = setTimeout(() => controller.abort(), OVERPASS_TIMEOUT_MS);
 
     try {
@@ -116,13 +124,13 @@ async function fetchOverpassPayload(
 
       if (rateLimited) {
         lastRateLimitPayload = payload;
-        continue;
+        return null;
       }
       // A 200 body carrying a runtime error / timeout is a transient upstream
       // failure — skip to the next mirror rather than returning or caching it.
       if (runtimeError) {
         lastError = new Error(`Overpass runtime error (${endpoint})`);
-        continue;
+        return null;
       }
       // Anything but 2xx is this mirror declining, not an answer. Only 5xx used
       // to rotate, so a 4xx ended the fan-out and was returned — and cached —
@@ -136,7 +144,7 @@ async function fetchOverpassPayload(
         lastError = new Error(
           `Overpass upstream returned ${status} (${endpoint})`,
         );
-        continue;
+        return null;
       }
 
       // Success: decimate giant boundary geometry before it reaches the cache,
@@ -145,14 +153,46 @@ async function fetchOverpassPayload(
       return payload;
     } catch (error) {
       lastError = error;
+      return null;
     } finally {
       clearTimeout(timeoutId);
+      controllers.delete(controller);
     }
-  }
+  };
 
-  if (lastRateLimitPayload) return lastRateLimitPayload;
-  if (lastRefusalPayload) return lastRefusalPayload;
-  throw lastError || new Error('All Overpass upstreams failed');
+  return new Promise((resolve, reject) => {
+    let next = 0;
+    let running = 0;
+    let settled = false;
+    let staggerTimer = null;
+    const settleIfDone = () => {
+      if (settled || running || next < endpoints.length) return;
+      settled = true;
+      if (lastRateLimitPayload) resolve(lastRateLimitPayload);
+      else if (lastRefusalPayload) resolve(lastRefusalPayload);
+      else reject(lastError || new Error('All Overpass upstreams failed'));
+    };
+    const start = () => {
+      clearTimeout(staggerTimer);
+      if (settled || next >= endpoints.length) return settleIfDone();
+      const endpoint = endpoints[next++];
+      running += 1;
+      ask(endpoint).then((payload) => {
+        running -= 1;
+        if (settled) return;
+        if (payload) {
+          settled = true;
+          clearTimeout(staggerTimer);
+          for (const controller of controllers) controller.abort();
+          resolve(payload);
+          return;
+        }
+        start();
+      });
+      if (next < endpoints.length) staggerTimer = setTimeout(start, staggerMs);
+    };
+    start();
+  });
 }
 
 export { overpassPayloadIsData, fetchOverpassPayload };

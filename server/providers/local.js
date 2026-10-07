@@ -24,6 +24,7 @@ import { keySetupEndpoint } from '../standalone/key-setup.js';
 import { researchDataProxy } from './research.js';
 import { curatedFlightsProxy } from './curatedFlights.js';
 import { stataProxy } from './stata.js';
+import { rProxy } from './r.js';
 
 /** Construct the local provider plugins in their established order. */
 function localProviderPlugins() {
@@ -53,6 +54,7 @@ function localProviderPlugins() {
     researchDataProxy(),
     curatedFlightsProxy(),
     stataProxy(),
+    rProxy(),
     keySetupEndpoint(),
   ];
 }

@@ -993,8 +993,10 @@ export function createGevActionRunner({
         return { ok: false, action: name, error: 'Stata Analysis unavailable' };
       const request = {
         geography:
-          args.geography || (name === 'open_in_stata' ? 'view' : 'county'),
+          args.geography ||
+          (name === 'open_in_stata' || args.layer ? 'view' : 'county'),
         state: args.state || null,
+        layer: args.layer || null,
       };
       const result =
         name === 'open_in_stata'
@@ -1002,6 +1004,28 @@ export function createGevActionRunner({
           : await panel.run({
               ...request,
               commands: Array.isArray(args.commands) ? args.commands : [],
+            });
+      return { action: name, ...result };
+    }
+
+    if (name === 'run_r_analysis' || name === 'open_in_r') {
+      const panel =
+        (await styleManager?.ensureRAnalysis?.()) || styleManager?.rAnalysis;
+      if (!panel)
+        return { ok: false, action: name, error: 'R Analysis unavailable' };
+      const request = {
+        geography:
+          args.geography ||
+          (name === 'open_in_r' || args.layer ? 'view' : 'county'),
+        state: args.state || null,
+        layer: args.layer || null,
+      };
+      const result =
+        name === 'open_in_r'
+          ? await panel.openR(request)
+          : await panel.run({
+              ...request,
+              commands: Array.isArray(args.lines) ? args.lines : [],
             });
       return { action: name, ...result };
     }

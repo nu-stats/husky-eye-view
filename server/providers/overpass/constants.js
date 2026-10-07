@@ -12,15 +12,23 @@ import path from 'node:path';
  * costs: a refusal is never data, so the query falls through to whatever
  * mirrors are left. Keep this honest and stable — if it is ever refused, the
  * answer is less query volume, not a new name.
+ *
+ * 2026-10-07: this names Husky Eye View and its repository (a contact), not
+ * the upstream God's Eye View project it was forked from; the FOSSGIS
+ * servers refuse the upstream string (406) for every copy of that project.
  */
 const OVERPASS_USER_AGENT =
-  'gods-eye-view/0.1 (+https://github.com/bilawalsidhu/gods-eye-view)';
+  'husky-eye-view/0.2 (+https://github.com/nu-stats/husky-eye-view)';
 
-/** Ordered list of Overpass API mirrors; tried sequentially on failure/rate-limit. */
+/**
+ * Overpass API mirrors, in the order they are started. The fastest healthy
+ * one (lz4, measured 2026-10-07) goes first; a mirror that has not answered
+ * within OVERPASS_STAGGER_MS is joined by the next (see transport.js).
+ */
 const OVERPASS_UPSTREAMS = [
+  'https://lz4.overpass-api.de/api/interpreter',
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
-  'https://lz4.overpass-api.de/api/interpreter',
   // Community full-planet instance (privateforge nonprofit) — added 2026-07-30
   // when all three mirrors above refused this IP (likely a dev-traffic rate
   // ban; refused connections fail in ms, so healthy mirrors above still win).
@@ -55,6 +63,14 @@ const OVERPASS_DISK_DIR = path.join(process.cwd(), '.gev-cache', 'overpass');
 
 /** Per-upstream fetch timeout (ms). */
 const OVERPASS_TIMEOUT_MS = 22000;
+
+/**
+ * How long a mirror may stay silent before the next one is started too
+ * (ms). Mirrors used to be tried strictly one after another, so two silent
+ * mirrors cost 44 s before a healthy one was even asked. A mirror that fails
+ * outright starts the next at once.
+ */
+const OVERPASS_STAGGER_MS = 3000;
 
 /** Max entries in the Overpass response cache (LRU-like, oldest evicted first). */
 const OVERPASS_CACHE_MAX_ENTRIES = 120;
@@ -145,4 +161,5 @@ export {
   OVERPASS_UPSTREAMS,
   OVERPASS_USER_AGENT,
   OVERPASS_TIMEOUT_MS,
+  OVERPASS_STAGGER_MS,
 };
