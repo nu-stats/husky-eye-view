@@ -101,44 +101,73 @@ const GENERIC = new Set([
 
 /** The words of a phrase, normalized ("Foreign-born, %" -> foreign born pct). */
 export function phraseTokens(text) {
-  return String(text || '')
-    .toLowerCase()
-    .replace(/%/g, ' % ')
-    .replace(/[_\-–/(),.:;'"]+/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => SYNONYMS.get(w) || w)
-    .filter((w) => !STOP.has(w) && !/^\d+$/.test(w));
+  return (
+    String(text || '')
+      .toLowerCase()
+      .replace(/%/g, ' % ')
+      .replace(/[_\-–/(),.:;'"]+/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => SYNONYMS.get(w) || w)
+      // A light stem, the same on both sides: "clustering" meets "cluster".
+      .map((w) => (w.length > 5 && w.endsWith('ing') ? w.slice(0, -3) : w))
+      .map((w) =>
+        w.length > 4 && w.endsWith('s') && !w.endsWith('ss')
+          ? w.slice(0, -1)
+          : w,
+      )
+      .filter((w) => !STOP.has(w) && !/^\d+$/.test(w))
+  );
 }
+
+/** Whether a word agrees with a token: the same, or one abbreviates the other ("exp"). */
+const wordMeets = (word, token) =>
+  word === token ||
+  (Math.min(word.length, token.length) >= 3 &&
+    (token.startsWith(word) || word.startsWith(token)));
 
 /**
  * The variable a phrase means, or null: an exact name first, then the best
  * word overlap with its name, label, short name and aliases (ties go to the
  * shorter name, so "foreign_born_share" beats "foreign_born_share_2010").
  */
-export function matchVariable(phrase, variables) {
+export function matchVariable(
+  phrase,
+  variables,
+  { exclude = new Set(), numeric = false } = {},
+) {
   const clean = String(phrase || '')
     .trim()
     .replace(/^(?:the|a|an)\s+/i, '');
   if (!clean) return null;
+  // Not one already used in this request; numbers only where the
+  // analysis needs them (a correlation of a text field is no correlation).
+  const usable = variables.filter(
+    (v) => !exclude.has(v.name) && !(numeric && v.kind === 'string'),
+  );
   const asName = clean.replace(/\s+/g, '_').toLowerCase();
-  const exact = variables.find((v) => v.name.toLowerCase() === asName);
+  const exact = usable.find((v) => v.name.toLowerCase() === asName);
   if (exact) return exact;
   const words = phraseTokens(clean);
   if (!words.length) return null;
   let best = null;
-  for (const v of variables) {
+  for (const v of usable) {
     const texts = [v.name, v.label, v.short, ...(v.aliases || [])].filter(
       Boolean,
     );
     let score = 0;
     for (const text of texts) {
-      const theirs = new Set(phraseTokens(text));
-      if (!theirs.size) continue;
-      const hits = words.filter((w) => theirs.has(w)).length;
+      const theirs = [...new Set(phraseTokens(text))];
+      if (!theirs.length) continue;
+      const meets = (w) => theirs.some((t) => wordMeets(w, t));
+      const hits = words.filter(meets).length;
       // At least one topic word must agree ("rent", not just "share").
-      if (!words.some((w) => theirs.has(w) && !GENERIC.has(w))) continue;
-      score = Math.max(score, (hits / words.length) * 2 + hits / theirs.size);
+      if (!words.some((w) => meets(w) && !GENERIC.has(w))) continue;
+      const covered = theirs.filter((t) => words.some((w) => wordMeets(w, t)));
+      score = Math.max(
+        score,
+        (hits / words.length) * 2 + covered.length / theirs.length,
+      );
     }
     if (score < 1) continue; // at least about half the phrase
     if (
@@ -471,19 +500,33 @@ function translateOne(request, variables, engine) {
         `“${request}”: say which analysis — regression, logistic, Poisson, negative binomial, spatial regression, summarize, correlate, frequencies, tabulate, scatter plot, histogram, standardize, or contiguity weights.`,
       ],
     };
-  const pick = (phrase) => {
+  // Tables and frequencies take text fields; everything else needs numbers.
+  const needsNumbers = !['tab', 'fre'].includes(kind.model);
+  const used = new Set();
+  const pick = (phrase, { numeric = needsNumbers, reuse = false } = {}) => {
     // "median income" is a variable; "average poverty" is poverty.
-    const v =
-      matchVariable(phrase, variables) ||
+    const find = (opts) =>
+      matchVariable(phrase, variables, opts) ||
       matchVariable(
         phrase.replace(/^(?:the\s+)?(?:average|mean|median|typical)\s+/i, ''),
         variables,
+        opts,
       );
-    if (v) matched.push({ phrase, name: v.name });
-    else problems.push(`No variable matches “${phrase}”.`);
-    return v?.name || null;
+    const v = find({ exclude: reuse ? new Set() : used, numeric });
+    if (v) {
+      if (!reuse) used.add(v.name);
+      matched.push({ phrase, name: v.name });
+      return v.name;
+    }
+    const text = numeric && find({ exclude: used, numeric: false });
+    problems.push(
+      text
+        ? `“${phrase}” matches ${text.name}, which is text, not a number: try “tabulate ${text.name}”.`
+        : `No variable matches “${phrase}”.`,
+    );
+    return null;
   };
-  if (kind.cluster) kind.clusterName = pick(kind.cluster);
+  if (kind.cluster) kind.clusterName = pick(kind.cluster, { numeric: false });
   const { rest, condition } = conditionOf(request);
   const roles = rolesOf(rest);
   const isModel = ['regress', 'logit', 'poisson', 'nbreg', 'spatial'].includes(
@@ -510,7 +553,7 @@ function translateOne(request, variables, engine) {
     );
     if (m) {
       y = pick(m[2]);
-      xs = [pick(m[3])].filter(Boolean);
+      xs = [pick(m[3], { numeric: false })].filter(Boolean);
       kind.stat = {
         mean: 'mean',
         average: 'mean',
@@ -537,7 +580,7 @@ function translateOne(request, variables, engine) {
       );
       continue;
     }
-    const name = pick(part.phrase);
+    const name = pick(part.phrase, { reuse: true });
     if (name) conditions.push({ name, op: part.op, value: part.value });
   }
   if (problems.length) return { lines: [], matched, problems };

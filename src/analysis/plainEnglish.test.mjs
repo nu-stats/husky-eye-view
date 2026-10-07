@@ -122,3 +122,44 @@ test('unknown phrases and missing parts are named, not guessed', () => {
     'foreign_born_share',
   );
 });
+
+test('abbreviated field names, no variable twice, and text fields named', () => {
+  // The Life Expectancy Clusters (tracts) layer's own fields.
+  const layer = [
+    { name: 'name', label: 'Area name', kind: 'string' },
+    { name: 'life_exp_8', label: 'life_exp_8', kind: 'numeric' },
+    {
+      name: 'cluster_status',
+      label: "Life expectancy cluster (Local Moran's I), 2015",
+      kind: 'string',
+    },
+    { name: 'p_value', label: 'p_value', kind: 'numeric' },
+  ];
+  const ask = 'correlation between life expectancy and clustering';
+  const out = translatePlainEnglish(ask, layer);
+  assert.equal(out.ok, false);
+  assert.deepEqual(
+    out.matched.map((m) => m.name),
+    ['life_exp_8'],
+  );
+  assert.match(out.problems.join(' '), /cluster_status, which is text/);
+  assert.deepEqual(translatePlainEnglish('tabulate clustering', layer).lines, [
+    'tab cluster_status',
+  ]);
+  assert.deepEqual(
+    translatePlainEnglish('summarize life expectancy', layer).lines,
+    ['summarize life_exp_8'],
+  );
+  // With a numeric cluster field (county data) the pair is two variables.
+  const county = [
+    {
+      name: 'life_expectancy',
+      label: 'Life expectancy at birth (years), 2019',
+      kind: 'numeric',
+    },
+    { name: 'cluster_p', label: 'cluster_p', kind: 'numeric' },
+  ];
+  assert.deepEqual(translatePlainEnglish(ask, county).lines, [
+    'correlate life_expectancy cluster_p',
+  ]);
+});
