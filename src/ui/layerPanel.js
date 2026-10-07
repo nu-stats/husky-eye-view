@@ -469,8 +469,10 @@ export class LayerPanel {
       if (!layer.showInTogglePanel) continue;
       if (!layerListedInProfile(layer, showAll)) continue;
       const group = groupOf(layer);
-      if (previousGroup === RESEARCH_GROUP && group !== previousGroup)
+      if (previousGroup === RESEARCH_GROUP && group !== previousGroup) {
         this._toggleContainer.appendChild(this._buildCuratedRow());
+        this._toggleContainer.appendChild(this._buildReportsRow());
+      }
       if (group && group !== previousGroup) {
         const heading = document.createElement('button');
         heading.type = 'button';
@@ -653,8 +655,10 @@ export class LayerPanel {
           this._buildViewRow(TIME_LENS_ROW, group),
         );
     }
-    if (previousGroup === RESEARCH_GROUP)
+    if (previousGroup === RESEARCH_GROUP) {
       this._toggleContainer.appendChild(this._buildCuratedRow());
+      this._toggleContainer.appendChild(this._buildReportsRow());
+    }
     this._toggleContainer.appendChild(empty);
     this._toggleContainer.appendChild(this._buildProfileToggle(layers));
     this._applyFilter();
@@ -714,6 +718,48 @@ export class LayerPanel {
     meta.className = 'data-toggle-meta';
     meta.textContent =
       'Tour up to 3 cities · 6 layers · report, data and charts';
+    row.append(top, meta);
+    return row;
+  }
+
+  /**
+   * Research Data → Area Reports: rank counties, tracts or states by any
+   * layer and save PDF / CSV / XLSX (src/reports/reportPanel.js). No key.
+   */
+  _buildReportsRow() {
+    const group = RESEARCH_GROUP;
+    const row = document.createElement('div');
+    row.className =
+      'data-toggle-row data-view-row data-curated-row data-reports-row';
+    row.dataset.group = group;
+    this._groups.get(group)?.rows.push({ row, label: 'area reports' });
+    const top = document.createElement('div');
+    top.className = 'data-toggle-top';
+    const left = document.createElement('div');
+    left.className = 'data-toggle-left';
+    const icon = document.createElement('span');
+    icon.className = 'data-icon';
+    icon.textContent = '▤';
+    const name = document.createElement('span');
+    name.className = 'data-name';
+    name.textContent = 'Area Reports';
+    left.append(icon, name);
+    const right = document.createElement('div');
+    right.className = 'data-toggle-right';
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'data-toggle-btn data-view-start';
+    open.setAttribute('aria-label', 'Open Area Reports');
+    open.textContent = 'OPEN';
+    open.title = 'Rank counties, tracts or states by any layer';
+    this._bind(open, 'click', () =>
+      window.dispatchEvent(new CustomEvent('gev:area-reports-open')),
+    );
+    right.appendChild(open);
+    top.append(left, right);
+    const meta = document.createElement('div');
+    meta.className = 'data-toggle-meta';
+    meta.textContent = 'Rank areas by any layer · PDF, CSV and XLSX';
     row.append(top, meta);
     return row;
   }

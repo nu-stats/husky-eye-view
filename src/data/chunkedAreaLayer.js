@@ -296,6 +296,8 @@ export function chunksInView(index, view, limit) {
  * @param {Array<{id:string,label:string,featureColor:Function,legend?:Array,featureSummary?:Function}>} [options.variants]
  *   Alternative views of the same areas (e.g. survey years); the layer row
  *   shows one chip per variant and the first is shown until another is chosen.
+ * @param {string} [options.defaultVariant] Id of the variant to show first
+ *   instead (e.g. the latest year, with the chips kept in date order).
  * @param {object} [options.far] A coarser stand-in drawn when the camera is
  *   above `maxHeightM` (e.g. county values for a tract layer), so the layer
  *   always shows something over the country:
@@ -323,6 +325,7 @@ export function createChunkedAreaLayer(
     featureFilter = null,
     fillAlpha = FILL_ALPHA,
     variants = [],
+    defaultVariant = null,
     far = null,
     screenSpaceEventHandlerFactory = (canvas) =>
       new Cesium.ScreenSpaceEventHandler(canvas),
@@ -388,8 +391,11 @@ export function createChunkedAreaLayer(
   let lastViewPose = null;
   let lastMotionCheckMs = 0;
   let rowControlsListener = null;
-  // A variant swaps the coloring, legend and card text in place.
-  let variantId = variants[0]?.id ?? null;
+  // A variant swaps the coloring, legend and card text in place. The first
+  // one shows unless `defaultVariant` names another (chips stay in order).
+  const firstVariant =
+    variants.find((variant) => variant.id === defaultVariant) || variants[0];
+  let variantId = firstVariant?.id ?? null;
   let farColor = far?.featureColor ?? null;
   let farSummary = far?.featureSummary ?? null;
   let farLegend = far?.legend ?? null;
@@ -406,7 +412,7 @@ export function createChunkedAreaLayer(
   /** Fill color for a feature of the near or the far source. */
   const colorOf = (properties, isFar) =>
     (isFar && farColor ? farColor : featureColor)(properties);
-  applyVariant(variants[0]);
+  applyVariant(firstVariant);
   /**
    * chunk id -> { primitives, features } currently drawn. `primitives` are
    * the chunk's Cesium.GroundPrimitive batches (none when no area survived

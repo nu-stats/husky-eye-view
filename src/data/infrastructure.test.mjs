@@ -245,6 +245,16 @@ test('infrastructure factory preserves identity and creates independent state wi
         source: 'ASU Technology, Data and Society',
       },
       {
+        id: 'local-foreign-born-tracts',
+        name: 'Foreign-Born Residents (tracts)',
+        source: 'Census 2000 / ACS',
+      },
+      {
+        id: 'local-foreign-born-counties',
+        name: 'Foreign-Born Residents (counties)',
+        source: 'Census 2000 / ACS',
+      },
+      {
         id: 'local-gva-2015',
         name: 'Gun Deaths 2015 (GVA)',
         source: 'Gun Violence Archive',
@@ -470,6 +480,8 @@ test('consumer build includes only infrastructure code and resolves assets under
   const sources = Object.keys(entry.modules).filter((id) => id.endsWith('.js'));
   assert.deepEqual(sources.map((id) => id.split('/').at(-1)).sort(), [
     'chunkedAreaLayer.js',
+    // The country names the foreign-born layers' cards decode (pure data).
+    'foreignBornCountries.js',
     'infrastructure.js',
     // Pure layer metadata (card nouns for unnamed pins).
     'layerManifest.js',

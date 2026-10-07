@@ -391,6 +391,14 @@ export const DATA_CREDITS = [
       'Technology, Data and Society, Arizona State University',
   },
   {
+    key: 'census-foreign-born',
+    html:
+      'Foreign-born residents and countries of birth, 2000–2024: U.S. Census Bureau, ' +
+      '<a href="https://www2.census.gov/census_2000/datasets/Summary_File_3/" target="_blank" rel="noopener">Census 2000 Summary File 3</a> (PCT019) and ' +
+      '<a href="https://www.census.gov/programs-surveys/acs/data/summary-file.html" target="_blank" rel="noopener">American Community Survey 5-year estimates</a> (B05006; 2006–2010 and 2020–2024), ' +
+      'moved onto 2020 tracts with the Census tract relationship files',
+  },
+  {
     key: 'chicago-historical-homicides',
     html:
       'Chicago homicides 1870–1930 (key-locked): Leigh Bienen, ' +

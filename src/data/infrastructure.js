@@ -1,5 +1,6 @@
 import { createLocalGeoJsonLayer, DATASET_LOCKS } from './localGeojsonCore.js';
 import { createChunkedAreaLayer } from './chunkedAreaLayer.js';
+import { FOREIGN_BORN_COUNTRIES } from './foreignBornCountries.js';
 
 // Nationwide context layers, chunked by county under public/context/ by
 // scripts/build-context-layers.mjs and loaded only for the counties in view.
@@ -749,6 +750,62 @@ export function areaSegregationSummary(p, noun = 'This area') {
           `Population 2020–24: ${Math.round(population).toLocaleString('en-US')}`,
         ]
       : []),
+  ].join('\n');
+}
+
+// ---- Foreign-born residents: the share, and the largest countries of birth --
+// scripts/build-foreign-born-layers.mjs writes fb<yy> (% of residents born
+// outside the United States) and fbt<yy> (the eight largest countries of
+// birth as "country:percent,…", percent of ALL residents, countries as
+// indexes into FOREIGN_BORN_COUNTRIES) on the 2020 tracts and the counties.
+export const FOREIGN_BORN_YEARS = Object.freeze([
+  { key: '00', label: '2000', source: 'Census 2000 SF3, table PCT019' },
+  { key: '10', label: '2006–10', source: 'ACS 2006–2010, table B05006' },
+  { key: '24', label: '2020–24', source: 'ACS 2020–2024, table B05006' },
+]);
+// Most counties are under 5%, so the low classes are narrow enough to show
+// rural differences; 30% and over picks out the gateway metros.
+const FOREIGN_BORN_BINS = shareBins([2.5, 5, 10, 20, 30], TEALS);
+const FOREIGN_BORN_SOURCES =
+  'U.S. Census Bureau: Census 2000 Summary File 3 (tables PCT019, P001) and American Community Survey 2006–2010 and 2020–2024 5-year estimates (tables B05006, B01003). The share is residents born outside the United States; the card lists the eight largest countries of birth in the area, each as a share of all residents, using the countries as each table names them ("Other …" lines left out).';
+export const FOREIGN_BORN_TRACT_NOTE = `${FOREIGN_BORN_SOURCES} 2000 and 2006–10 tract values are moved onto 2020 tracts with the Census Bureau's tract relationship files (2000→2010 by the 2010 population in each part, 2010→2020 by land area). ACS tract estimates carry wide margins of error. Computed by Husky Eye View.`;
+export const FOREIGN_BORN_COUNTY_NOTE = `${FOREIGN_BORN_SOURCES} County estimates (Connecticut 2020–24: tracts summed into its former counties). Computed by Husky Eye View.`;
+
+/** [{name, pct}] from an "index:percent,…" string. */
+export function foreignBornGroups(encoded, countries = FOREIGN_BORN_COUNTRIES) {
+  return String(encoded || '')
+    .split(',')
+    .filter(Boolean)
+    .map((pair) => {
+      const [index, pct] = pair.split(':');
+      return { name: countries[Number(index)] || 'Unknown', pct: Number(pct) };
+    })
+    .filter((group) => Number.isFinite(group.pct));
+}
+
+/**
+ * An area's card (its name is the card's title): the year's share, its top
+ * countries, and the other years.
+ */
+export function foreignBornSummary(year, p, noun = 'area') {
+  const share = p[`fb${year.key}`];
+  if (!Number.isFinite(share))
+    return `No ${year.label} estimate for this ${noun} (too few residents).`;
+  const groups = foreignBornGroups(p[`fbt${year.key}`]);
+  const others = FOREIGN_BORN_YEARS.filter(
+    (other) => other !== year && Number.isFinite(p[`fb${other.key}`]),
+  ).map((other) => `${other.label} ${p[`fb${other.key}`].toFixed(1)}%`);
+  return [
+    `${year.label}: ${share.toFixed(1)}% of this ${noun}'s residents were born outside the United States (${year.source}).`,
+    ...(groups.length
+      ? [
+          'Largest countries of birth (% of all residents):',
+          groups
+            .map((g, i) => `${i + 1}. ${g.name} ${g.pct.toFixed(1)}%`)
+            .join(' · '),
+        ]
+      : []),
+    ...(others.length ? [`Other years: ${others.join(' · ')}`] : []),
   ].join('\n');
 }
 
@@ -1797,6 +1854,57 @@ export function createInfrastructureLayers(services) {
     services,
   );
 
+  // Foreign-born residents by tract and by county, 2000 / 2006–10 / 2020–24
+  // (scripts/build-foreign-born-layers.mjs); the tract layer shows counties
+  // from far out.
+  const foreignBornLayers = [
+    {
+      id: 'local-foreign-born-tracts',
+      name: 'Foreign-Born Residents (tracts)',
+      noun: 'tract',
+    },
+    {
+      id: 'local-foreign-born-counties',
+      name: 'Foreign-Born Residents (counties)',
+      noun: 'county',
+    },
+  ].map((area) =>
+    createChunkedAreaLayer(
+      {
+        id: area.id,
+        name: area.name,
+        ...(area.noun === 'county'
+          ? {
+              baseUrl: 'context/county-life-expectancy/',
+              ...COUNTY_LAYER_OPTIONS,
+              sourceNote: FOREIGN_BORN_COUNTY_NOTE,
+            }
+          : {
+              baseUrl: 'context/tracts-2020/',
+              sourceNote: FOREIGN_BORN_TRACT_NOTE,
+              far: countyOverview({ sourceNote: FOREIGN_BORN_COUNTY_NOTE }),
+            }),
+        icon: '✈',
+        source: 'Census 2000 / ACS',
+        fillAlpha: 0.6,
+        defaultVariant: 'fb24',
+        variants: FOREIGN_BORN_YEARS.map((year) => ({
+          id: `fb${year.key}`,
+          label: year.label,
+          title: `${year.label}: residents born outside the United States`,
+          featureColor: (p) =>
+            binOf(FOREIGN_BORN_BINS, p[`fb${year.key}`])?.color ||
+            NO_DATA_COLOR,
+          legend: binLegend(FOREIGN_BORN_BINS, `fb${year.key}`),
+          featureSummary: (p) => foreignBornSummary(year, p, area.noun),
+          farFeatureSummary: (p) => foreignBornSummary(year, p, 'county'),
+        })),
+        featureColor: () => NO_DATA_COLOR,
+      },
+      services,
+    ),
+  );
+
   return [
     datacenters,
     dams,
@@ -1826,6 +1934,7 @@ export function createInfrastructureLayers(services) {
     ...internetLayers,
     ntiaStates,
     asuCounties,
+    ...foreignBornLayers,
     gva2015,
     mkdb,
     chicagoHomicides,

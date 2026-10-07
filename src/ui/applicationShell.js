@@ -31,6 +31,7 @@ import { aircraftTrackingTarget } from '../cockpitTracking.js';
 
 import { ShellFeedback } from './shellFeedback.js';
 import { CuratedFlightsPanel } from '../curated/curatedPanel.js';
+import { AreaReportsPanel } from '../reports/reportPanel.js';
 import { TimeLens } from './timeLens.js';
 import {
   applyDataPanelPlacement,
@@ -394,6 +395,12 @@ export class StyleManager extends ShellFacade {
       readDataManager: () => this._dataManager,
       holdRender: services.holdContinuousRender,
       releaseRender: services.releaseContinuousRender,
+      showToast: (message) => this._showToast(message),
+    });
+
+    // Area Reports (Data Layers → Research Data): rank areas by any layer and
+    // save PDF / CSV / XLSX; panel and voice share it.
+    this.areaReports = new AreaReportsPanel({
       showToast: (message) => this._showToast(message),
     });
 
@@ -1564,6 +1571,7 @@ export class StyleManager extends ShellFacade {
     this._visualSettings.releaseIrBoost();
     this._cockpitCoordinator.destroy();
     this.curatedFlights?.destroy();
+    this.areaReports?.destroy();
     this.timeLens?.destroy();
     this._contextControls.disconnect();
     this._layerBindings.disconnect();

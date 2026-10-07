@@ -260,6 +260,32 @@ export const LAYER_MANIFEST = Object.freeze(
       vintage: '2020–2024',
       aliases: ['broadband', 'broadband tracts', 'internet subscription'],
     },
+    {
+      id: 'local-foreign-born-tracts',
+      token: 'ft',
+      group: CENSUS_GROUP,
+      vintage: '2000–2024',
+      aliases: [
+        'foreign born',
+        'foreign-born residents',
+        'immigrants',
+        'immigrant population',
+        'countries of birth',
+        'foreign born tracts',
+      ],
+    },
+    {
+      id: 'local-foreign-born-counties',
+      token: 'fc',
+      group: CENSUS_GROUP,
+      vintage: '2000–2024',
+      aliases: [
+        'foreign born by county',
+        'foreign-born counties',
+        'immigrants by county',
+        'county immigrant population',
+      ],
+    },
 
     // ---- Internet Access Over Time: CPS states, ACS counties and tracts ----
     {

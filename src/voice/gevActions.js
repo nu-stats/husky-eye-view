@@ -969,6 +969,22 @@ export function createGevActionRunner({
           };
     }
 
+    if (name === 'generate_area_report') {
+      const reports = styleManager?.areaReports;
+      if (!reports)
+        return { ok: false, action: name, error: 'Area Reports unavailable' };
+      const result = await reports.generate({
+        geography: args.geography,
+        rankBy: args.rank_by,
+        order: args.order,
+        limit: args.count,
+        columns: Array.isArray(args.columns) ? args.columns : undefined,
+        state: args.state,
+        formats: Array.isArray(args.formats) ? args.formats : undefined,
+      });
+      return { action: name, ...result };
+    }
+
     if (name === 'plan_curated_flight' || name === 'control_curated_flight') {
       return curatedFlightAction(styleManager?.curatedFlights, name, args);
     }

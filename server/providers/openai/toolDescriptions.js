@@ -122,6 +122,39 @@ export const ACTION_DESCRIPTIONS = {
     description:
       'Start Walking View (first person at street level) or Drone View (hovering 30–120 m up) at the center of the current view. The user then moves with W/A/S/D (Q/E for height) and leaves with Esc. Use only when the user asks to walk, go to street level, or fly a drone.',
   },
+  generate_area_report: {
+    description:
+      'Gather data and generate a report that ranks US counties, census tracts (within one state) or states by one measure and lists other measures as columns, saved as PDF, CSV and XLSX (one ZIP). Use for requests like "a report of the 50 counties with the largest immigrant populations with poverty, unemployment, life expectancy and cluster status". Identifiers (state and county FIPS codes, state and county names) are always included. No key needed. After it runs, say the report title, the file name and the first few areas with their values; mention any problems the result lists.',
+    parameters: {
+      properties: {
+        geography: {
+          description: 'county (default), tract (needs state), or state.',
+        },
+        rank_by: {
+          description:
+            'The measure to rank by: population, foreign-born-count (immigrant population size), foreign-born-share (% foreign-born; -2010 and -2000 for earlier years), poverty, unemployment, bachelors, renters, black, hispanic, no-vehicle, internet, broadband, median-income, life-expectancy (counties), life-expectancy-2000, pm25, ozone, park-access, asu-broadband (counties), ntia-internet-use (states), segregation-bw / segregation-hw / segregation-aw (counties and states). cluster-status and top-countries are columns only.',
+        },
+        order: {
+          description:
+            'largest (default: largest, highest, most) or smallest (lowest, fewest).',
+        },
+        count: {
+          description: 'How many areas to list (default 50, at most 500).',
+        },
+        columns: {
+          description:
+            'Other measures to list, in the order said (same names as rank_by, plus cluster-status = county life expectancy clustering status and top-countries = largest countries of birth). Omit to use the default columns: population, foreign-born count and share, poverty, unemployment, life expectancy, cluster status.',
+        },
+        state: {
+          description:
+            'Limit to one state (name or postal code), e.g. "Massachusetts". Required for tract reports.',
+        },
+        formats: {
+          description: 'Any of pdf, csv, xlsx; default all three.',
+        },
+      },
+    },
+  },
   plan_curated_flight: {
     description:
       'Plan (and optionally start) a Curated Flight: a guided tour comparing up to 3 US cities of 100,000+ people on up to 6 data layers, with city / county / state averages and a downloadable report. Needs the Curated Flights key (POWER UP); if locked, tell the user to enter it. Ask for missing cities or layers before calling. Read back the plan and any problems the result lists.',

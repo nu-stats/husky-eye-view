@@ -6,6 +6,38 @@ import { REGISTERED_LAYER_IDS } from '../data/layerManifest.js';
 // registry to get a share-link token, so new layers reach voice automatically.
 const VOICE_LAYER_IDS = [...REGISTERED_LAYER_IDS];
 
+// Area Reports measures (src/reports/reportMeasures.js ids; a test keeps the
+// two lists equal). Listed here so the voice schemas stay a portable export.
+const REPORT_MEASURE_IDS = [
+  'population',
+  'foreign-born-count',
+  'foreign-born-share',
+  'foreign-born-share-2010',
+  'foreign-born-share-2000',
+  'top-countries',
+  'poverty',
+  'unemployment',
+  'bachelors',
+  'renters',
+  'black',
+  'hispanic',
+  'no-vehicle',
+  'internet',
+  'broadband',
+  'median-income',
+  'life-expectancy',
+  'life-expectancy-2000',
+  'cluster-status',
+  'pm25',
+  'ozone',
+  'park-access',
+  'asu-broadband',
+  'ntia-internet-use',
+  'segregation-bw',
+  'segregation-hw',
+  'segregation-aw',
+];
+
 // Canonical action arguments. Descriptive wording is supplied separately.
 const schemas = [
   {
@@ -868,6 +900,49 @@ const schemas = [
         },
       },
       required: ['mode'],
+    },
+  },
+  // Area Reports (src/reports/): rank counties, tracts or states by one
+  // measure and save PDF / CSV / XLSX. The measure list must match
+  // src/reports/reportMeasures.js (pinned by a test).
+  {
+    name: 'generate_area_report',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        geography: {
+          type: 'string',
+          enum: ['county', 'tract', 'state'],
+        },
+        rank_by: {
+          type: 'string',
+          enum: REPORT_MEASURE_IDS,
+        },
+        order: {
+          type: 'string',
+          enum: ['largest', 'smallest'],
+        },
+        count: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 500,
+        },
+        columns: {
+          type: 'array',
+          items: { type: 'string', enum: REPORT_MEASURE_IDS },
+          maxItems: 12,
+        },
+        state: {
+          type: 'string',
+        },
+        formats: {
+          type: 'array',
+          items: { type: 'string', enum: ['pdf', 'csv', 'xlsx'] },
+          maxItems: 3,
+        },
+      },
+      required: ['rank_by'],
     },
   },
   // Curated Flights (src/curated/): needs its own key; GVA/MKDB values also

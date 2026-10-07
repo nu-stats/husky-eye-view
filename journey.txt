@@ -1055,10 +1055,44 @@ STEP 63: Northeastern fonts; internet and segregation comparisons (v0.2.1)
     (CDC PLACES 2025 uninsured adults by tract) in both videos.
 
 
+STEP 64: Foreign-born residents, 2000-2024 (October 6)
+-------------------------------------------------------------------------------
+  - Foreign-Born Residents (tracts) and (counties), chips 2000 / 2006-10 /
+    2020-24 (2020-24 shown first): the share of residents born outside the US,
+    and on each card the eight largest countries of birth in that tract or
+    county, each as a share of ALL residents, plus the other years.
+  - Census 2000 SF3 (PCT019, P001), ACS 2006-2010 and 2020-2024 (B05006,
+    B01003) from the Census bulk files (the Census API now needs a key).
+    2000 tracts go onto 2010 tracts by 2010 population and then onto 2020
+    tracts by land area (Census relationship files); counties use the county
+    tables. Countries are each table's own; "Other ..." lines are left out.
+  - Checks: US 2000 foreign-born 31,107,889; Miami-Dade 50.9% (2000), Cuba
+    first; Suffolk County 29.8% (2020-24).
+  - 77 layers. scripts/fetch-foreign-born.mjs, build-foreign-born-layers.mjs;
+    country names in src/data/foreignBornCountries.js (generated).
+
+
+STEP 65: Area Reports, by panel or by voice (October 7)
+-------------------------------------------------------------------------------
+  - Data Layers -> Research Data -> Area Reports, and the voice tool
+    generate_area_report: rank counties, census tracts (one state at a time)
+    or states by any of 27 measures from the layers (foreign-born count and
+    share, ACS social measures, life expectancy, cluster status, air, parks,
+    internet, segregation), list any of them as columns, and save PDF, CSV
+    and XLSX in one ZIP. FIPS codes and names are always included; the PDF
+    ends with sources and notes for every column.
+  - Test case: "the 50 counties with the largest immigrant populations" with
+    population, foreign-born count and share, poverty, unemployment, life
+    expectancy and cluster status (Los Angeles 3,279,681 first).
+  - Reads the map's own area files in the browser (src/reports/); foreign-born
+    and population counts added to the county and tract files.
+
+
 ===============================================================================
 WHERE THINGS STAND (October 6, 2026)
 ===============================================================================
-Layers:     75. Newest: NTIA internet use by state, ASU broadband by county, and
+Layers:     77. Newest: Foreign-Born Residents by tract and by county (Step 64);
+            NTIA internet use by state, ASU broadband by county, and
             segregation by county and by state (Step 63); before them Segregation by
             city (3), Enumeration Districts (4) and Chicago Homicides 1870-1930 (locked,
             own key), plus the Time Lens view. All are on voice's list. GVA and MKDB
@@ -1084,7 +1118,7 @@ HOLC:       314 cities from Mapping Inequality, Boston included (Step 48); every
 Media:      Overview video, captions and guide PDF on the latest GitHub release only
             (v0.2.1; video, sample flight and guide from Step 63). The release-media
             workflow moves them to each new release.
-Tests:      4,367 unit tests, none failing. Format, import-direction and
+Tests:      4,379 unit tests, none failing. Format, import-direction and
             package-boundary checks are clean.
 
 Backups:    C:\Users\jstow\Documents\HuskyEyeView-backups\
@@ -1100,7 +1134,9 @@ Data exports:
             mkdb_incidents_geocoded.csv
 
 Git history on main (newest first):
-            (release)  Your data in Curated Flights; internet and segregation
+            (release)  Foreign-born residents; Area Reports by panel and voice
+                       (tagged v0.2.2)
+            6352c6e7   Your data in Curated Flights; internet and segregation
                        comparisons; Northeastern fonts (tagged v0.2.1)
             (release)  History layers, Time Lens, Chicago homicides (tagged v0.2.0)
             7ef08a24  Internet Access by county and by tract (tagged v0.1.9)

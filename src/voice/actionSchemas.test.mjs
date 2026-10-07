@@ -33,8 +33,8 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     // Curated Flights tools plan_curated_flight / control_curated_flight
     // (layers include the ACS 2020–2024 social measures). 2026-10-06: the
     // flight layers add the three segregation indices, then 'my-data' (the
-    // user's uploaded file).
-    'db38c2d037f275814ca7d623da6072d5a2bdd34b48a4a7417d24a5d3380f0837',
+    // user's uploaded file). 2026-10-07: generate_area_report (Area Reports).
+    '1421744539110367cb9d5626d0b65714c1e875894f4960dd81a7970a1e7a436b',
   );
 });
 

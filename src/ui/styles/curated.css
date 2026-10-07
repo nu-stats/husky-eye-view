@@ -303,3 +303,41 @@
   border-radius: 2px;
   vertical-align: -2px;
 }
+
+/* Area Reports: same panel as Curated Flights, plus a preview table. */
+.area-reports-limit {
+  width: 64px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  background: #15181d;
+  color: inherit;
+}
+.area-reports-preview {
+  max-height: 260px;
+  overflow: auto;
+}
+.area-reports-preview:empty {
+  display: none;
+}
+.area-reports-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.area-reports-table th,
+.area-reports-table td {
+  padding: 3px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  white-space: nowrap;
+}
+.area-reports-table th {
+  color: var(--text-secondary, #b6b9be);
+  font-weight: 700;
+}
+.data-reports-row .data-icon {
+  color: #c8102e;
+}
