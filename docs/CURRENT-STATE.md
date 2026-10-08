@@ -4409,6 +4409,10 @@ easier to meet (detection is now on more often), but does not create it.
   shown dot against the allowed source classes and records phase timings.
   Positions and segment distances are precomputed, with no new animation-loop
   allocation. Visible-globe roads use cached terrain without offscreen mesh picks. The road-source label names the geometry being drawn, with partial/unavailable states shown plainly.
+- Vector tile sources accept tiles only from an allowed origin, which defaults
+  to the configured `tileJsonUrl` origin; an explicit `allowedOrigin` overrides
+  it. Repointing only `tileJsonUrl` loads tiles from that host or fails with an
+  origin error rather than silently falling back to OpenFreeMap.
 - TileJSON caches successful metadata. Transient failures retry after a
   five-second cooldown; invalid metadata/origins stay unavailable until the
   source is cleared. Clear resets metadata and cancels pending requests.
