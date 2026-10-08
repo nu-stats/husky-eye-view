@@ -55,8 +55,16 @@ test('conditions, options and several requests at once', () => {
     both(
       'effect of poverty on homicide counts where population is at least 1,000 and poverty over 5',
     ).stata.lines,
-    ['regress homicide_counts poverty if population >= 1000 & poverty > 5'],
+    ['poisson homicide_counts poverty if population >= 1000 & poverty > 5'],
   );
+  // A count outcome gets a count model unless OLS is asked for by name.
+  assert.deepEqual(
+    both('effect of poverty on homicide counts').r.lines.slice(0, 1),
+    ['m <- glm(homicide_counts ~ poverty, family = poisson, data = d)'],
+  );
+  assert.deepEqual(both('regress homicide counts on poverty').stata.lines, [
+    'regress homicide_counts poverty',
+  ]);
   assert.deepEqual(
     both('regress poverty on unemployment, robust').stata.lines,
     ['regress poverty unemployment, vce(robust)'],

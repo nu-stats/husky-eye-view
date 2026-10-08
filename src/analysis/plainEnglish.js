@@ -187,6 +187,15 @@ const splitList = (text) =>
     .map((s) => s.replace(/^(?:and|the|of)\s+/i, '').trim())
     .filter(Boolean);
 
+/** A variable holding counts: "homicide_counts", "Homicides (count)", "Number of …". */
+function isCount(variable) {
+  if (!variable) return false;
+  return (
+    /(?:^|_)(?:counts?|num|number|n)(?:_|$)/i.test(variable.name) ||
+    /\bcounts?\b|\bnumber of\b/i.test(variable.label || '')
+  );
+}
+
 /** What kind of analysis a request asks for, with its options. */
 export function analysisKind(text) {
   const t = String(text).toLowerCase();
@@ -229,7 +238,13 @@ export function analysisKind(text) {
       t,
     )
   )
-    return { model: 'regress', ...options };
+    return {
+      model: 'regress',
+      // "regress", "OLS" or "linear" asks for OLS by name; "effect of" or
+      // "predict" leaves the model to the outcome (counts get Poisson).
+      linear: /\bregress\b|\bols\b|linear|least squares/.test(t),
+      ...options,
+    };
   if (/standardi[sz]e|z[- ]?scores?/.test(t)) return { model: 'std' };
   if (/\brank\b/.test(t)) return { model: 'rank' };
   if (
@@ -542,6 +557,12 @@ function translateOne(request, variables, engine) {
       [outcome, ...predictors] = predictors;
     if (!outcome) problems.push('Name the outcome (for example DV = poverty).');
     else y = pick(outcome);
+    // A count outcome (homicides, cases) is modeled as counts, not OLS,
+    // unless OLS was asked for by name.
+    if (kind.model === 'regress' && !kind.linear && y) {
+      const v = variables.find((item) => item.name === y);
+      if (isCount(v)) kind.model = 'poisson';
+    }
     if (!predictors.length)
       problems.push(
         'Name the predictors (for example IV: unemployment, income).',
