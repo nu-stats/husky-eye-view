@@ -22,6 +22,7 @@ import {
   SESSION_SHAPES_FILE,
   STATA_COMMANDS,
 } from './stataCommands.js';
+import { isSpssModelLine } from './spssCommands.js';
 import { parseCsv } from '../curated/userData.js';
 
 /** Selected rows on the map: a bright fill with a thick outline. */
@@ -132,7 +133,9 @@ export function modelLines(steps = []) {
     .filter((s) => !s.rc)
     .map((s) => String(s.line || ''))
     .filter(
-      (line) => STATA_COMMANDS[line.trim().split(/\s+/)[0]]?.kind === 'model',
+      (line) =>
+        STATA_COMMANDS[line.trim().split(/\s+/)[0]]?.kind === 'model' ||
+        isSpssModelLine(line),
     );
 }
 

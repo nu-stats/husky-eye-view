@@ -321,7 +321,7 @@ export function prepareSession(request = {}, options = {}) {
   return prepareAnalysisSession(request, { ...options, engine: STATA_ENGINE });
 }
 
-/** The same for any engine (Stata here, R in rSession.js). */
+/** The same for any engine (Stata here, R in rSession.js, SPSS in spssSession.js). */
 export function prepareAnalysisSession(
   request = {},
   { engine = STATA_ENGINE, env = process.env, publicDir, now } = {},
@@ -492,6 +492,7 @@ export function prepareAnalysisSession(
   const doText = engine.build({
     title,
     variables,
+    rows,
     commands: checked.commands,
     userFile: doFile ? engine.userFile : null,
     areaCount: rows.length,

@@ -25,6 +25,7 @@ import { researchDataProxy } from './research.js';
 import { curatedFlightsProxy } from './curatedFlights.js';
 import { stataProxy } from './stata.js';
 import { rProxy } from './r.js';
+import { spssProxy } from './spss.js';
 
 /** Construct the local provider plugins in their established order. */
 function localProviderPlugins() {
@@ -55,6 +56,7 @@ function localProviderPlugins() {
     curatedFlightsProxy(),
     stataProxy(),
     rProxy(),
+    spssProxy(),
     keySetupEndpoint(),
   ];
 }

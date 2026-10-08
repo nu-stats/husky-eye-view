@@ -47,7 +47,8 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     // run_r_analysis and open_in_r (R on this computer); a layer choice for
     // all four Stata and R tools. Later: run_stata_analysis / run_r_analysis
     // take the user's words (request) for the plain-English translator.
-    '4fcf295dc79d8dcd7eb42bae876d3d64c6ef8f1972d1d8268ef7f49d0682229b',
+    // 2026-10-08: run_spss_analysis and open_in_spss (SPSS on this computer).
+    '6b044773064ce88d58b2b17920976a6617c3d5e60c18f35e03d681c0f488bfc6',
   );
 });
 

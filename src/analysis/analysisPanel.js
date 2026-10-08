@@ -1,9 +1,10 @@
 /**
- * The Stata Analysis and R Analysis panels (the Analysis menu) and
- * the controller the voice assistant shares. Commands or an uploaded script
- * run on this computer against a layer's data (counties, a state's tracts,
- * states, or the areas in the current map view); "Open in Stata" / "Open in
- * R" opens the program itself with that data loaded. Each run is kept as a
+ * The Stata Analysis, R Analysis and SPSS Analysis panels (the Analysis
+ * menu) and the controller the voice assistant shares. Commands or an
+ * uploaded script run on this computer against a layer's data (counties, a
+ * state's tracts, states, or the areas in the current map view); "Open in
+ * Stata" / "Open in R" / "Open in SPSS" opens the program itself with that
+ * data loaded. Each run is kept as a
  * session folder with its script and log (server/providers/analysis.js).
  */
 import { STATES } from '../reports/areaReport.js';
@@ -13,6 +14,11 @@ import {
   checkCommandLines,
 } from './stataCommands.js';
 import { MAX_R_SCRIPT_BYTES, checkRLines } from './rCommands.js';
+import {
+  MAX_SPSS_SYNTAX_BYTES,
+  SPSS_COMMAND_NAMES,
+  checkSpssLines,
+} from './spssCommands.js';
 import { LAYER_MANIFEST, layerManifestEntry } from '../data/layerManifest.js';
 import { translatePlainEnglish } from './plainEnglish.js';
 import {
@@ -91,7 +97,50 @@ export const ANALYSIS_ENGINES = Object.freeze({
       `R ${s.version ?? ''} found${s.rstudio ? ' (RStudio too)' : ''}.`,
     failed: () => 'error',
   },
+  spss: {
+    id: 'spss',
+    name: 'SPSS',
+    event: 'gev:spss-analysis-open',
+    api: '/api/spss',
+    panelId: 'spss-analysis-panel',
+    lineLabel: 'SPSS commands (one per line; the period is optional)',
+    examples: [
+      'DESCRIPTIVES VARIABLES=foreign_born_share poverty median_income',
+      'REGRESSION /DEPENDENT foreign_born_share /METHOD=ENTER poverty unemployment',
+      'GRAPH /SCATTERPLOT(BIVAR)=poverty WITH foreign_born_share',
+    ],
+    hint: `${SPSS_COMMAND_NAMES.join(', ')} — one command per line, with its subcommands. A linear REGRESSION sends its residuals and fitted values to the map. Anything else: upload a syntax file.`,
+    scriptLabel: 'Syntax file',
+    scriptAccept: '.sps,text/plain',
+    scriptBytes: MAX_SPSS_SYNTAX_BYTES,
+    files: [
+      'analysis.sps',
+      'analysis.log',
+      'output.spv',
+      'output.html',
+      'results.docx',
+      'results.xlsx',
+      'results.doc',
+      'results.xls',
+      'data.sav',
+    ],
+    sessionFiles: 'data.sav, and session.log for what you run',
+    openNote:
+      'In SPSS, choose Run ▸ All in the syntax window (open.sps) to load and label the data.',
+    missing:
+      'IBM SPSS Statistics was not found on this computer. Set HEV_SPSS_PATH to its program (stats.exe) or install folder.',
+    found: (s) =>
+      `SPSS Statistics ${s.version ?? ''} found${s.python ? '' : ' (its Python 3 is missing: RUN needs it; OPEN IN SPSS works)'}.`,
+    failed: (rc) => `error level ${rc}`,
+  },
 });
+
+/** Each program's line check (the same one its server runs). */
+const LINE_CHECKS = {
+  stata: checkCommandLines,
+  r: checkRLines,
+  spss: checkSpssLines,
+};
 
 /** Kept for existing imports: the Stata panel's open event. */
 export const ANALYSIS_OPEN_EVENT = ANALYSIS_ENGINES.stata.event;
@@ -874,10 +923,7 @@ export class AnalysisPanel {
     ) {
       if (!this.variableList) await this.loadVariables();
       const lines = request.commands.split(/\r?\n/).filter((l) => l.trim());
-      const check = (this.engine.id === 'r' ? checkRLines : checkCommandLines)(
-        lines,
-        this.variableList || [],
-      );
+      const check = LINE_CHECKS[this.engine.id](lines, this.variableList || []);
       if (check.problems.length) {
         const out = await this.translate(request.commands);
         if (out.ok) {
@@ -1008,9 +1054,13 @@ export class AnalysisPanel {
     if (!result.ok)
       return this.fail(result.problems || [`${name} did not open.`]);
     this.setStatus(
-      `${name} is opening with ${result.title.replace(/^Husky Eye View: /, '')}. Your commands and results are saved in ${result.folder} (${this.engine.sessionFiles}).`,
+      `${name} is opening with ${result.title.replace(/^Husky Eye View: /, '')}.${this.engine.openNote ? ` ${this.engine.openNote}` : ''} Your commands and results are saved in ${result.folder} (${this.engine.sessionFiles}).`,
     );
-    this.showToast(`${name} is opening with the data loaded.`);
+    this.showToast(
+      this.engine.openNote
+        ? `${name} is opening. ${this.engine.openNote}`
+        : `${name} is opening with the data loaded.`,
+    );
     return {
       ok: true,
       title: result.title,
@@ -1042,7 +1092,8 @@ export class AnalysisPanel {
     );
     const base = `${this.engine.api}/sessions/${encodeURIComponent(result.id)}`;
     const graphs = (result.files || [])
-      .filter((f) => /^graph\d+\.png$/.test(f))
+      // graph1.png (Stata, R); SPSS's charts as its HTML output names them.
+      .filter((f) => /^graph[\w-]*\.png$/i.test(f))
       .map((f) =>
         element('img', {
           src: `${base}/${f}`,
@@ -1440,6 +1491,18 @@ export class RAnalysisPanel extends AnalysisPanel {
 
   /** Voice and the panel call it the same way as Stata's. */
   openR(request) {
+    return this.openStata(request);
+  }
+}
+
+/** The SPSS panel. */
+export class SpssAnalysisPanel extends AnalysisPanel {
+  constructor(options = {}) {
+    super({ ...options, engine: 'spss' });
+  }
+
+  /** Voice and the panel call it the same way as Stata's. */
+  openSpss(request) {
     return this.openStata(request);
   }
 }

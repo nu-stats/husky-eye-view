@@ -1047,6 +1047,56 @@ const schemas = [
       },
     },
   },
+  // IBM SPSS Statistics on this computer (src/analysis/spssCommands.js,
+  // server/providers/spss.js).
+  {
+    name: 'run_spss_analysis',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        geography: {
+          type: 'string',
+          enum: ['view', 'county', 'tract', 'state'],
+        },
+        layer: {
+          type: 'string',
+        },
+        state: {
+          type: 'string',
+        },
+        request: {
+          type: 'string',
+          maxLength: 600,
+        },
+        commands: {
+          type: 'array',
+          items: { type: 'string', maxLength: 600 },
+          minItems: 1,
+          maxItems: 20,
+        },
+      },
+    },
+  },
+  {
+    name: 'open_in_spss',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        geography: {
+          type: 'string',
+          enum: ['view', 'county', 'tract', 'state'],
+        },
+        layer: {
+          type: 'string',
+        },
+        state: {
+          type: 'string',
+        },
+      },
+    },
+  },
   // Curated Flights (src/curated/): needs its own key; GVA/MKDB values also
   // need the research key.
   {

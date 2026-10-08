@@ -1,5 +1,5 @@
 /**
- * A statistics program on this computer (Stata or R), for its Analysis panel
+ * A statistics program on this computer (Stata, R or SPSS), for its Analysis panel
  * and voice tools. One endpoint per program, under its own prefix:
  *
  *   GET  <prefix>/status                    -> {found, version, …, folder}
@@ -48,6 +48,14 @@ const TYPES = {
   '.dta': 'application/x-stata-dta',
   '.rds': 'application/octet-stream',
   '.rdata': 'application/octet-stream',
+  '.sps': 'text/plain; charset=utf-8',
+  '.py': 'text/plain; charset=utf-8',
+  '.sav': 'application/x-spss-sav',
+  '.spv': 'application/octet-stream',
+  '.xls': 'application/vnd.ms-excel',
+  '.doc': 'application/msword',
+  // SPSS's own HTML output: shown sandboxed (no scripts, its own origin).
+  '.html': 'text/html; charset=utf-8',
 };
 
 /**
@@ -163,11 +171,14 @@ export function analysisProxy({
           const full = path.join(folder, file[2]);
           if (!existsSync(full))
             return sendJson(res, 404, { error: 'No such file.' });
+          const ext = path.extname(full).toLowerCase();
           res.writeHead(200, {
-            'Content-Type':
-              TYPES[path.extname(full).toLowerCase()] ||
-              'application/octet-stream',
+            'Content-Type': TYPES[ext] || 'application/octet-stream',
             'Cache-Control': 'no-store',
+            ...(ext === '.html' && {
+              'Content-Security-Policy': 'sandbox',
+              'X-Content-Type-Options': 'nosniff',
+            }),
           });
           return res.end(readFileSync(full));
         }

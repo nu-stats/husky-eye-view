@@ -348,6 +348,17 @@ With Stata 18 or 19 installed on the same computer, **Data Layers → Data Analy
 - **By voice** ("run a regression in R…", "open the tracts in view in R") and **from a terminal**: `node scripts/r-analysis.mjs --geography tract --state MA "summary(d$poverty)"`.
 - `HEV_R_PATH` points at Rscript if R is somewhere unusual.
 
+## 📋 SPSS Analysis
+
+**Analysis → SPSS Analysis** is the same box for IBM SPSS Statistics (24 or later): pick a layer and areas, type SPSS commands one per line (the period is optional): `DESCRIPTIVES VARIABLES=poverty median_income`, `REGRESSION /DEPENDENT foreign_born_share /METHOD=ENTER poverty unemployment`, `GRAPH /SCATTERPLOT(BIVAR)=poverty WITH foreign_born_share`, or upload a syntax file. The plain-English box writes SPSS syntax too.
+
+- Typed lines may run models (`REGRESSION`, `LOGISTIC REGRESSION`, `GENLIN`, `UNIANOVA`, `GLM`), descriptives and tests (`DESCRIPTIVES`, `FREQUENCIES`, `CORRELATIONS`, `CROSSTABS`, `MEANS`, `EXAMINE`, `T-TEST`, `ONEWAY`, `NPAR TESTS`, `FACTOR`, `RELIABILITY`), `GRAPH`, and new variables (`COMPUTE`, `RECODE … INTO`, `RANK`, `SELECT IF`, `TEMPORARY`). Lines that read or write files, run programs or define macros are refused. SPSS has no spatial regression: use Stata or R for that (Moran's I and brushing work here as everywhere).
+- Runs use SPSS's own Python 3 (installed with SPSS): each line is submitted on its own, so each gets its own ✓ or ✗. A linear `REGRESSION` sends its residuals and fitted values to the map.
+- Each session keeps `analysis.sps`, the log, `data.sav`, `output.spv` (open it in SPSS), `output.html` with the charts, and the tables as `results.docx` and `results.xlsx`.
+- **Open in SPSS** opens SPSS on `open.sps`; choose **Run ▸ All** to load and label the data (`session.log` records what you run).
+- **By voice** ("run a regression in SPSS…", "open the tracts in view in SPSS") and **from a terminal**: `node scripts/spss-analysis.mjs --geography tract --state MA "DESCRIPTIVES VARIABLES=poverty"` (`--syntax file.sps`, `--open`, `--variables`).
+- `HEV_SPSS_PATH` points at `stats.exe` (or the SPSS folder) if SPSS is somewhere unusual; `HEV_SPSS_PYTHON` at its Python.
+
 Every run is kept in `Documents/HuskyEyeView-Analyses/<date>_<areas>/`: `data.csv`, `data.dta`, the do-file, the log, graphs as PNG and `results.xlsx` for models. `HEV_STATA_PATH` points at Stata if it is installed somewhere unusual; `HEV_ANALYSIS_DIR` moves the sessions folder.
 
 ---

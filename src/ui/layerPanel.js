@@ -665,7 +665,7 @@ export class LayerPanel {
   /**
    * The Analysis menu (its own bottom-row panel, #analysis-rows): the tools
    * that work on the layers (Curated Flights, Area Reports, Stata Analysis,
-   * R Analysis) and the Surprise. Rebuilt with the Data Layers list, so its
+   * R Analysis, SPSS Analysis) and the Surprise. Rebuilt with the Data Layers list, so its
    * handlers are released with the others.
    */
   _renderAnalysisRows() {
@@ -676,6 +676,7 @@ export class LayerPanel {
       this._buildReportsRow(),
       this._buildStataRow(),
       this._buildRRow(),
+      this._buildSpssRow(),
       this._buildSurpriseRow(),
     );
   }
@@ -888,6 +889,45 @@ export class LayerPanel {
     const meta = document.createElement('div');
     meta.className = 'data-toggle-meta';
     meta.textContent = 'R on this computer · script and log kept';
+    row.append(top, meta);
+    return row;
+  }
+
+  _buildSpssRow() {
+    const group = ANALYSIS_GROUP;
+    const row = document.createElement('div');
+    row.className =
+      'data-toggle-row data-view-row data-curated-row data-spss-row';
+    row.dataset.group = group;
+    this._groups.get(group)?.rows.push({ row, label: 'spss analysis' });
+    const top = document.createElement('div');
+    top.className = 'data-toggle-top';
+    const left = document.createElement('div');
+    left.className = 'data-toggle-left';
+    const icon = document.createElement('span');
+    icon.className = 'data-icon';
+    icon.textContent = '▦';
+    const name = document.createElement('span');
+    name.className = 'data-name';
+    name.textContent = 'SPSS Analysis';
+    left.append(icon, name);
+    const right = document.createElement('div');
+    right.className = 'data-toggle-right';
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'data-toggle-btn data-view-start';
+    open.setAttribute('aria-label', 'Open SPSS Analysis');
+    open.textContent = 'OPEN';
+    open.title = 'Run SPSS on any layer, or open SPSS with the data in view';
+    this._bind(open, 'click', () =>
+      window.dispatchEvent(new CustomEvent('gev:spss-analysis-open')),
+    );
+    right.appendChild(open);
+    top.append(left, right);
+    const meta = document.createElement('div');
+    meta.className = 'data-toggle-meta';
+    meta.textContent =
+      'IBM SPSS Statistics on this computer · syntax and output kept';
     row.append(top, meta);
     return row;
   }

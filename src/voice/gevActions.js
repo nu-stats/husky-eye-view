@@ -1032,6 +1032,30 @@ export function createGevActionRunner({
       return { action: name, ...result };
     }
 
+    if (name === 'run_spss_analysis' || name === 'open_in_spss') {
+      const panel =
+        (await styleManager?.ensureSpssAnalysis?.()) ||
+        styleManager?.spssAnalysis;
+      if (!panel)
+        return { ok: false, action: name, error: 'SPSS Analysis unavailable' };
+      const request = {
+        geography:
+          args.geography ||
+          (name === 'open_in_spss' || args.layer ? 'view' : 'county'),
+        state: args.state || null,
+        layer: args.layer || null,
+      };
+      const result =
+        name === 'open_in_spss'
+          ? await panel.openSpss(request)
+          : await panel.run({
+              ...request,
+              commands: Array.isArray(args.commands) ? args.commands : [],
+              plain: typeof args.request === 'string' ? args.request : null,
+            });
+      return { action: name, ...result };
+    }
+
     if (name === 'plan_curated_flight' || name === 'control_curated_flight') {
       return curatedFlightAction(
         (await styleManager?.ensureCuratedFlights?.()) ||

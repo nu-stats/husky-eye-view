@@ -216,6 +216,53 @@ export const ACTION_DESCRIPTIONS = {
       },
     },
   },
+  run_spss_analysis: {
+    description:
+      'Run a statistical analysis in IBM SPSS Statistics (on this computer) on a layer data set: counties, the census tracts of one state, states, or the areas in the current map view. Pass the user\'s words as request whenever you can: the app turns them into SPSS syntax itself. The variables are the same as for run_stata_analysis. Only if the user dictates SPSS syntax, give one command per line (the period is optional), e.g. "REGRESSION /DEPENDENT foreign_born_share /METHOD=ENTER poverty unemployment" or "DESCRIPTIVES VARIABLES=poverty median_income". Allowed commands: REGRESSION, LOGISTIC REGRESSION, GENLIN (Poisson, negative binomial, robust errors), UNIANOVA, GLM, DESCRIPTIVES, FREQUENCIES, CORRELATIONS, CROSSTABS, MEANS, EXAMINE, T-TEST, ONEWAY, NPAR TESTS, FACTOR, RELIABILITY, GRAPH, COMPUTE, RECODE … INTO, RANK, SELECT IF, TEMPORARY. SPSS has no spatial regression; use Stata or R for that. The syntax, the output (output.spv) and the log are saved. After it runs, report the key results in plain words and any failed line.',
+    parameters: {
+      properties: {
+        geography: {
+          description:
+            'view = the areas in the current map view; county (default); tract (needs state); state.',
+        },
+        layer: {
+          description:
+            'Analyze one area layer instead (all of its fields), by its Data Layers name or id, e.g. "Foreign-Born Residents (tracts)" or "local-acs-poverty". Use with geography view (the default) or a state.',
+        },
+        state: {
+          description:
+            'Limit to one state (name or postal code). Required for tract data unless geography is view.',
+        },
+        request: {
+          description:
+            "Preferred: the user's request in their own words; the app writes the SPSS syntax with its plain-English translator, shows it and runs it. Give request or commands, not both.",
+        },
+        commands: {
+          description:
+            'SPSS commands, one per line, run in order — only when the user dictates exact SPSS syntax.',
+        },
+      },
+    },
+  },
+  open_in_spss: {
+    description:
+      'Open IBM SPSS Statistics itself on this computer with a syntax window (open.sps) that loads a layer data set, labeled (default: the areas in the current map view); the user chooses Run ▸ All to load it, then works in SPSS directly. The data is also saved as data.sav, and what they run is logged to session.log.',
+    parameters: {
+      properties: {
+        geography: {
+          description:
+            'view (default) = the areas in the current map view; county; tract (needs state); state.',
+        },
+        layer: {
+          description:
+            'Analyze one area layer instead (all of its fields), by its Data Layers name or id, e.g. "Foreign-Born Residents (tracts)" or "local-acs-poverty". Use with geography view (the default) or a state.',
+        },
+        state: {
+          description: 'Limit to one state (name or postal code).',
+        },
+      },
+    },
+  },
   generate_area_report: {
     description:
       'Gather data and generate a report that ranks US counties, census tracts (within one state) or states by one measure and lists other measures as columns, saved as PDF, CSV and XLSX (one ZIP). Use for requests like "a report of the 50 counties with the largest immigrant populations with poverty, unemployment, life expectancy and cluster status". Identifiers (state and county FIPS codes, state and county names) are always included. No key needed. After it runs, say the report title, the file name and the first few areas with their values; mention any problems the result lists.',

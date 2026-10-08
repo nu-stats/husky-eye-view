@@ -442,7 +442,7 @@ const newName = (prefix, name) => `${prefix}_${name}`.slice(0, 32);
 
 /**
  * Translate a request (one or more, by line or "then"). Returns {ok, lines,
- * matched: [{phrase, name}], problems}; `engine` is 'stata' or 'r'.
+ * matched: [{phrase, name}], problems}; `engine` is 'stata', 'r' or 'spss'.
  */
 export function translatePlainEnglish(text, variables = [], engine = 'stata') {
   const requests = String(text || '')
@@ -492,7 +492,10 @@ function translateOne(request, variables, engine) {
     variables.some((v) => v.name === 'state')
   )
     return {
-      lines: [engine === 'r' ? 'table(d$state)' : 'tab state'],
+      lines: [
+        { r: 'table(d$state)', spss: 'FREQUENCIES VARIABLES=state' }[engine] ||
+          'tab state',
+      ],
       matched,
       problems,
     };
@@ -604,13 +607,23 @@ function translateOne(request, variables, engine) {
     const name = pick(part.phrase, { reuse: true });
     if (name) conditions.push({ name, op: part.op, value: part.value });
   }
+  // What SPSS does not do in one line: say so instead of writing something else.
+  if (engine === 'spss') {
+    if (kind.model === 'spatial' || kind.model === 'weights')
+      problems.push(
+        'SPSS has no spatial regression or contiguity weights: use Stata or R for that, or MORAN’S I in this panel.',
+      );
+    if (kind.clusterName)
+      problems.push(
+        'Clustered standard errors are not offered in SPSS lines: use Stata (vce(cluster …)) for those.',
+      );
+  }
   if (problems.length) return { lines: [], matched, problems };
   const all = [y, ...xs].filter(Boolean);
+  const write =
+    engine === 'r' ? rLines : engine === 'spss' ? spssLines : stataLines;
   return {
-    lines:
-      engine === 'r'
-        ? rLines(kind, y, xs, all, conditions, validOnly)
-        : stataLines(kind, y, xs, all, conditions, validOnly),
+    lines: write(kind, y, xs, all, conditions, validOnly),
     matched,
     problems,
     created:
@@ -618,10 +631,84 @@ function translateOne(request, variables, engine) {
         ? xs.map((x) => newName('z', x))
         : kind.model === 'rank'
           ? xs.map((x) => newName('rank', x))
-          : kind.model === 'groupstat' && engine !== 'r'
+          : kind.model === 'groupstat' && engine === 'stata'
             ? [newName(kind.stat, y)]
             : [],
   };
+}
+
+/**
+ * SPSS lines. Conditions become TEMPORARY / SELECT IF for the next command
+ * only; SPSS drops cases with missing values itself (listwise).
+ */
+function spssLines(kind, y, xs, all, conditions) {
+  const ops = {
+    '==': '=',
+    '!=': '~=',
+    '>': '>',
+    '<': '<',
+    '>=': '>=',
+    '<=': '<=',
+  };
+  const select = conditions.length
+    ? [
+        'TEMPORARY',
+        `SELECT IF (${conditions.map((c) => `${c.name} ${ops[c.op]} ${c.value}`).join(' AND ')})`,
+      ]
+    : [];
+  // Each command gets the selection (TEMPORARY lasts for one procedure).
+  const each = (lines) => lines.flatMap((line) => [...select, line]);
+  const list = xs.join(' ');
+  switch (kind.model) {
+    case 'regress':
+      // Robust standard errors: the same linear model in GENLIN.
+      return each([
+        kind.robust
+          ? `GENLIN ${y} WITH ${list} /MODEL ${list} DISTRIBUTION=NORMAL LINK=IDENTITY /CRITERIA COVB=ROBUST /PRINT MODELINFO FIT SUMMARY SOLUTION`
+          : `REGRESSION /STATISTICS COEFF OUTS CI(95) R ANOVA /DEPENDENT ${y} /METHOD=ENTER ${list}`,
+      ]);
+    case 'logit':
+      return each([
+        `LOGISTIC REGRESSION VARIABLES ${y} /METHOD=ENTER ${list}${kind.odds ? ' /PRINT=CI(95)' : ''}`,
+      ]);
+    case 'poisson':
+    case 'nbreg':
+      return each([
+        `GENLIN ${y} WITH ${list} /MODEL ${list} DISTRIBUTION=${kind.model === 'poisson' ? 'POISSON' : 'NEGBIN(MLE)'} LINK=LOG${kind.robust ? ' /CRITERIA COVB=ROBUST' : ''} /PRINT MODELINFO FIT SUMMARY SOLUTION${kind.irr ? '(EXPONENTIATED)' : ''}`,
+      ]);
+    case 'correlate':
+      return each([`CORRELATIONS /VARIABLES=${list} /PRINT=TWOTAIL NOSIG`]);
+    case 'tab':
+      return each([
+        xs.length > 1
+          ? `CROSSTABS /TABLES=${xs[0]} BY ${xs[1]}`
+          : `FREQUENCIES VARIABLES=${xs[0]}`,
+      ]);
+    case 'fre':
+      return each([`FREQUENCIES VARIABLES=${list}`]);
+    case 'scatter':
+      return each([`GRAPH /SCATTERPLOT(BIVAR)=${xs[0]} WITH ${y}`]);
+    case 'histogram':
+      return each(xs.map((x) => `GRAPH /HISTOGRAM=${x}`));
+    case 'std':
+      return each([
+        `DESCRIPTIVES VARIABLES=${xs.map((x) => `${x} (${newName('z', x)})`).join(' ')} /SAVE`,
+      ]);
+    case 'rank':
+      return each(
+        xs.map((x) => `RANK VARIABLES=${x} /RANK INTO ${newName('rank', x)}`),
+      );
+    case 'groupstat':
+      return each([
+        `MEANS TABLES=${y} BY ${xs[0]} /CELLS=${{ mean: 'MEAN', median: 'MEDIAN', total: 'SUM' }[kind.stat] || 'MEAN'} COUNT`,
+      ]);
+    default:
+      return each([
+        kind.detail
+          ? `FREQUENCIES VARIABLES=${list} /FORMAT=NOTABLE /STATISTICS=MEAN MEDIAN STDDEV MINIMUM MAXIMUM /PERCENTILES=25 75`
+          : `DESCRIPTIVES VARIABLES=${list} /STATISTICS=MEAN STDDEV MIN MAX`,
+      ]);
+  }
 }
 
 function stataLines(kind, y, xs, all, conditions, validOnly) {
