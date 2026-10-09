@@ -26,6 +26,7 @@ import { curatedFlightsProxy } from './curatedFlights.js';
 import { stataProxy } from './stata.js';
 import { rProxy } from './r.js';
 import { spssProxy } from './spss.js';
+import { excelProxy } from './excel.js';
 
 /** Construct the local provider plugins in their established order. */
 function localProviderPlugins() {
@@ -57,6 +58,7 @@ function localProviderPlugins() {
     stataProxy(),
     rProxy(),
     spssProxy(),
+    excelProxy(),
     keySetupEndpoint(),
   ];
 }

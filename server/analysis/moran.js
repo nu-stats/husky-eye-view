@@ -12,6 +12,7 @@ import { findState } from '../../src/reports/areaReport.js';
 import { analysisVariables } from '../../src/analysis/stataCommands.js';
 import { layerRows, layerVariables, readLayerAreas } from './layerData.js';
 import { datasetRows, readAreas } from './stataSession.js';
+import { uploadRows } from './userTable.js';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -207,7 +208,10 @@ function erfc(x) {
  * Moran's I for a request like the analysis box's (layer or measures, state,
  * view) and one numeric variable.
  */
-export function moranForRequest(request = {}, { publicDir } = {}) {
+export function moranForRequest(
+  request = {},
+  { publicDir, env = process.env } = {},
+) {
   const dataDir = publicDir ?? path.join(ROOT, 'public');
   const variable = String(request.variable || '');
   const state = request.state ? findState(request.state) : null;
@@ -223,7 +227,24 @@ export function moranForRequest(request = {}, { publicDir } = {}) {
   let variables;
   let rows;
   let geometries;
-  if (request.baseUrl) {
+  if (request.uploadId) {
+    // Your own file: its rows joined to the census outlines by GEOID.
+    const read = uploadRows(
+      { uploadId: request.uploadId, state, view, withGeometry: true },
+      { env, publicDir: dataDir },
+    );
+    if (!read.ok) return { ok: false, problems: read.problems };
+    if (!read.census)
+      return {
+        ok: false,
+        problems: [
+          'Your file has no census GEOIDs, so its rows have no outlines for neighbors.',
+        ],
+      };
+    variables = read.variables;
+    rows = read.rows;
+    geometries = read.areas.map((a) => a.geometry);
+  } else if (request.baseUrl) {
     const read = readLayerAreas({
       baseUrl: request.baseUrl,
       publicDir: dataDir,

@@ -20,6 +20,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { deflateRawSync } from 'node:zlib';
 import { STATES, findState } from '../../src/reports/areaReport.js';
 import { REPORT_GEOGRAPHIES } from '../../src/reports/reportMeasures.js';
 import {
@@ -34,8 +35,14 @@ import {
   stepResults,
 } from '../../src/analysis/stataCommands.js';
 import { buildZip } from '../../src/curated/curatedFiles.js';
+import { buildWorkbook } from '../../src/analysis/excelWorkbook.js';
+import { dataSheets } from '../../src/analysis/excelCommands.js';
 import { writeShapefile } from './shapefile.js';
 import { layerRows, layerVariables, readLayerAreas } from './layerData.js';
+import { uploadRows } from './userTable.js';
+
+/** data.xlsx is written up to this many cells (rows × variables). */
+const MAX_XLSX_CELLS = 4_000_000;
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -328,16 +335,20 @@ export function prepareAnalysisSession(
 ) {
   const problems = [];
   const dataDir = publicDir ?? path.join(ROOT, 'public');
-  // A chosen layer (its own files, every field) or, without one, every Area
-  // Reports measure for counties, a state's tracts or states.
-  const layerMode = Boolean(request.baseUrl);
-  const geography = layerMode
-    ? 'layer'
-    : ['county', 'tract', 'state'].includes(request.geography)
-      ? request.geography
-      : request.geography
-        ? null
-        : 'county';
+  // A chosen layer (its own files, every field), your own uploaded file, or,
+  // without either, every Area Reports measure for counties, a state's
+  // tracts or states.
+  const uploadMode = Boolean(request.uploadId);
+  const layerMode = !uploadMode && Boolean(request.baseUrl);
+  const geography = uploadMode
+    ? 'upload'
+    : layerMode
+      ? 'layer'
+      : ['county', 'tract', 'state'].includes(request.geography)
+        ? request.geography
+        : request.geography
+          ? null
+          : 'county';
   if (!geography)
     return {
       ok: false,
@@ -360,8 +371,24 @@ export function prepareAnalysisSession(
       'Tract data needs a state or the current view (all US tracts are too many).',
     );
   let layerRead = null;
+  let uploadRead = null;
   let variables;
-  if (layerMode) {
+  if (uploadMode) {
+    if (problems.length) return { ok: false, problems };
+    uploadRead = uploadRows(
+      { uploadId: request.uploadId, state, view },
+      { env, publicDir: dataDir },
+    );
+    if (!uploadRead.ok) return { ok: false, problems: uploadRead.problems };
+    if (!uploadRead.rows.length)
+      return {
+        ok: false,
+        problems: [
+          'No rows of your file match these areas; nothing to analyze.',
+        ],
+      };
+    variables = uploadRead.variables;
+  } else if (layerMode) {
     if (problems.length) return { ok: false, problems };
     layerRead = readLayerAreas({
       baseUrl: request.baseUrl,
@@ -410,7 +437,25 @@ export function prepareAnalysisSession(
   // Layers whose areas are not census tracts, counties or states keep their
   // shapes with the session, so the panel can show its rows on the map.
   let saveShapes = false;
-  if (layerMode) {
+  if (uploadMode) {
+    if (needsShapes && !uploadRead.census && !request.interactive)
+      return {
+        ok: false,
+        problems: [
+          'Your file has no census GEOIDs, so there are no outlines for spatial weights.',
+        ],
+      };
+    const read =
+      needsShapes && uploadRead.census
+        ? uploadRows(
+            { uploadId: request.uploadId, state, view, withGeometry: true },
+            { env, publicDir: dataDir },
+          )
+        : uploadRead;
+    rows = read.rows;
+    areas = read.areas || [];
+    shapeAreas = areas;
+  } else if (layerMode) {
     const geoids = layerRead.areas.map((a) => String(a.properties.geoid ?? ''));
     const lengths = new Set(geoids.map((g) => g.length));
     const census = lengths.size === 1 && [2, 5, 11].includes([...lengths][0]);
@@ -444,29 +489,49 @@ export function prepareAnalysisSession(
     rows = datasetRows(geography, variables, areas);
     shapeAreas = areas;
   }
-  const stateUsed = layerMode ? (layerRead.stateApplied ? state : null) : state;
-  const where = stateUsed ? STATES[stateUsed][0] : view ? 'view' : 'US';
-  const layerName = String(request.layerName || 'layer').slice(0, 80);
-  const plural = layerMode
-    ? 'areas'
-    : { county: 'counties', tract: 'tracts', state: 'states' }[geography];
-  const label = layerMode
-    ? layerName
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 40) || 'layer'
-    : plural;
+  const stateUsed = uploadMode
+    ? uploadRead.stateApplied
+      ? state
+      : null
+    : layerMode
+      ? layerRead.stateApplied
+        ? state
+        : null
+      : state;
+  const viewUsed = uploadMode && !uploadRead.census ? null : view;
+  const where = stateUsed ? STATES[stateUsed][0] : viewUsed ? 'view' : 'US';
+  const layerName = String(
+    uploadMode ? uploadRead.name : request.layerName || 'layer',
+  ).slice(0, 80);
+  const plural = uploadMode
+    ? 'rows'
+    : layerMode
+      ? 'areas'
+      : { county: 'counties', tract: 'tracts', state: 'states' }[geography];
+  const label =
+    uploadMode || layerMode
+      ? layerName
+          .toLowerCase()
+          .replace(/\.(xlsx|xlsm|csv|tsv|txt)$/, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 40) || 'layer'
+      : plural;
   const root = analysisRoot(env);
-  const { id, folder } = newSessionFolder(root, `${label}-${where}`, now);
+  const { id, folder } = newSessionFolder(
+    root,
+    uploadMode && !uploadRead.census ? label : `${label}-${where}`,
+    now,
+  );
   const scope = stateUsed
     ? ` in ${STATES[stateUsed][1]}`
-    : view
+    : viewUsed
       ? ' in the map view'
       : '';
-  const title = layerMode
-    ? `Husky Eye View: ${layerName}, ${rows.length} areas${scope}`
-    : `Husky Eye View: ${rows.length} ${plural}${scope}`;
+  const title =
+    uploadMode || layerMode
+      ? `Husky Eye View: ${layerName}, ${rows.length} ${plural}${scope}`
+      : `Husky Eye View: ${rows.length} ${plural}${scope}`;
   const notes = [
     ...new Set(
       variables.filter((v) => v.source).map((v) => `${v.name}: ${v.source}`),
@@ -477,6 +542,15 @@ export function prepareAnalysisSession(
     datasetCsv(variables, rows),
     'utf8',
   );
+  // The same data for Excel, with each variable's label and source.
+  if (rows.length * variables.length <= MAX_XLSX_CELLS)
+    writeFileSync(
+      path.join(folder, 'data.xlsx'),
+      buildWorkbook(dataSheets({ title, data: { variables, rows } }), {
+        title,
+        deflate: deflateRawSync,
+      }),
+    );
   if (saveShapes)
     writeFileSync(
       path.join(folder, SESSION_SHAPES_FILE),
@@ -517,11 +591,16 @@ export function prepareAnalysisSession(
       title,
       geography,
       state: stateUsed,
-      layer: layerMode ? layerName : null,
+      layer: uploadMode || layerMode ? layerName : null,
       areas: rows.length,
       commands: checked.commands.map((c) => c.line),
       uploaded: Boolean(doFile),
-      variables: variables.map((v) => ({ name: v.name, label: v.label })),
+      variables: variables.map((v) => ({
+        name: v.name,
+        label: v.label,
+        kind: v.kind,
+      })),
+      notes: uploadMode ? uploadRead.notes : [],
     },
   };
 }

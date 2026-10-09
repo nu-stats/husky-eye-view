@@ -1,10 +1,11 @@
 /**
- * The Stata Analysis, R Analysis and SPSS Analysis panels (the Analysis
- * menu) and the controller the voice assistant shares. Commands or an
- * uploaded script run on this computer against a layer's data (counties, a
- * state's tracts, states, or the areas in the current map view); "Open in
- * Stata" / "Open in R" / "Open in SPSS" opens the program itself with that
- * data loaded. Each run is kept as a
+ * The Stata Analysis, R Analysis, SPSS Analysis and Excel Analysis panels
+ * (the Analysis menu) and the controller the voice assistant shares.
+ * Commands or an uploaded script run on this computer against a layer's
+ * data (counties, a state's tracts, states, the areas in the current map
+ * view) or your own Excel workbook or CSV; "Open in Stata" / "Open in R" /
+ * "Open in SPSS" / "Open in Excel" opens the program itself with that data
+ * loaded. Each run is kept as a
  * session folder with its script and log (server/providers/analysis.js).
  */
 import { STATES } from '../reports/areaReport.js';
@@ -19,6 +20,11 @@ import {
   SPSS_COMMAND_NAMES,
   checkSpssLines,
 } from './spssCommands.js';
+import {
+  EXCEL_COMMAND_NAMES,
+  MAX_EXCEL_FILE_BYTES,
+  checkExcelLines,
+} from './excelCommands.js';
 import { LAYER_MANIFEST, layerManifestEntry } from '../data/layerManifest.js';
 import { translatePlainEnglish } from './plainEnglish.js';
 import {
@@ -65,6 +71,7 @@ export const ANALYSIS_ENGINES = Object.freeze({
       'results.tex',
       'results.xlsx',
       'data.dta',
+      'data.xlsx',
     ],
     sessionFiles: 'session_commands.do, session.log',
     missing:
@@ -89,7 +96,13 @@ export const ANALYSIS_ENGINES = Object.freeze({
     scriptLabel: 'R script',
     scriptAccept: '.R,.r,text/plain',
     scriptBytes: MAX_R_SCRIPT_BYTES,
-    files: ['analysis.R', 'analysis.log', 'data.rds', 'session.RData'],
+    files: [
+      'analysis.R',
+      'analysis.log',
+      'data.rds',
+      'session.RData',
+      'data.xlsx',
+    ],
     sessionFiles: 'session_commands.R, session.log',
     missing:
       'R was not found on this computer. Install it from cran.r-project.org, or set HEV_R_PATH to Rscript.',
@@ -123,6 +136,7 @@ export const ANALYSIS_ENGINES = Object.freeze({
       'results.doc',
       'results.xls',
       'data.sav',
+      'data.xlsx',
     ],
     sessionFiles: 'data.sav, and session.log for what you run',
     openNote:
@@ -133,6 +147,33 @@ export const ANALYSIS_ENGINES = Object.freeze({
       `SPSS Statistics ${s.version ?? ''} found${s.python ? '' : ' (its Python 3 is missing: RUN needs it; OPEN IN SPSS works)'}.`,
     failed: (rc) => `error level ${rc}`,
   },
+  excel: {
+    id: 'excel',
+    name: 'Excel',
+    event: 'gev:excel-analysis-open',
+    api: '/api/excel',
+    panelId: 'excel-analysis-panel',
+    lineLabel: 'Excel Analysis commands (one per line)',
+    examples: [
+      'DESCRIPTIVE foreign_born_share poverty median_income',
+      'REGRESSION foreign_born_share ON poverty unemployment',
+      'SCATTER foreign_born_share poverty',
+      '=CORREL(poverty, bachelors)',
+    ],
+    hint: `${EXCEL_COMMAND_NAMES.join(', ')} — each may end with IF poverty > 5 AND …. Each command becomes a sheet of analysis.xlsx with live Excel formulas (LINEST for regressions) and charts; REGRESSION sends its residuals to the map. Excel itself is needed only to open the workbook.`,
+    scriptLabel: 'Command file',
+    scriptAccept: '.txt,text/plain',
+    scriptBytes: MAX_EXCEL_FILE_BYTES,
+    files: ['analysis.xlsx', 'data.xlsx', 'commands.txt', 'analysis.log'],
+    sessionFiles: 'data.xlsx',
+    openNote: 'The session’s data opens as data.xlsx.',
+    missing: 'Excel Analysis is not available.',
+    found: (s) =>
+      s.excel
+        ? `Excel ${s.version ? `(Office ${s.version}) ` : ''}found; workbooks open in it.`
+        : 'Excel was not found: workbooks are still built, and open in whatever opens .xlsx files here.',
+    failed: () => 'error',
+  },
 });
 
 /** Each program's line check (the same one its server runs). */
@@ -140,7 +181,16 @@ const LINE_CHECKS = {
   stata: checkCommandLines,
   r: checkRLines,
   spss: checkSpssLines,
+  excel: checkExcelLines,
 };
+
+/**
+ * Files uploaded in any box (Excel workbooks or CSVs), by id: every box can
+ * analyze them, so they are listed in all of them.
+ */
+const UPLOADS = new Map();
+/** The largest file the boxes accept (the server checks too). */
+const MAX_UPLOAD_FILE_BYTES = 30 * 1024 * 1024;
 
 /** Kept for existing imports: the Stata panel's open event. */
 export const ANALYSIS_OPEN_EVENT = ANALYSIS_ENGINES.stata.event;
@@ -489,7 +539,22 @@ export class AnalysisPanel {
     this.moranButton.addEventListener('click', () => void this.moran());
     this.moranOut = element('div', { className: 'stata-moran' });
     this.output = element('div', { className: 'stata-output' });
+    // Your own Excel workbook or CSV, chosen from the Layer list.
+    this.fileInput = element('input', {
+      type: 'file',
+      accept: '.xlsx,.xlsm,.csv,.tsv,.txt',
+      ariaLabel: 'Upload your own Excel workbook or CSV file',
+      hidden: true,
+    });
+    this.fileInput.addEventListener('change', () => void this.uploadFile());
     this.layer.addEventListener('change', () => {
+      if (this.layer.value === 'upload:new') {
+        this.layer.value = this.lastChoice || this.layer.options[0]?.value;
+        this.fileInput.value = '';
+        this.fileInput.click();
+        return;
+      }
+      this.lastChoice = this.layer.value;
       this.layerChosen = true;
       void this.loadVariables();
     });
@@ -557,6 +622,7 @@ export class AnalysisPanel {
       ]),
       this.statusLine,
       this.output,
+      this.fileInput,
     );
     document.body.append(this.root);
     this.refreshLayers();
@@ -592,6 +658,12 @@ export class AnalysisPanel {
   refreshLayers() {
     const layers = this.analyzableLayers();
     this.layerInfo = new Map(layers.map((l) => [`layer:${l.id}`, l]));
+    for (const [id, upload] of UPLOADS)
+      this.layerInfo.set(`upload:${id}`, {
+        id: `upload:${id}`,
+        name: upload.name,
+        uploadId: id,
+      });
     const previous = this.layer.value;
     const groups = new Map();
     for (const l of layers) {
@@ -618,6 +690,18 @@ export class AnalysisPanel {
           element('option', { value, textContent: text }),
         ),
       ),
+      element('optgroup', { label: 'Your own file' }, [
+        ...[...UPLOADS].map(([id, upload]) =>
+          element('option', {
+            value: `upload:${id}`,
+            textContent: `${upload.name} (${upload.rows.toLocaleString('en-US')} rows)`,
+          }),
+        ),
+        element('option', {
+          value: 'upload:new',
+          textContent: 'Upload an Excel workbook or CSV…',
+        }),
+      ]),
     );
     const on = layers.find((l) => l.enabled);
     this.layer.value =
@@ -627,6 +711,7 @@ export class AnalysisPanel {
         : on
           ? `layer:${on.id}`
           : 'measures:county';
+    this.lastChoice = this.layer.value;
   }
 
   syncScope() {
@@ -671,6 +756,45 @@ export class AnalysisPanel {
     for (const [value, l] of this.layerInfo || [])
       if (l.name.toLowerCase().includes(wanted)) return value;
     return null;
+  }
+
+  /**
+   * Upload your own Excel workbook or CSV (the file the picker chose, or one
+   * given): the server keeps it for every box, and it becomes the Layer.
+   */
+  async uploadFile(file = this.fileInput.files?.[0]) {
+    if (!file) return { ok: false, problems: ['No file chosen.'] };
+    if (file.size > MAX_UPLOAD_FILE_BYTES)
+      return this.fail([
+        `The file is ${(file.size / 1048576).toFixed(0)} MB; the limit is ${MAX_UPLOAD_FILE_BYTES / 1048576} MB.`,
+      ]);
+    this.setStatus(`Reading ${file.name}…`);
+    const data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+    const result = await this.post('upload', { name: file.name, data });
+    if (!result.ok)
+      return this.fail(result.problems || ['The file could not be read.']);
+    UPLOADS.set(result.id, { name: result.name, rows: result.rows });
+    this.refreshLayers();
+    this.layer.value = `upload:${result.id}`;
+    this.lastChoice = this.layer.value;
+    this.layerChosen = true;
+    await this.loadVariables();
+    const geo = result.geography
+      ? `${result.rows.toLocaleString('en-US')} rows, joined to the map's ${
+          { state: 'states', county: 'counties', tract: 'census tracts' }[
+            result.geography
+          ]
+        } by ${result.join}`
+      : `${result.rows.toLocaleString('en-US')} rows`;
+    this.setStatus(
+      `${result.name}${result.sheet ? ` (sheet ${result.sheet})` : ''}: ${geo}. ${(result.notes || []).join(' ')}`.trim(),
+    );
+    return result;
   }
 
   async readDoFile() {
@@ -720,7 +844,14 @@ export class AnalysisPanel {
           : !request.geography || request.geography === 'view'
             ? 'view'
             : 'all');
-      if (choice.startsWith('layer:')) {
+      if (choice.startsWith('upload:')) {
+        const info = this.layerInfo?.get(choice);
+        if (!info?.uploadId)
+          return { ...out, problem: 'Upload the file again.' };
+        out.uploadId = info.uploadId;
+        out.layerName = info.name;
+        delete out.geography;
+      } else if (choice.startsWith('layer:')) {
         const info = this.layerInfo?.get(choice);
         if (!info) return { ...out, problem: 'That layer is not loaded.' };
         out.baseUrl = info.baseUrl;
@@ -753,6 +884,15 @@ export class AnalysisPanel {
   /** The Layer choice the variable list shows. */
   variablesQuery() {
     const choice = this.layer.value;
+    if (choice.startsWith('upload:')) {
+      const info = this.layerInfo?.get(choice);
+      return info?.uploadId
+        ? {
+            query: `uploadId=${encodeURIComponent(info.uploadId)}`,
+            title: info.name,
+          }
+        : null;
+    }
     if (choice.startsWith('layer:')) {
       const info = this.layerInfo?.get(choice);
       return info
@@ -985,6 +1125,7 @@ export class AnalysisPanel {
       const result = await this.post('moran', {
         geography: resolved.geography,
         baseUrl: resolved.baseUrl,
+        uploadId: resolved.uploadId,
         state: resolved.state,
         view: resolved.view,
         variable,
@@ -1491,6 +1632,18 @@ export class RAnalysisPanel extends AnalysisPanel {
 
   /** Voice and the panel call it the same way as Stata's. */
   openR(request) {
+    return this.openStata(request);
+  }
+}
+
+/** The Excel Analysis panel (workbooks built here; Excel opens them). */
+export class ExcelAnalysisPanel extends AnalysisPanel {
+  constructor(options = {}) {
+    super({ ...options, engine: 'excel' });
+  }
+
+  /** Voice and the panel call it the same way as Stata's. */
+  openExcel(request) {
     return this.openStata(request);
   }
 }

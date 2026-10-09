@@ -1056,6 +1056,30 @@ export function createGevActionRunner({
       return { action: name, ...result };
     }
 
+    if (name === 'run_excel_analysis' || name === 'open_in_excel') {
+      const panel =
+        (await styleManager?.ensureExcelAnalysis?.()) ||
+        styleManager?.excelAnalysis;
+      if (!panel)
+        return { ok: false, action: name, error: 'Excel Analysis unavailable' };
+      const request = {
+        geography:
+          args.geography ||
+          (name === 'open_in_excel' || args.layer ? 'view' : 'county'),
+        state: args.state || null,
+        layer: args.layer || null,
+      };
+      const result =
+        name === 'open_in_excel'
+          ? await panel.openExcel(request)
+          : await panel.run({
+              ...request,
+              commands: Array.isArray(args.commands) ? args.commands : [],
+              plain: typeof args.request === 'string' ? args.request : null,
+            });
+      return { action: name, ...result };
+    }
+
     if (name === 'plan_curated_flight' || name === 'control_curated_flight') {
       return curatedFlightAction(
         (await styleManager?.ensureCuratedFlights?.()) ||

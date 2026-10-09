@@ -665,7 +665,7 @@ export class LayerPanel {
   /**
    * The Analysis menu (its own bottom-row panel, #analysis-rows): the tools
    * that work on the layers (Curated Flights, Area Reports, Stata Analysis,
-   * R Analysis, SPSS Analysis) and the Surprise. Rebuilt with the Data Layers list, so its
+   * R Analysis, SPSS Analysis, Excel Analysis) and the Surprise. Rebuilt with the Data Layers list, so its
    * handlers are released with the others.
    */
   _renderAnalysisRows() {
@@ -677,6 +677,7 @@ export class LayerPanel {
       this._buildStataRow(),
       this._buildRRow(),
       this._buildSpssRow(),
+      this._buildExcelRow(),
       this._buildSurpriseRow(),
     );
   }
@@ -928,6 +929,46 @@ export class LayerPanel {
     meta.className = 'data-toggle-meta';
     meta.textContent =
       'IBM SPSS Statistics on this computer · syntax and output kept';
+    row.append(top, meta);
+    return row;
+  }
+
+  _buildExcelRow() {
+    const group = ANALYSIS_GROUP;
+    const row = document.createElement('div');
+    row.className =
+      'data-toggle-row data-view-row data-curated-row data-excel-row';
+    row.dataset.group = group;
+    this._groups.get(group)?.rows.push({ row, label: 'excel analysis' });
+    const top = document.createElement('div');
+    top.className = 'data-toggle-top';
+    const left = document.createElement('div');
+    left.className = 'data-toggle-left';
+    const icon = document.createElement('span');
+    icon.className = 'data-icon';
+    icon.textContent = '⊞';
+    const name = document.createElement('span');
+    name.className = 'data-name';
+    name.textContent = 'Excel Analysis';
+    left.append(icon, name);
+    const right = document.createElement('div');
+    right.className = 'data-toggle-right';
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'data-toggle-btn data-view-start';
+    open.setAttribute('aria-label', 'Open Excel Analysis');
+    open.textContent = 'OPEN';
+    open.title =
+      'Build an Excel workbook from any layer or your own file: formulas, regression and charts';
+    this._bind(open, 'click', () =>
+      window.dispatchEvent(new CustomEvent('gev:excel-analysis-open')),
+    );
+    right.appendChild(open);
+    top.append(left, right);
+    const meta = document.createElement('div');
+    meta.className = 'data-toggle-meta';
+    meta.textContent =
+      'Workbooks with live formulas and charts · no install needed';
     row.append(top, meta);
     return row;
   }

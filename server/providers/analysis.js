@@ -12,6 +12,9 @@
  *        -> the data only (no program run), for the table and brushing
  *   POST <prefix>/moran {geography|baseUrl, state?, view?, variable, rook?}
  *        -> global Moran's I with contiguity weights, computed here
+ *   POST <prefix>/upload {name, data: base64}
+ *        -> your own Excel workbook or CSV, kept for every box; {ok, id, …}.
+ *        Then {uploadId} in place of geography|baseUrl on the routes above.
  *   GET  <prefix>/sessions/<id>/<file>      -> one file of a session
  *   GET  <prefix>/sessions/<id>.zip         -> the whole session
  *
@@ -26,6 +29,7 @@ import { admitKeySetupRequest } from '../../src/keySetupCore.mjs';
 import { analysisVariables } from '../../src/analysis/stataCommands.js';
 import { sampleLayerVariables } from '../analysis/layerData.js';
 import { moranForRequest } from '../analysis/moran.js';
+import { storeUpload, uploadRows } from '../analysis/userTable.js';
 import {
   analysisRoot,
   sessionFiles,
@@ -34,6 +38,8 @@ import {
 } from '../analysis/stataSession.js';
 
 const MAX_BODY = 512 * 1024;
+/** An uploaded workbook or CSV (base64 in JSON): up to 30 MB of file. */
+const MAX_UPLOAD_BODY = 42 * 1024 * 1024;
 const TYPES = {
   '.csv': 'text/csv; charset=utf-8',
   '.do': 'text/plain; charset=utf-8',
@@ -49,6 +55,7 @@ const TYPES = {
   '.rds': 'application/octet-stream',
   '.rdata': 'application/octet-stream',
   '.sps': 'text/plain; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
   '.py': 'text/plain; charset=utf-8',
   '.sav': 'application/x-spss-sav',
   '.spv': 'application/octet-stream',
@@ -99,12 +106,12 @@ export function analysisProxy({
       proxyHeaders: req.headers || {},
       env,
     });
-  const readBody = (req) =>
+  const readBody = (req, limit = MAX_BODY) =>
     new Promise((resolve, reject) => {
       let body = '';
       req.on('data', (chunk) => {
         body += chunk;
-        if (body.length > MAX_BODY) {
+        if (body.length > limit) {
           reject(new Error('too large'));
           req.destroy();
         }
@@ -139,18 +146,33 @@ export function analysisProxy({
         }
         if (req.method === 'GET' && route === 'variables') {
           const baseUrl = url.searchParams.get('baseUrl');
-          return sendJson(res, 200, {
-            variables: (baseUrl
+          const uploadId = url.searchParams.get('uploadId');
+          let list;
+          if (uploadId) {
+            const read = uploadRows({ uploadId }, { env });
+            if (!read.ok)
+              return sendJson(res, 200, {
+                variables: [],
+                problems: read.problems,
+              });
+            list = read.variables;
+          } else
+            list = baseUrl
               ? sampleLayerVariables({ baseUrl })
-              : analysisVariables(url.searchParams.get('geography') || 'county')
-            ).map(({ name: variable, label, kind, short, aliases }) => ({
-              name: variable,
-              label,
-              kind,
-              // For the plain-English box: other ways people say it.
-              ...(short && { short }),
-              ...(aliases?.length && { aliases }),
-            })),
+              : analysisVariables(
+                  url.searchParams.get('geography') || 'county',
+                );
+          return sendJson(res, 200, {
+            variables: list.map(
+              ({ name: variable, label, kind, short, aliases }) => ({
+                name: variable,
+                label,
+                kind,
+                // For the plain-English box: other ways people say it.
+                ...(short && { short }),
+                ...(aliases?.length && { aliases }),
+              }),
+            ),
           });
         }
         const file = route.match(/^sessions\/([\w.-]+?)(?:\.zip|\/([\w.-]+))$/);
@@ -182,6 +204,20 @@ export function analysisProxy({
           });
           return res.end(readFileSync(full));
         }
+        if (req.method === 'POST' && route === 'upload') {
+          // Your own Excel workbook or CSV, kept for every analysis box:
+          // {name, data: base64} -> {ok, id, rows, geography, variables, notes}.
+          const request = await readBody(req, MAX_UPLOAD_BODY);
+          const bytes = Buffer.from(String(request.data || ''), 'base64');
+          return sendJson(
+            res,
+            200,
+            await storeUpload(
+              { name: request.name, bytes: new Uint8Array(bytes) },
+              { env },
+            ),
+          );
+        }
         if (req.method === 'POST' && route === 'browse') {
           // The data alone (data.csv, and shapes for non-census layers), for
           // the table and brushing: no program runs, none need be installed.
@@ -190,6 +226,7 @@ export function analysisProxy({
             {
               geography: request.geography,
               baseUrl: request.baseUrl,
+              uploadId: request.uploadId,
               layerName: request.layerName,
               state: request.state,
               view: request.view,
@@ -219,14 +256,18 @@ export function analysisProxy({
           return sendJson(
             res,
             200,
-            moranForRequest({
-              geography: request.geography,
-              baseUrl: request.baseUrl,
-              state: request.state,
-              view: request.view,
-              variable: request.variable,
-              rook: request.rook,
-            }),
+            moranForRequest(
+              {
+                geography: request.geography,
+                baseUrl: request.baseUrl,
+                uploadId: request.uploadId,
+                state: request.state,
+                view: request.view,
+                variable: request.variable,
+                rook: request.rook,
+              },
+              { env },
+            ),
           );
         }
         if (req.method === 'POST' && (route === 'run' || route === 'open')) {
@@ -246,6 +287,7 @@ export function analysisProxy({
               {
                 geography: request.geography,
                 baseUrl: request.baseUrl,
+                uploadId: request.uploadId,
                 layerName: request.layerName,
                 state: request.state,
                 view: request.view,

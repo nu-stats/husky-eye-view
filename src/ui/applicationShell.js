@@ -436,7 +436,7 @@ export class StyleManager extends ShellFacade {
         })),
     );
     // The map view as a lon/lat box plus the camera height, for "analyze
-    // what I am looking at" (Stata, R and SPSS).
+    // what I am looking at" (Stata, R, SPSS and Excel).
     const readView = () => {
       const rect = viewer.camera.computeViewRectangle?.();
       if (!rect) return null;
@@ -458,6 +458,19 @@ export class StyleManager extends ShellFacade {
       () => import('../analysis/analysisPanel.js'),
       ({ RAnalysisPanel }) =>
         (this.rAnalysis = new RAnalysisPanel({
+          viewer,
+          showToast: (message) => this._showToast(message),
+          readView,
+          readDataManager: () => this._dataManager,
+        })),
+    );
+    this.excelAnalysis = null;
+    this.ensureExcelAnalysis = lazyPanel(
+      this,
+      'gev:excel-analysis-open',
+      () => import('../analysis/analysisPanel.js'),
+      ({ ExcelAnalysisPanel }) =>
+        (this.excelAnalysis = new ExcelAnalysisPanel({
           viewer,
           showToast: (message) => this._showToast(message),
           readView,
@@ -1673,6 +1686,7 @@ export class StyleManager extends ShellFacade {
     this.stataAnalysis?.destroy();
     this.rAnalysis?.destroy();
     this.spssAnalysis?.destroy();
+    this.excelAnalysis?.destroy();
     this.timeLens?.destroy();
     this._contextControls.disconnect();
     this._layerBindings.disconnect();

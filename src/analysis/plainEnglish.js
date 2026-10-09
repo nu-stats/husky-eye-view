@@ -442,7 +442,8 @@ const newName = (prefix, name) => `${prefix}_${name}`.slice(0, 32);
 
 /**
  * Translate a request (one or more, by line or "then"). Returns {ok, lines,
- * matched: [{phrase, name}], problems}; `engine` is 'stata', 'r' or 'spss'.
+ * matched: [{phrase, name}], problems}; `engine` is 'stata', 'r', 'spss'
+ * or 'excel'.
  */
 export function translatePlainEnglish(text, variables = [], engine = 'stata') {
   const requests = String(text || '')
@@ -493,8 +494,11 @@ function translateOne(request, variables, engine) {
   )
     return {
       lines: [
-        { r: 'table(d$state)', spss: 'FREQUENCIES VARIABLES=state' }[engine] ||
-          'tab state',
+        {
+          r: 'table(d$state)',
+          spss: 'FREQUENCIES VARIABLES=state',
+          excel: 'FREQUENCY state',
+        }[engine] || 'tab state',
       ],
       matched,
       problems,
@@ -618,10 +622,25 @@ function translateOne(request, variables, engine) {
         'Clustered standard errors are not offered in SPSS lines: use Stata (vce(cluster …)) for those.',
       );
   }
+  // Excel's ToolPak has least squares only.
+  if (engine === 'excel') {
+    if (kind.model === 'spatial' || kind.model === 'weights')
+      problems.push(
+        'Excel has no spatial regression: use Stata or R for that, or MORAN’S I in this panel.',
+      );
+    else if (['logit', 'poisson', 'nbreg'].includes(kind.model))
+      problems.push(
+        'Excel Analysis has least-squares regression only: use Stata, R or SPSS for logistic, Poisson or negative binomial models.',
+      );
+    else if (kind.model === 'regress' && (kind.robust || kind.clusterName))
+      problems.push(
+        'Excel’s regression has no robust or clustered standard errors: use Stata, R or SPSS for those.',
+      );
+  }
   if (problems.length) return { lines: [], matched, problems };
   const all = [y, ...xs].filter(Boolean);
   const write =
-    engine === 'r' ? rLines : engine === 'spss' ? spssLines : stataLines;
+    { r: rLines, spss: spssLines, excel: excelLines }[engine] || stataLines;
   return {
     lines: write(kind, y, xs, all, conditions, validOnly),
     matched,
@@ -635,6 +654,48 @@ function translateOne(request, variables, engine) {
             ? [newName(kind.stat, y)]
             : [],
   };
+}
+
+/**
+ * Excel Analysis lines (src/analysis/excelCommands.js). Conditions become
+ * the command's own IF clause.
+ */
+function excelLines(kind, y, xs, all, conditions) {
+  const ops = {
+    '==': '=',
+    '!=': '<>',
+    '>': '>',
+    '<': '<',
+    '>=': '>=',
+    '<=': '<=',
+  };
+  const when = conditions.length
+    ? ` IF ${conditions.map((c) => `${c.name} ${ops[c.op]} ${c.value}`).join(' AND ')}`
+    : '';
+  const list = xs.join(' ');
+  switch (kind.model) {
+    case 'regress':
+      return [`REGRESSION ${y} ON ${list}${when}`];
+    case 'correlate':
+      return [`CORRELATION ${list}${when}`];
+    case 'tab':
+    case 'fre':
+      return xs.map((x) => `FREQUENCY ${x}${when}`);
+    case 'scatter':
+      return [`SCATTER ${y} ${xs[0]}${when}`];
+    case 'histogram':
+      return xs.map((x) => `HISTOGRAM ${x}${when}`);
+    case 'std':
+      return [`STANDARDIZE ${list}${when}`];
+    case 'rank':
+      return [`RANK ${list}${when}`];
+    case 'groupstat':
+      return [
+        `${{ mean: 'AVERAGE', median: 'MEDIAN', total: 'SUM' }[kind.stat] || 'AVERAGE'} ${y} BY ${xs[0]}${when}`,
+      ];
+    default:
+      return [`DESCRIPTIVE ${list}${when}`];
+  }
 }
 
 /**

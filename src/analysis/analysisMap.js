@@ -23,6 +23,7 @@ import {
   STATA_COMMANDS,
 } from './stataCommands.js';
 import { isSpssModelLine } from './spssCommands.js';
+import { isExcelModelLine } from './excelCommands.js';
 import { parseCsv } from '../curated/userData.js';
 
 /** Selected rows on the map: a bright fill with a thick outline. */
@@ -135,7 +136,8 @@ export function modelLines(steps = []) {
     .filter(
       (line) =>
         STATA_COMMANDS[line.trim().split(/\s+/)[0]]?.kind === 'model' ||
-        isSpssModelLine(line),
+        isSpssModelLine(line) ||
+        isExcelModelLine(line),
     );
 }
 

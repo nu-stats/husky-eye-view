@@ -1,11 +1,12 @@
 /**
- * Curated Flights, your own data: reading an uploaded CSV, GeoJSON or zipped
- * shapefile in the browser (nothing is sent anywhere), finding how it joins
- * to the map (census GEOIDs, coordinates or its own shapes), and the city /
- * county / state values a flight compares. No DOM, no Cesium: the panel, the
- * map overlay and the tests share it.
+ * Curated Flights, your own data: reading an uploaded CSV, Excel workbook,
+ * GeoJSON or zipped shapefile in the browser (nothing is sent anywhere),
+ * finding how it joins to the map (census GEOIDs, coordinates or its own
+ * shapes), and the city / county / state values a flight compares. No DOM,
+ * no Cesium: the panel, the map overlay and the tests share it.
  */
 import { pointInCounty, pointInGeometry } from './curatedModel.js';
+import { readXlsxTable } from './xlsxRead.js';
 
 /** Key of the uploaded layer in a flight's layer table. */
 export const USER_LAYER_KEY = 'my-data';
@@ -759,11 +760,18 @@ export async function readUpload(name, bytes) {
     const { columns, rows } = parseCsv(text());
     return buildDataset({ name, rows, columns });
   }
+  if (/\.(xlsx|xlsm)$/.test(lower)) {
+    // The first sheet with data, its first row the header.
+    const { columns, rows } = await readXlsxTable(bytes);
+    return buildDataset({ name, rows, columns });
+  }
   if (lower.endsWith('.shp'))
     throw new Error(
       'Upload the shapefile as a ZIP with its .shp, .dbf and .prj files together.',
     );
-  throw new Error('Upload a CSV, GeoJSON, or a zipped shapefile.');
+  throw new Error(
+    'Upload a CSV, an Excel workbook (.xlsx), GeoJSON, or a zipped shapefile.',
+  );
 }
 
 // ---------- values for a flight ----------

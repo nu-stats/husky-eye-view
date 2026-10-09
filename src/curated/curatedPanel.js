@@ -401,7 +401,7 @@ export class CuratedFlightsPanel {
     this.fileInput = element('input', {
       type: 'file',
       className: 'curated-file',
-      accept: '.csv,.tsv,.txt,.geojson,.json,.geojsonl,.zip',
+      accept: '.csv,.tsv,.txt,.xlsx,.xlsm,.geojson,.json,.geojsonl,.zip',
       ariaLabel: 'Add your own data',
     });
     this.fileInput.addEventListener('change', () => {
