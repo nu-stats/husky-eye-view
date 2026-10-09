@@ -664,8 +664,8 @@ export class LayerPanel {
 
   /**
    * The Analysis menu (its own bottom-row panel, #analysis-rows): the tools
-   * that work on the layers (Curated Flights, Area Reports, Stata Analysis,
-   * R Analysis, SPSS Analysis, Excel Analysis) and the Surprise. Rebuilt with the Data Layers list, so its
+   * that work on the layers (Curated Flights, Area Reports, Stata, R,
+   * SPSS, Excel) and the Surprise. Rebuilt with the Data Layers list, so its
    * handlers are released with the others.
    */
   _renderAnalysisRows() {
@@ -835,14 +835,14 @@ export class LayerPanel {
     icon.textContent = 'Σ';
     const name = document.createElement('span');
     name.className = 'data-name';
-    name.textContent = 'Stata Analysis';
+    name.textContent = 'Stata';
     left.append(icon, name);
     const right = document.createElement('div');
     right.className = 'data-toggle-right';
     const open = document.createElement('button');
     open.type = 'button';
     open.className = 'data-toggle-btn data-view-start';
-    open.setAttribute('aria-label', 'Open Stata Analysis');
+    open.setAttribute('aria-label', 'Open Stata');
     open.textContent = 'OPEN';
     open.title = 'Run Stata on any layer, or open Stata with the data in view';
     this._bind(open, 'click', () =>
@@ -872,14 +872,14 @@ export class LayerPanel {
     icon.textContent = 'R';
     const name = document.createElement('span');
     name.className = 'data-name';
-    name.textContent = 'R Analysis';
+    name.textContent = 'R';
     left.append(icon, name);
     const right = document.createElement('div');
     right.className = 'data-toggle-right';
     const open = document.createElement('button');
     open.type = 'button';
     open.className = 'data-toggle-btn data-view-start';
-    open.setAttribute('aria-label', 'Open R Analysis');
+    open.setAttribute('aria-label', 'Open R');
     open.textContent = 'OPEN';
     open.title = 'Run R on any layer, or open RStudio with the data in view';
     this._bind(open, 'click', () =>
@@ -910,14 +910,14 @@ export class LayerPanel {
     icon.textContent = '▦';
     const name = document.createElement('span');
     name.className = 'data-name';
-    name.textContent = 'SPSS Analysis';
+    name.textContent = 'SPSS';
     left.append(icon, name);
     const right = document.createElement('div');
     right.className = 'data-toggle-right';
     const open = document.createElement('button');
     open.type = 'button';
     open.className = 'data-toggle-btn data-view-start';
-    open.setAttribute('aria-label', 'Open SPSS Analysis');
+    open.setAttribute('aria-label', 'Open SPSS');
     open.textContent = 'OPEN';
     open.title = 'Run SPSS on any layer, or open SPSS with the data in view';
     this._bind(open, 'click', () =>
@@ -949,14 +949,14 @@ export class LayerPanel {
     icon.textContent = '⊞';
     const name = document.createElement('span');
     name.className = 'data-name';
-    name.textContent = 'Excel Analysis';
+    name.textContent = 'Excel';
     left.append(icon, name);
     const right = document.createElement('div');
     right.className = 'data-toggle-right';
     const open = document.createElement('button');
     open.type = 'button';
     open.className = 'data-toggle-btn data-view-start';
-    open.setAttribute('aria-label', 'Open Excel Analysis');
+    open.setAttribute('aria-label', 'Open Excel');
     open.textContent = 'OPEN';
     open.title =
       'Build an Excel workbook from any layer or your own file: formulas, regression and charts';

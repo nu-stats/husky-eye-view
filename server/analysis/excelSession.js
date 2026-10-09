@@ -35,7 +35,7 @@ export const EXCEL_ENGINE = Object.freeze({
       ? `${title}\r\nOpened in Excel: data.xlsx (the data, its variables and sources).\r\n`
       : [
           `# ${title}`,
-          '# Excel Analysis commands; the results are in analysis.xlsx.',
+          '# Excel commands; the results are in analysis.xlsx.',
           ...commands.map((c) => c.line),
           ...(userFile ? [`# then the lines of ${userFile}`] : []),
           '',

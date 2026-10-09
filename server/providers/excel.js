@@ -17,7 +17,7 @@ export function excelProxy({ env = process.env, locate = findExcel } = {}) {
     name: 'Excel',
     plugin: 'hev-excel',
     prefix: '/api/excel',
-    missing: 'Excel Analysis is not available.',
+    missing: 'Excel is not available.',
     locate,
     describe: (excel) => ({
       version: excel.version,

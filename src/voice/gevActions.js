@@ -990,7 +990,7 @@ export function createGevActionRunner({
         (await styleManager?.ensureStataAnalysis?.()) ||
         styleManager?.stataAnalysis;
       if (!panel)
-        return { ok: false, action: name, error: 'Stata Analysis unavailable' };
+        return { ok: false, action: name, error: 'Stata unavailable' };
       const request = {
         geography:
           args.geography ||
@@ -1012,8 +1012,7 @@ export function createGevActionRunner({
     if (name === 'run_r_analysis' || name === 'open_in_r') {
       const panel =
         (await styleManager?.ensureRAnalysis?.()) || styleManager?.rAnalysis;
-      if (!panel)
-        return { ok: false, action: name, error: 'R Analysis unavailable' };
+      if (!panel) return { ok: false, action: name, error: 'R unavailable' };
       const request = {
         geography:
           args.geography ||
@@ -1036,8 +1035,7 @@ export function createGevActionRunner({
       const panel =
         (await styleManager?.ensureSpssAnalysis?.()) ||
         styleManager?.spssAnalysis;
-      if (!panel)
-        return { ok: false, action: name, error: 'SPSS Analysis unavailable' };
+      if (!panel) return { ok: false, action: name, error: 'SPSS unavailable' };
       const request = {
         geography:
           args.geography ||
@@ -1061,7 +1059,7 @@ export function createGevActionRunner({
         (await styleManager?.ensureExcelAnalysis?.()) ||
         styleManager?.excelAnalysis;
       if (!panel)
-        return { ok: false, action: name, error: 'Excel Analysis unavailable' };
+        return { ok: false, action: name, error: 'Excel unavailable' };
       const request = {
         geography:
           args.geography ||

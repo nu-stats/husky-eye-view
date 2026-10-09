@@ -66,7 +66,7 @@ async function main() {
     return;
   }
   const { session } = prepared;
-  console.log(`Excel Analysis · ${session.title} · ${session.folder}`);
+  console.log(`Excel · ${session.title} · ${session.folder}`);
   if (options.open) {
     const opened = openExcelInteractive(session, { excel: findExcel() });
     for (const problem of opened.problems) console.error(problem);

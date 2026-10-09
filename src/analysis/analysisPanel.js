@@ -1,5 +1,5 @@
 /**
- * The Stata Analysis, R Analysis, SPSS Analysis and Excel Analysis panels
+ * The Stata, R, SPSS and Excel panels
  * (the Analysis menu) and the controller the voice assistant shares.
  * Commands or an uploaded script run on this computer against a layer's
  * data (counties, a state's tracts, states, the areas in the current map
@@ -153,7 +153,7 @@ export const ANALYSIS_ENGINES = Object.freeze({
     event: 'gev:excel-analysis-open',
     api: '/api/excel',
     panelId: 'excel-analysis-panel',
-    lineLabel: 'Excel Analysis commands (one per line)',
+    lineLabel: 'Excel commands (one per line)',
     examples: [
       'DESCRIPTIVE foreign_born_share poverty median_income',
       'REGRESSION foreign_born_share ON poverty unemployment',
@@ -167,7 +167,7 @@ export const ANALYSIS_ENGINES = Object.freeze({
     files: ['analysis.xlsx', 'data.xlsx', 'commands.txt', 'analysis.log'],
     sessionFiles: 'data.xlsx',
     openNote: 'The session’s data opens as data.xlsx.',
-    missing: 'Excel Analysis is not available.',
+    missing: 'Excel is not available.',
     found: (s) =>
       s.excel
         ? `Excel ${s.version ? `(Office ${s.version}) ` : ''}found; workbooks open in it.`
@@ -423,13 +423,13 @@ export class AnalysisPanel {
       id: this.engine.panelId,
       className: 'curated-panel area-reports-panel stata-panel',
       role: 'dialog',
-      ariaLabel: `${this.engine.name} Analysis`,
+      ariaLabel: this.engine.name,
       hidden: true,
     });
     const close = element('button', {
       type: 'button',
       className: 'curated-close',
-      ariaLabel: `Close ${this.engine.name} Analysis`,
+      ariaLabel: `Close ${this.engine.name}`,
       textContent: '×',
     });
     close.addEventListener('click', () => this.close());
@@ -563,7 +563,7 @@ export class AnalysisPanel {
       element('header', { className: 'curated-header' }, [
         element('span', { className: 'curated-kicker', textContent: 'DATA' }),
         element('strong', {
-          textContent: `${this.engine.name.toUpperCase()} ANALYSIS`,
+          textContent: this.engine.name.toUpperCase(),
         }),
         close,
       ]),

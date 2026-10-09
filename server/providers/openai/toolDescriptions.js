@@ -265,7 +265,7 @@ export const ACTION_DESCRIPTIONS = {
   },
   run_excel_analysis: {
     description:
-      "Build an Excel workbook analysis (computed by Husky Eye View; Excel is needed only to open it) from a layer data set: counties, the census tracts of one state, states, the areas in the current map view, or a file the user uploaded in the panel (name it as layer). Pass the user's words as request whenever you can: the app writes the commands itself. Only if the user dictates commands, give one per line: DESCRIPTIVE a b, CORRELATION a b c, REGRESSION y ON x1 x2 (least squares, with LINEST), HISTOGRAM x, SCATTER y x, FREQUENCY x, AVERAGE y BY group (also MEDIAN, SUM), STANDARDIZE x, RANK x, or one formula like =CORREL(poverty, bachelors); any may end with IF poverty > 5 AND …. The variables are the same as for run_stata_analysis. Excel Analysis has no logistic, Poisson or spatial models: use Stata, R or SPSS for those. Each command becomes a sheet of analysis.xlsx with live formulas and charts. After it runs, report the key results in plain words and any failed line.",
+      "Build an Excel workbook analysis (computed by Husky Eye View; Excel is needed only to open it) from a layer data set: counties, the census tracts of one state, states, the areas in the current map view, or a file the user uploaded in the panel (name it as layer). Pass the user's words as request whenever you can: the app writes the commands itself. Only if the user dictates commands, give one per line: DESCRIPTIVE a b, CORRELATION a b c, REGRESSION y ON x1 x2 (least squares, with LINEST), HISTOGRAM x, SCATTER y x, FREQUENCY x, AVERAGE y BY group (also MEDIAN, SUM), STANDARDIZE x, RANK x, or one formula like =CORREL(poverty, bachelors); any may end with IF poverty > 5 AND …. The variables are the same as for run_stata_analysis. The Excel box has no logistic, Poisson or spatial models: use Stata, R or SPSS for those. Each command becomes a sheet of analysis.xlsx with live formulas and charts. After it runs, report the key results in plain words and any failed line.",
     parameters: {
       properties: {
         geography: {
@@ -282,11 +282,11 @@ export const ACTION_DESCRIPTIONS = {
         },
         request: {
           description:
-            "Preferred: the user's request in their own words; the app writes the Excel Analysis commands with its plain-English translator, shows them and runs them. Give request or commands, not both.",
+            "Preferred: the user's request in their own words; the app writes the Excel commands with its plain-English translator, shows them and runs them. Give request or commands, not both.",
         },
         commands: {
           description:
-            'Excel Analysis commands, one per line, run in order — only when the user dictates them.',
+            'Excel commands, one per line, run in order — only when the user dictates them.',
         },
       },
     },

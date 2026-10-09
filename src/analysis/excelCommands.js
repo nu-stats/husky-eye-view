@@ -417,7 +417,7 @@ export function checkExcelLine(raw, vars) {
   );
   if (!found)
     return fail(
-      `“${body.split(' ')[0]}” is not one of the commands Excel Analysis runs: ${EXCEL_COMMAND_NAMES.join(', ')}.`,
+      `“${body.split(' ')[0]}” is not one of the Excel commands: ${EXCEL_COMMAND_NAMES.join(', ')}.`,
     );
   const [spelling, name] = found;
   const rest = body.slice(spelling.length).trim();

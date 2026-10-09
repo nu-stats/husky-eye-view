@@ -48,8 +48,9 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     // all four Stata and R tools. Later: run_stata_analysis / run_r_analysis
     // take the user's words (request) for the plain-English translator.
     // 2026-10-08: run_spss_analysis and open_in_spss (SPSS on this computer).
-    // 2026-10-09: run_excel_analysis and open_in_excel (Excel Analysis).
-    '10a9f74796178ded8649d6637f363f21e2d5d1693cc5d0d50af6ea3f1c2f1436',
+    // 2026-10-09: run_excel_analysis and open_in_excel (Excel), then the
+    // boxes renamed Stata, R, SPSS and Excel (no "Analysis") in the wording.
+    'be175b44fcd7940471cfc9045ebd3ca6c768e9ade67e5a12344fa7c088268dc0',
   );
 });
 

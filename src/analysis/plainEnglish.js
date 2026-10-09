@@ -630,7 +630,7 @@ function translateOne(request, variables, engine) {
       );
     else if (['logit', 'poisson', 'nbreg'].includes(kind.model))
       problems.push(
-        'Excel Analysis has least-squares regression only: use Stata, R or SPSS for logistic, Poisson or negative binomial models.',
+        'Excel has least-squares regression only here: use Stata, R or SPSS for logistic, Poisson or negative binomial models.',
       );
     else if (kind.model === 'regress' && (kind.robust || kind.clusterName))
       problems.push(
