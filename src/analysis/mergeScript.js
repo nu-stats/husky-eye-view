@@ -253,7 +253,7 @@ export function replicationFiles(
           `   Dates (${dates.map(S).join(', ')}) are written as YYYY-MM-DD text in the input file.`,
         );
       say('');
-      st(`* ---- Step ${k}. Read ${s.name} (as Husky Eye View read it) ----`);
+      st(`* ---- Step ${k}. Read ${s.name} (as ${appName} read it) ----`);
       st(
         `import delimited using "${name}", varnames(1) case(preserve) stringcols(_all) encoding("utf-8") bindquotes(strict) clear`,
       );
@@ -269,7 +269,7 @@ export function replicationFiles(
       }
       st('generate long hev__row = _n');
       st();
-      rs(`# ---- Step ${k}. Read ${s.name} (as Husky Eye View read it) ----`);
+      rs(`# ---- Step ${k}. Read ${s.name} (as ${appName} read it) ----`);
       rs(`d <- read_input(${rq(name)})`);
       for (const c of t.columns.filter(numberLike))
         rs(`d[[${rq(Rn(c))}]] <- as_num(d[[${rq(Rn(c))}]])`);
@@ -447,7 +447,7 @@ export function replicationFiles(
           .filter((x) => x.role === 'field' && x.level === level)
           .map((x) => col(x.uid));
       const itemsText = s.items.map((i) => i.label).join('; ');
-      say(`Step ${k}. Add Husky Eye View data: ${itemsText}.`);
+      say(`Step ${k}. Add ${appName} data: ${itemsText}.`);
       if (join.kind === 'points') {
         say(
           `   Each point (${join.how}) was located in its state, county and 2020 census tract${a.added.some((x) => x.level === 'place' && x.role === 'located') ? ' and city' : ''} by point-in-polygon`,
@@ -517,8 +517,8 @@ export function replicationFiles(
       const sources = [...new Set(s.items.map((i) => i.source))];
       for (const src of sources) say(`   Source: ${src}`);
       say('');
-      st(`* ---- Step ${k}. Add Husky Eye View data ----`);
-      rs(`# ---- Step ${k}. Add Husky Eye View data ----`);
+      st(`* ---- Step ${k}. Add ${appName} data ----`);
+      rs(`# ---- Step ${k}. Add ${appName} data ----`);
       // The area each row is in, at each level.
       const keyOf = {};
       const rKeyOf = {};
@@ -1013,7 +1013,7 @@ export function replicationFiles(
   say(
     'Mapping Inequality’s HOLC maps are CC BY-NC-SA 4.0 (non-commercial, share alike). Your own files',
   );
-  say('never left your computer: Husky Eye View did the merge in the browser.');
+  say(`never left your computer: ${appName} did the merge in the browser.`);
 
   files.push({ name: `${stem}_merge.do`, data: `${stata.join('\r\n')}\r\n` });
   files.push({ name: `${stem}_merge.R`, data: `${r.join('\n')}\n` });

@@ -959,6 +959,20 @@ export function tableWithUpload(table, dataset, options) {
 }
 
 /** Five quantile class breaks for coloring the upload on the map. */
+/**
+ * Your data's colors on any map (the globe's overlay and Husky Merge's 2D
+ * map): one hue, light to dark — gold, so it reads over the red/blue
+ * research layers — and the color of points.
+ */
+export const USER_RAMP = Object.freeze([
+  '#FFF3C4',
+  '#FFD966',
+  '#F4B400',
+  '#C77C02',
+  '#7A4A00',
+]);
+export const USER_POINT_COLOR = '#FFC72C';
+
 export function quantileBreaks(values, classes = 5) {
   const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
   if (!sorted.length) return [];

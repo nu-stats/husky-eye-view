@@ -13,6 +13,8 @@ import * as Cesium from 'cesium';
 const AREA_VOLUME_BOTTOM_M = -120_000;
 const AREA_VOLUME_TOP_M = 8_000;
 import {
+  USER_POINT_COLOR as POINT_COLOR,
+  USER_RAMP,
   classOf,
   geometryBbox,
   geometryPoint,
@@ -20,15 +22,7 @@ import {
   toNumber,
 } from './userData.js';
 
-/** One hue, light to dark (gold, so it reads over the red/blue research layers). */
-export const USER_RAMP = Object.freeze([
-  '#FFF3C4',
-  '#FFD966',
-  '#F4B400',
-  '#C77C02',
-  '#7A4A00',
-]);
-const POINT_COLOR = '#FFC72C';
+export { USER_RAMP };
 const FILL_ALPHA = 0.5;
 
 const polygonsOf = (geometry) =>

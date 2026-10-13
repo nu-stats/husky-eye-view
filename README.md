@@ -434,6 +434,20 @@ Choose your file, choose the format, download. Tick **With a codebook** for a ZI
 
 - **Reading the files:** Stata `use my_tracts_merged.dta`; R `load("my_tracts_merged.RData")` (a data frame `hev_data`, labels in each column's `label` attribute) or `d <- readRDS("…rds")`; SPSS opens the `.sav`; Python `pandas.read_stata(…)`, `pandas.read_spss(…)` (needs `pyreadstat`), `geopandas.read_file("…shp")`, or `pandas.read_csv(…, dtype={"hev_geoid": str})`.
 
+### 🐾 Husky Merge — the same box as an app of its own
+
+**Husky Merge** (`husky-merge/index.html`) is Merge & Export without the globe: the same panel, worker and engine, so the same conversions and merges and the same replication ZIP (data, do-file, R script, steps, codebook, `inputs/`), on a light 2D map of the states and counties (no map tiles; nothing about your file leaves the computer). It looks like Husky Eye View and needs no keys, no build and no npm packages — the page loads its modules as they are.
+
+```bash
+node scripts/husky-merge.mjs serve
+```
+
+```bash
+node scripts/husky-merge.mjs build
+```
+
+`serve` runs it at `http://127.0.0.1:4300/` (`--port`, `--host`); `build` writes it as a static site to `dist-husky-merge/` (about 200 MB, mostly Census outlines) for any web host such as GitHub Pages. Both publish only the page, the modules it imports (followed from `src/analysis/huskyMerge.js`), and the data folders the engine reads. A Pinokio launcher (`C:\pinokio\api\husky-merge`) installs it as a sparse checkout of this repository.
+
 ---
 
 ## 🎖️ Field Missions

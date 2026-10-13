@@ -1,0 +1,273 @@
+/* Husky Merge: Husky Eye View's look (src/ui/styles/foundation.css) — the
+   dark glass panels, Northeastern red and grey, Real Head Pro / Lato — with
+   the Merge & Export panel (curated.css) docked beside a 2D map. */
+:root {
+  --bg-dark: #0a0a0f;
+  --glass-bg: rgba(12, 12, 20, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --accent: #aaaaaa;
+  --accent-glow: rgba(170, 170, 170, 0.4);
+  --text-primary: #e8eaed;
+  --text-secondary: rgba(232, 234, 237, 0.76);
+  --text-dim: rgba(232, 234, 237, 0.64);
+  --font-brand:
+    'Real Head Pro', 'FF Real Head Pro', 'ff-real-headline-pro', 'Lato',
+    'Segoe UI', sans-serif;
+  --font-mono: var(--font-brand);
+  --font-sans: var(--font-brand);
+  --nu-red: #c8102e;
+  --gutter: 16px;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+:where(button, a[href], input, select, summary, canvas, [tabindex]):focus-visible {
+  outline: 2px solid var(--nu-red);
+  outline-offset: 2px;
+}
+
+a {
+  color: #a2aaad;
+}
+
+/* The title plate, as on the globe. */
+.hm-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 14px var(--gutter) 10px;
+}
+#title-bar {
+  padding: 10px 18px 10px 12px;
+  background: rgba(10, 10, 16, 0.74);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  user-select: none;
+}
+#title-bar h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 8px;
+  text-shadow: 0 0 30px var(--accent-glow);
+}
+#title-bar .title-logo {
+  display: block;
+  width: 48px;
+  aspect-ratio: 775 / 520;
+  filter: drop-shadow(0 0 12px rgba(200, 16, 46, 0.5));
+}
+#title-bar .title-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+#title-bar .title-accent {
+  /* Northeastern grey, matching the logo. */
+  color: #a2aaad;
+  font-weight: 300;
+}
+#title-bar .subtitle {
+  margin: 6px 0 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-style: italic;
+  letter-spacing: 1.5px;
+  text-align: center;
+  text-transform: lowercase;
+}
+.hm-about {
+  flex: 1 1 260px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* The panel docked on the left, the map filling the rest. */
+.hm-layout {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(340px, 480px) 1fr;
+  gap: var(--gutter);
+  min-height: 0;
+  padding: 0 var(--gutter) var(--gutter);
+}
+.hm-panel {
+  min-height: 0;
+  overflow-y: auto;
+}
+.hm-panel .curated-panel {
+  position: static;
+  width: 100%;
+  max-height: none;
+  transform: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.hm-map {
+  position: relative;
+  min-height: 320px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  background: var(--bg-dark);
+}
+
+/* The 2D map (src/analysis/flatMap.js). */
+.flat-map-canvas {
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.flat-map-canvas:active {
+  cursor: grabbing;
+}
+.flat-map-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  gap: 4px;
+}
+.flat-map-button {
+  min-width: 34px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(10, 12, 16, 0.86);
+  color: var(--text-primary);
+  font: 700 12px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.flat-map-button:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.flat-map-legend {
+  position: absolute;
+  left: 10px;
+  bottom: 28px;
+  display: grid;
+  gap: 3px;
+  max-width: min(280px, calc(100% - 20px));
+  padding: 10px 12px;
+  border-left: 4px solid #ffc72c;
+  border-radius: 4px;
+  background: rgba(8, 10, 14, 0.86);
+  font-size: 11px;
+}
+.flat-map-legend[hidden],
+.flat-map-tooltip[hidden] {
+  display: none;
+}
+.flat-map-legend strong {
+  margin-bottom: 2px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.flat-map-key {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.flat-map-key i {
+  flex: none;
+  width: 14px;
+  height: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  border-radius: 2px;
+}
+.flat-map-tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  gap: 2px;
+  max-width: 280px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(10, 12, 16, 0.94);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.flat-map-tooltip span {
+  color: var(--text-secondary);
+}
+.flat-map-credit {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  color: var(--text-dim);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.hm-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 10;
+  max-width: calc(100vw - 2 * var(--gutter));
+  padding: 10px 14px;
+  border-left: 4px solid var(--nu-red);
+  border-radius: 4px;
+  background: rgba(8, 10, 14, 0.92);
+  font-size: 13px;
+  transform: translateX(-50%);
+}
+.hm-toast[hidden] {
+  display: none;
+}
+
+/* Phones and narrow windows: the map above, the panel below, one scroll. */
+@media (max-width: 820px) {
+  body {
+    display: block;
+    height: auto;
+  }
+  .hm-layout {
+    grid-template-columns: 1fr;
+  }
+  .hm-map {
+    order: -1;
+    height: 52vh;
+  }
+  .hm-panel {
+    overflow: visible;
+  }
+  #title-bar h1 {
+    font-size: 19px;
+    letter-spacing: 5px;
+  }
+}

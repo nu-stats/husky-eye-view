@@ -75,7 +75,9 @@ export const MAX_MAP_POLYGONS = 1500;
 export const MAX_MAP_POINTS = 50_000;
 
 export class MergeSession {
-  constructor({ readContext }) {
+  /** `appName` signs the scripts, steps and data titles (Husky Merge sets its own). */
+  constructor({ readContext, appName = 'Husky Eye View' }) {
+    this.appName = appName;
     this.library = contextLibrary(readContext);
     this.reset(true);
   }
@@ -321,7 +323,7 @@ export class MergeSession {
     for (const path of chunks)
       for (const f of await this.library.features(path)) {
         const g = String(f.properties?.geoid ?? '');
-        if (byId.has(g)) shapes.set(g, f.geometry);
+        if (byId.has(g)) shapes.set(g, f);
       }
     const mean = (vals) => {
       const nums = vals.filter((v) => v !== null);
@@ -329,16 +331,19 @@ export class MergeSession {
     };
     const polygons = shapes.size <= MAX_MAP_POLYGONS;
     const records = [];
-    for (const [g, geometry] of shapes)
+    for (const [g, { geometry, properties }] of shapes) {
+      const name = properties?.name ?? null;
       records.push(
         polygons
-          ? { geoid: g, geometry, value: mean(byId.get(g)) }
+          ? { geoid: g, name, geometry, value: mean(byId.get(g)) }
           : {
               geoid: g,
+              name,
               point: geometryPoint(geometry),
               value: mean(byId.get(g)),
             },
       );
+    }
     return {
       mode: polygons ? 'polygons' : 'dots',
       records,
@@ -441,6 +446,7 @@ export class MergeSession {
     const file = await exportTable(table, format, {
       now,
       title: table.title || undefined,
+      appName: this.appName,
     });
     if (!codebook) return file;
     const files = [
@@ -476,13 +482,16 @@ export class MergeSession {
       };
       dataFiles = parts.files;
     } else {
-      data = await exportTable(table, format, { now });
+      data = await exportTable(table, format, {
+        now,
+        appName: this.appName,
+      });
       dataFiles = [{ name: data.fileName, data: data.bytes }];
     }
     const { files: scripts } = replicationFiles(
       this.steps,
       this.current.table,
-      { format, date: now, shapes: data.shapes },
+      { format, date: now, shapes: data.shapes, appName: this.appName },
     );
     const files = [
       ...dataFiles,
@@ -503,6 +512,7 @@ export class MergeSession {
     return exportTable(
       { ...this.current.table, name: `${fileStem(this.base.name)}_merged` },
       'csv',
+      { appName: this.appName },
     );
   }
 }

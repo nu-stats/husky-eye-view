@@ -77,13 +77,33 @@ function show(node, on) {
 }
 
 export class MergePanel {
+  /**
+   * In Husky Eye View the panel floats over the globe (`viewer`). Husky Merge
+   * (the stand-alone app) puts it in `container`, draws on a 2D `mapView`
+   * (`show(map, {column, label})`, `fit(box)`, `clear()`), and has no
+   * analysis boxes and no close button.
+   */
   constructor({
     viewer = null,
+    mapView = null,
+    container = null,
+    title = 'MERGE & EXPORT',
+    kicker = 'DATA',
+    dataName = 'Husky Eye View',
+    closable = true,
+    analysis = true,
     showToast = () => {},
     openAnalysis = async () => null,
     createWorker,
   } = {}) {
     this.viewer = viewer;
+    this.mapView = mapView;
+    this.container = container;
+    this.title = title;
+    this.kicker = kicker;
+    this.dataName = dataName;
+    this.closable = closable;
+    this.analysis = analysis;
     this.showToast = showToast;
     this.openAnalysis = openAnalysis;
     this.mode = 'merge';
@@ -102,7 +122,10 @@ export class MergePanel {
         }))
     )();
     this.worker.onmessage = ({ data }) => this.onWorker(data);
-    this.ready = this.call('init', { baseUrl: document.baseURI });
+    this.ready = this.call('init', {
+      baseUrl: document.baseURI,
+      appName: this.dataName,
+    });
     this.build();
     const onOpen = () => this.open();
     window.addEventListener(MERGE_OPEN_EVENT, onOpen);
@@ -403,11 +426,11 @@ export class MergePanel {
       ]),
       this.secondInfo,
       this.secondBox,
-      step(3, 'Add Husky Eye View data'),
+      step(3, `Add ${this.dataName} data`),
       this.choices,
       element('div', { className: 'curated-options' }, [this.addButton]),
       this.countBox,
-      step(4, 'Download, or analyze it'),
+      step(4, this.analysis ? 'Download, or analyze it' : 'Download it'),
       element('div', { className: 'curated-options' }, [
         element('label', { className: 'curated-check' }, [
           'Format ',
@@ -421,13 +444,17 @@ export class MergePanel {
         textContent:
           'The download is a ZIP: the merged data, a Stata do-file and an R script that rebuild it from the files included and check the result, a description of every step (.txt), and a codebook.',
       }),
-      element('div', { className: 'curated-options merge-send' }, [
-        element('span', {
-          className: 'curated-hint',
-          textContent: 'Analyze in ',
-        }),
-        ...this.sendButtons,
-      ]),
+      ...(this.analysis
+        ? [
+            element('div', { className: 'curated-options merge-send' }, [
+              element('span', {
+                className: 'curated-hint',
+                textContent: 'Analyze in ',
+              }),
+              ...this.sendButtons,
+            ]),
+          ]
+        : []),
     ]);
     this.statusLine = element('p', {
       className: 'curated-status',
@@ -437,9 +464,12 @@ export class MergePanel {
 
     this.root.append(
       element('header', { className: 'curated-header' }, [
-        element('span', { className: 'curated-kicker', textContent: 'DATA' }),
-        element('strong', { textContent: 'MERGE & EXPORT' }),
-        close,
+        element('span', {
+          className: 'curated-kicker',
+          textContent: this.kicker,
+        }),
+        element('strong', { textContent: this.title }),
+        ...(this.closable ? [close] : []),
       ]),
       element('div', { className: 'curated-form' }, [
         element(
@@ -477,7 +507,7 @@ export class MergePanel {
       this.fileInput,
       this.secondInput,
     );
-    document.body.append(this.root);
+    (this.container || document.body).append(this.root);
     this.setMode(this.mode);
     this.fillChoices([]);
   }
@@ -904,6 +934,7 @@ export class MergePanel {
 
   /** Your file on the map: outlines for a few areas, dots for many, points. */
   async drawMap({ fly = false } = {}) {
+    if (this.mapView) return this.drawFlat({ fly });
     if (!this.viewer || !this.file) return;
     if (!this.overlay) {
       const { UserDataOverlay } = await import('../curated/userOverlay.js');
@@ -963,6 +994,27 @@ export class MergePanel {
     if (fly) await this.flyTo(map.records);
   }
 
+  /** Husky Merge: the same preview on its 2D map. */
+  async drawFlat({ fly = false } = {}) {
+    if (!this.file) return;
+    this.mapView.clear();
+    if (!this.showMap.checked || this.file.join.kind === 'none') return;
+    const column = this.shadeBy.value;
+    let map;
+    try {
+      map = await this.call('map', { column });
+    } catch {
+      return;
+    }
+    if (!map.records.length) return;
+    this.mapView.show(map, { column, label: column || this.file.file });
+    if (map.mode === 'dots')
+      this.setStatus(
+        `${this.statusLine.textContent} The map shows a dot per area (${map.total.toLocaleString('en-US')} areas).`.trim(),
+      );
+    if (fly) await this.flyTo(map.records);
+  }
+
   async flyTo(records) {
     let box = null;
     const grow = ([x, y]) => {
@@ -985,6 +1037,10 @@ export class MergePanel {
         for (const ring of rings)
           for (let k = 0; k < ring.length; k += 8) grow(ring[k]);
       }
+    }
+    if (box && this.mapView) {
+      this.mapView.fit(box);
+      return;
     }
     if (!box || !this.viewer?.camera) return;
     const Cesium = await import('cesium');
@@ -1059,6 +1115,7 @@ export class MergePanel {
 
   destroy() {
     this.overlay?.clear();
+    this.mapView?.clear();
     this.worker.terminate();
     for (const reject of [...this.requests.values()].map((r) => r.reject))
       reject(new Error('Closed.'));

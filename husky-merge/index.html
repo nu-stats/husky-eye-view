@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Husky Merge</title>
+    <meta
+      name="description"
+      content="Convert your data between CSV, Excel, Stata, SPSS and R, or merge it with census data and download it with a Stata do-file and an R script that replicate every step. Runs in your browser; your files never leave your computer."
+    />
+    <link rel="icon" type="image/svg+xml" href="logo.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="src/ui/styles/curated.css" />
+    <link rel="stylesheet" href="husky-merge.css" />
+  </head>
+  <body>
+    <header class="hm-top">
+      <div id="title-bar">
+        <h1>
+          <span class="title-logo brand-logo" aria-hidden="true"
+            ><img src="logo.svg" alt=""
+          /></span>
+          <span>HUSKY <span class="title-accent">MERGE</span></span>
+        </h1>
+        <p class="subtitle">convert, merge and replicate your data</p>
+      </div>
+      <p class="hm-about">
+        Part of
+        <a href="https://github.com/nu-stats/husky-eye-view" rel="noopener"
+          >Husky Eye View</a
+        >. Everything runs in your browser — your files never leave your
+        computer.
+      </p>
+    </header>
+    <main class="hm-layout">
+      <div id="hm-panel" class="hm-panel"></div>
+      <div id="hm-map" class="hm-map" aria-label="Map"></div>
+    </main>
+    <div id="hm-toast" class="hm-toast" role="status" hidden></div>
+    <noscript>Husky Merge needs JavaScript.</noscript>
+    <script type="module">
+      import { startHuskyMerge } from './src/analysis/huskyMerge.js';
+      startHuskyMerge();
+    </script>
+  </body>
+</html>

@@ -36,9 +36,9 @@ const fileResult = (file) => {
 };
 
 const ops = {
-  init({ baseUrl }) {
+  init({ baseUrl, appName }) {
     base = baseUrl || base;
-    session = new MergeSession({ readContext });
+    session = new MergeSession({ readContext, ...(appName && { appName }) });
     return true;
   },
   open({ name, bytes, which }) {

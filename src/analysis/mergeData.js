@@ -1733,13 +1733,13 @@ const CODEBOOK_HEADER = [
 /** The merge log and terms, as README text. */
 export function readmeText(
   table,
-  { log = [], format, date = new Date() } = {},
+  { log = [], format, date = new Date(), appName = 'Husky Eye View' } = {},
 ) {
   const sources = [
     ...new Set(table.columns.map((c) => c.source).filter(Boolean)),
   ];
   return [
-    `${table.name} — merged and exported by Husky Eye View`,
+    `${table.name} — merged and exported by ${appName}`,
     `Written ${date.toISOString().slice(0, 16).replace('T', ' ')} UTC as ${EXPORT_FORMATS[format]?.label || format}.`,
     '',
     `${table.rows.length.toLocaleString('en-US')} rows, ${table.columns.length} variables.`,
@@ -1767,7 +1767,7 @@ export function readmeText(
 export async function exportTable(
   table,
   format,
-  { now = new Date(), title } = {},
+  { now = new Date(), title, appName = 'Husky Eye View' } = {},
 ) {
   const spec = EXPORT_FORMATS[format];
   if (!spec) throw new Error(`No export format “${format}”.`);
@@ -1775,7 +1775,7 @@ export async function exportTable(
     throw new Error('A shapefile needs its shapes: use MergeSession.');
   const stem = fileStem(table.name);
   const heading =
-    title || `Husky Eye View: ${table.name}, ${table.rows.length} rows`;
+    title || `${appName}: ${table.name}, ${table.rows.length} rows`;
   const dataset = {
     title: heading,
     variables: table.columns,
