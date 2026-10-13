@@ -147,7 +147,9 @@ const R_RESERVED = new Set(
  */
 export function programNames(variables, program) {
   const used = new Set();
-  const keyOf = (n) => (program === 'spss' ? n.toUpperCase() : n);
+  // SPSS and dBase (shapefile) names are case-insensitive.
+  const keyOf = (n) =>
+    program === 'spss' || program === 'dbf' ? n.toUpperCase() : n;
   const names = [];
   const renames = [];
   for (const v of variables) {
@@ -159,6 +161,11 @@ export function programNames(variables, program) {
       base = base.slice(0, 32);
       if (STATA_RESERVED.has(base) || /^str\d+$/.test(base))
         base = `${base.slice(0, 30)}_v`;
+    } else if (program === 'dbf') {
+      // dBase (shapefile) fields: ASCII letters, digits and _, at most 10.
+      base = base.replace(/[^A-Za-z0-9_]/g, '_');
+      if (!/^[A-Za-z]/.test(base)) base = `v${base}`;
+      base = base.slice(0, 10);
     } else if (program === 'spss') {
       base = base.replace(/[^A-Za-z0-9_.@#$]/g, '_');
       if (!/^[A-Za-z@#$]/.test(base)) base = `v${base}`;
@@ -171,7 +178,14 @@ export function programNames(variables, program) {
       if (R_RESERVED.has(base)) base = `${base}.`;
     }
     let name = base || 'v';
-    const limit = program === 'stata' ? 32 : program === 'spss' ? 64 : 10000;
+    const limit =
+      program === 'stata'
+        ? 32
+        : program === 'spss'
+          ? 64
+          : program === 'dbf'
+            ? 10
+            : 10000;
     for (let k = 2; used.has(keyOf(name)); k += 1) {
       const suffix = `_${k}`;
       name = `${base.slice(0, limit - suffix.length)}${suffix}`;
@@ -256,11 +270,18 @@ export function writeDta(
   tag('</sortlist>');
   map[5] = out.length;
   tag('<formats>');
-  for (const t of types)
-    out.fixed(
-      encoder.encode(t === DTA_DOUBLE ? '%10.0g' : `%${Math.min(t, 244)}s`),
-      57,
-    );
+  types.forEach((t, j) => {
+    const kind = variables[j].kind;
+    const format =
+      t !== DTA_DOUBLE
+        ? `%${Math.min(t, 244)}s`
+        : kind === 'date'
+          ? '%td'
+          : kind === 'datetime'
+            ? '%tc'
+            : '%10.0g';
+    out.fixed(encoder.encode(format), 57);
+  });
   tag('</formats>');
   // Value labels: one table per labelled variable, named after it.
   const labelled = variables.map((v, j) =>
@@ -282,12 +303,16 @@ export function writeDta(
   tag('<characteristics></characteristics>');
   map[9] = out.length;
   tag('<data>');
+  const dateShift = variables.map((v) =>
+    v.kind === 'date' ? 3653 : v.kind === 'datetime' ? 3653 * 86_400_000 : 0,
+  );
   for (const row of rows)
     for (let j = 0; j < K; j += 1) {
       if (types[j] === DTA_DOUBLE) {
         const n = cellNumber(row[j]);
         if (n === null) out.bytes(DTA_MISSING);
-        else out.f64(n);
+        // Dates: days (or ms) since 1960 in Stata, since 1970 here.
+        else out.f64(dateShift[j] ? n + dateShift[j] : n);
       } else out.fixed(utf8Prefix(cellText(row[j]), types[j]), types[j]);
     }
   tag('</data>');
@@ -331,6 +356,7 @@ export function writeDta(
 // ---------- SPSS .sav ----------
 
 const SAV_MAX_STR = 255;
+const SPSS_EPOCH = 12_219_379_200;
 const SYSMIS = -Number.MAX_VALUE;
 const spaces = (n) => new Uint8Array(n).fill(0x20);
 
@@ -424,9 +450,20 @@ export function writeSav(
   // Variable records, with continuation records for long strings.
   const formats = variables.map((v, j) => {
     if (widths[j]) return savFormat('string', widths[j]);
+    // DATE11 and DATETIME20.
+    if (v.kind === 'date') return (20 << 16) | (11 << 8);
+    if (v.kind === 'datetime') return (22 << 16) | (20 << 8);
     const { width, decimals } = numericFormat(rows, j);
     return savFormat('numeric', width, decimals);
   });
+  // SPSS dates are seconds since 1582-10-14.
+  const toSpss = variables.map((v) =>
+    v.kind === 'date'
+      ? (n) => n * 86400 + SPSS_EPOCH
+      : v.kind === 'datetime'
+        ? (n) => n / 1000 + SPSS_EPOCH
+        : null,
+  );
   const position = [];
   let index = 1;
   variables.forEach((v, j) => {
@@ -525,7 +562,7 @@ export function writeSav(
         );
       } else {
         const n = cellNumber(row[j]);
-        out.f64(n === null ? SYSMIS : n);
+        out.f64(n === null ? SYSMIS : toSpss[j] ? toSpss[j](n) : n);
       }
     });
   return { bytes: out.done(), renames, notes };
@@ -607,7 +644,10 @@ class RSerializer {
   }
 
   reals(values, attrs = []) {
-    this.flags(SXP.REAL, { attr: attrs.length > 0 });
+    this.flags(SXP.REAL, {
+      attr: attrs.length > 0,
+      object: attrs.some(([n]) => n === 'class'),
+    });
     this.out.i32(values.length);
     for (const v of values) {
       if (v === null) this.out.bytes(NA_REAL);
@@ -655,6 +695,25 @@ class RSerializer {
             return t === '' ? null : t;
           }),
           attrs,
+        );
+      else if (v.kind === 'date')
+        // Date: days since 1970-01-01.
+        this.reals(
+          rows.map((row) => cellNumber(row[j])),
+          [...attrs, ['class', () => this.strings(['Date'])]],
+        );
+      else if (v.kind === 'datetime')
+        // POSIXct: seconds since 1970-01-01 UTC.
+        this.reals(
+          rows.map((row) => {
+            const n = cellNumber(row[j]);
+            return n === null ? null : n / 1000;
+          }),
+          [
+            ...attrs,
+            ['class', () => this.strings(['POSIXct', 'POSIXt'])],
+            ['tzone', () => this.strings(['UTC'])],
+          ],
         );
       else
         this.reals(

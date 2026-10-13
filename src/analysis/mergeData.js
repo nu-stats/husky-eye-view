@@ -38,9 +38,20 @@ import {
   writeRData,
   writeSav,
 } from './statFiles.js';
+import { readDta, readRData, readSav } from './statRead.js';
 
-export const MAX_MERGE_FILE_BYTES = 100 * 1024 * 1024;
-export const MAX_MERGE_ROWS = 250_000;
+export const MAX_MERGE_FILE_BYTES = 250 * 1024 * 1024;
+export const MAX_MERGE_ROWS = 1_000_000;
+
+/** Files Merge & Export reads. */
+export const READ_FORMATS =
+  '.csv,.tsv,.txt,.xlsx,.xlsm,.dta,.sav,.zsav,.rdata,.rda,.rds,.geojson,.json,.geojsonl,.zip';
+
+// Every column has a lasting id, so the replication scripts can follow it
+// through merges and renames.
+let nextUid = 0;
+export const withUid = (column) =>
+  column.uid ? column : { ...column, uid: `c${(nextUid += 1)}` };
 
 // ---------- reading a file ----------
 
@@ -84,7 +95,12 @@ export function tableFromRows(name, columns, objects, geometries = null) {
   const names = uniqueColumns(columns);
   const cols = names.map((n, j) => {
     const values = objects.map((row) => row[columns[j]]);
-    return { name: n, label: '', kind: columnKind(n, values), origin: name };
+    return withUid({
+      name: n,
+      label: '',
+      kind: columnKind(n, values),
+      origin: name,
+    });
   });
   const rows = objects.map((row) =>
     cols.map((c, j) => {
@@ -97,7 +113,39 @@ export function tableFromRows(name, columns, objects, geometries = null) {
   return { name, columns: cols, rows, geometries };
 }
 
-/** Read an uploaded file (CSV, Excel, GeoJSON or a zipped shapefile). */
+/**
+ * A table from a statistics program's file (statRead.js): its own types,
+ * variable labels, value labels and dates are kept.
+ */
+function typedTable(name, read, format) {
+  if (read.rows.length > MAX_MERGE_ROWS)
+    throw new Error(
+      `The file has ${read.rows.length.toLocaleString('en-US')} rows; the limit is ${MAX_MERGE_ROWS.toLocaleString('en-US')}.`,
+    );
+  const names = uniqueColumns(read.columns.map((c) => c.name));
+  return {
+    name,
+    format,
+    columns: read.columns.map((c, j) =>
+      withUid({
+        name: names[j],
+        label: c.label || '',
+        kind: c.kind,
+        ...(c.valueLabels && { valueLabels: c.valueLabels }),
+        origin: name,
+      }),
+    ),
+    rows: read.rows,
+    geometries: null,
+    title: read.title || '',
+    notes: read.notes || [],
+  };
+}
+
+/**
+ * Read an uploaded file: CSV, Excel, Stata, SPSS, R, GeoJSON or a zipped
+ * shapefile.
+ */
 export async function readTable(name, bytes) {
   if (bytes.length > MAX_MERGE_FILE_BYTES)
     throw new Error(
@@ -130,12 +178,17 @@ export async function readTable(name, bytes) {
     if (zipped.inner) return readTable(zipped.inner.name, zipped.inner.bytes);
     return fromFeatures(zipped.features);
   }
+  if (lower.endsWith('.dta')) return typedTable(name, readDta(bytes), 'dta');
+  if (/\.z?sav$/.test(lower))
+    return typedTable(name, await readSav(bytes), 'sav');
+  if (/\.(rdata|rda|rds)$/.test(lower))
+    return typedTable(name, await readRData(bytes), 'r');
   if (lower.endsWith('.xls'))
     throw new Error(
       'Save the workbook as .xlsx (Excel Workbook) or CSV, then upload it again.',
     );
   throw new Error(
-    'Upload a CSV, an Excel workbook (.xlsx), GeoJSON, or a zipped shapefile.',
+    'Upload a CSV, Excel workbook (.xlsx), Stata (.dta), SPSS (.sav), R (.RData, .rds), GeoJSON, or a zipped shapefile.',
   );
 }
 
@@ -240,6 +293,11 @@ export function findJoin(table) {
           .filter(Boolean)
           .join(' + '),
         column: null,
+        parts: {
+          statePart: found.statePart,
+          countyPart: found.countyPart,
+          tractPart: t >= 0 ? found.tractPart : null,
+        },
       };
   }
   if (table.geometries?.some(Boolean)) {
@@ -404,14 +462,16 @@ export function mergeTables(a, b, { leftKey, rightKey, keep = 'left' }) {
       const clash = names.has(c.name.toLowerCase());
       return {
         j,
-        column: {
+        // A new id: the second file's column is a new column here.
+        column: withUid({
           ...c,
+          uid: undefined,
           name: freeName(names, c.name),
           label: c.label || (clash ? `${c.name} (from ${b.name})` : ''),
-        },
+        }),
       };
     });
-  const indicator = {
+  const indicator = withUid({
     name: freeName(names, 'hev_merge'),
     label: `In which file: ${a.name} and/or ${b.name}`,
     kind: 'numeric',
@@ -420,24 +480,32 @@ export function mergeTables(a, b, { leftKey, rightKey, keep = 'left' }) {
       2: `Only in ${b.name}`.slice(0, 80),
       3: 'In both files',
     },
-  };
+  });
   const columns = [...a.columns, ...bCols.map((x) => x.column), indicator];
   const rows = [];
+  // Which row of the first file each row came from (null: the second file's
+  // own), so the shapefile can keep the first file's own geography.
+  const origin = [];
+  const from = (i) => (a.origin ? a.origin[i] : i);
   const usedB = new Set();
   let matched = 0;
   let onlyA = 0;
-  a.rows.forEach((row) => {
+  a.rows.forEach((row, i) => {
     const k = keyText(row[li], geoid);
     const hits = k === null ? [] : bByKey.get(k) || [];
     if (!hits.length) {
       onlyA += 1;
-      if (keep !== 'inner') rows.push([...row, ...bCols.map(() => null), 1]);
+      if (keep !== 'inner') {
+        rows.push([...row, ...bCols.map(() => null), 1]);
+        origin.push(from(i));
+      }
       return;
     }
     for (const r of hits) {
       usedB.add(r);
       matched += 1;
       rows.push([...row, ...bCols.map(({ j }) => b.rows[r][j]), 3]);
+      origin.push(from(i));
     }
   });
   let onlyB = 0;
@@ -448,6 +516,7 @@ export function mergeTables(a, b, { leftKey, rightKey, keep = 'left' }) {
     const fill = new Array(a.columns.length).fill(null);
     fill[li] = row[ri];
     rows.push([...fill, ...bCols.map(({ j }) => row[j]), 2]);
+    origin.push(null);
   });
   // Rows may repeat or drop, so the first file's own shapes do not carry over:
   // the merged table joins to the map by its IDs or coordinates.
@@ -456,6 +525,7 @@ export function mergeTables(a, b, { leftKey, rightKey, keep = 'left' }) {
       name: a.name,
       columns,
       rows,
+      origin,
       geometries: null,
       sources: [...(a.sources || []), b.name],
     },
@@ -471,6 +541,10 @@ export function mergeTables(a, b, { leftKey, rightKey, keep = 'left' }) {
       leftKey,
       rightKey,
       other: b.name,
+      // For the replication scripts.
+      geoidKeys: geoid,
+      bColumns: bCols.map(({ j, column }) => ({ j, uid: column.uid })),
+      indicatorUid: indicator.uid,
     },
   };
 }
@@ -928,9 +1002,13 @@ export async function attachData(
   const columns = [...table.columns];
   const rows = table.rows.map((r) => [...r]);
   const names = new Set(columns.map((c) => c.name.toLowerCase()));
-  const add = (column, values) => {
+  // What each new column is, for the replication scripts.
+  const added = [];
+  const add = (column, values, meta = {}) => {
     const name = freeName(names, column.name);
-    columns.push({ ...column, name });
+    const made = withUid({ ...column, name });
+    columns.push(made);
+    added.push({ uid: made.uid, ...meta });
     values.forEach((v, i) => rows[i].push(v ?? null));
   };
   // The GEOID of each row at each level.
@@ -952,6 +1030,7 @@ export async function attachData(
         source: 'Census TIGER/Line state boundaries',
       },
       ids.state,
+      { role: 'located', level: 'state' },
     );
     add(
       {
@@ -961,6 +1040,7 @@ export async function attachData(
         source: 'Census TIGER/Line county boundaries',
       },
       ids.county,
+      { role: 'located', level: 'county' },
     );
     add(
       {
@@ -970,6 +1050,7 @@ export async function attachData(
         source: 'Census TIGER/Line 2020 tract boundaries',
       },
       ids.tract,
+      { role: 'located', level: 'tract' },
     );
     if (items.some((i) => i.level === 'place'))
       add(
@@ -980,6 +1061,7 @@ export async function attachData(
           source: 'Census places',
         },
         ids.place,
+        { role: 'located', level: 'place' },
       );
   } else {
     // The clean GEOID the join used (Excel drops leading zeros).
@@ -991,6 +1073,7 @@ export async function attachData(
           kind: 'string',
         },
         join.ids,
+        { role: 'geoid' },
       );
     const own = join.ids.map((g) =>
       g && join.level === 'block group' ? g.slice(0, 11) : g,
@@ -1083,6 +1166,7 @@ export async function attachData(
                   ? null
                   : String(v);
           }),
+          { role: 'field', level, item: item.id },
         );
       found[level] ||= new Set();
       for (const g of rowIds)
@@ -1115,6 +1199,7 @@ export async function attachData(
           const v = p?.[field.key];
           return v === undefined || v === null || v === '' ? null : String(v);
         }),
+        { role: 'field', level: 'point', item: item.id },
       );
     report.attached.push(item.id);
     report.matched[item.id] = found.filter(Boolean).length;
@@ -1140,9 +1225,16 @@ export async function attachData(
         valueLabels: { 1: 'Not matched', 3: 'Matched' },
       },
       matchedRows,
+      { role: 'matched', level: join.kind === 'points' ? 'tract' : level },
     );
   report.rows = n;
   report.matchedRows = matchedRows.filter((v) => v === 3).length;
+  // For the replication scripts: the new columns, each row's area at each
+  // level, and which areas were found.
+  report.added = added;
+  report.ids = ids;
+  report.found = found;
+  report.matchLevel = join.kind === 'points' ? 'tract' : level;
   return {
     table: { ...table, columns, rows, geometries: table.geometries },
     report,
@@ -1214,7 +1306,7 @@ export async function countPoints(
       label: 'Points per 1,000 residents',
       kind: 'numeric',
     },
-  ];
+  ].map(withUid);
   const rows = props.map((p) => {
     const g = String(p.geoid);
     const count = counts.get(g) || 0;
@@ -1255,7 +1347,15 @@ export async function countPoints(
       how: 'the geoid column',
       column: 'geoid',
     },
-    report: { areas: rows.length, withPoints: counts.size, outside, notes },
+    report: {
+      areas: rows.length,
+      withPoints: counts.size,
+      outside,
+      notes,
+      level,
+      // For the replication scripts: each point's area.
+      located: tagged[level],
+    },
   };
 }
 
@@ -1276,6 +1376,8 @@ export const EXPORT_FORMATS = Object.freeze({
     mime: 'application/octet-stream',
   },
   rds: { label: 'R (.rds)', ext: 'rds', mime: 'application/octet-stream' },
+  // The shapes of your original file (mergeSession.js writes it).
+  shp: { label: 'Shapefile (.shp)', ext: 'shp', mime: 'application/zip' },
 });
 
 const csvCell = (v) => {
@@ -1287,9 +1389,20 @@ const csvCell = (v) => {
     : t;
 };
 
+/** A cell as text or number for CSV and Excel: dates as ISO text. */
+export function cellOut(column, v) {
+  if (v === null || v === undefined) return null;
+  if (column.kind === 'date' && Number.isFinite(v))
+    return new Date(Math.round(v * 86_400_000)).toISOString().slice(0, 10);
+  if (column.kind === 'datetime' && Number.isFinite(v))
+    return new Date(v).toISOString().slice(0, 19).replace('T', ' ');
+  return v;
+}
+
 /** A table as CSV text (with a byte-order mark, so Excel reads UTF-8). */
 export function tableCsv(table, names = table.columns.map((c) => c.name)) {
-  return `﻿${[names.map(csvCell).join(','), ...table.rows.map((r) => r.map(csvCell).join(','))].join('\r\n')}\r\n`;
+  const { columns } = table;
+  return `﻿${[names.map(csvCell).join(','), ...table.rows.map((r) => r.map((v, j) => csvCell(cellOut(columns[j], v))).join(','))].join('\r\n')}\r\n`;
 }
 
 /** A safe file stem from a name. */
@@ -1330,7 +1443,13 @@ export async function withDeflate(build) {
 }
 
 /** Which program a format's names follow. */
-const PROGRAM = { dta: 'stata', sav: 'spss', rdata: 'r', rds: 'r' };
+const PROGRAM = {
+  dta: 'stata',
+  sav: 'spss',
+  rdata: 'r',
+  rds: 'r',
+  shp: 'dbf',
+};
 
 /** Codebook rows: name in the file, original name, label, type, source, years. */
 export function codebookRows(table, format) {
@@ -1342,7 +1461,7 @@ export function codebookRows(table, format) {
     names[j],
     c.name,
     c.label || '',
-    c.kind === 'string' ? 'text' : 'number',
+    { string: 'text', date: 'date', datetime: 'date-time' }[c.kind] || 'number',
     c.valueLabels
       ? Object.entries(c.valueLabels)
           .map(([k, v]) => `${k} = ${v}`)
@@ -1404,6 +1523,8 @@ export async function exportTable(
 ) {
   const spec = EXPORT_FORMATS[format];
   if (!spec) throw new Error(`No export format “${format}”.`);
+  if (format === 'shp')
+    throw new Error('A shapefile needs its shapes: use MergeSession.');
   const stem = fileStem(table.name);
   const heading =
     title || `Husky Eye View: ${table.name}, ${table.rows.length} rows`;
@@ -1428,15 +1549,14 @@ export async function exportTable(
         rows: [
           table.columns.map((c) => ({ v: c.name, s: 'header' })),
           ...table.rows.map((row) =>
-            row.map((v, j) =>
-              v === null || v === undefined || v === ''
-                ? null
-                : table.columns[j].kind === 'string'
-                  ? String(v)
-                  : Number.isFinite(Number(v))
-                    ? Number(v)
-                    : String(v),
-            ),
+            row.map((v, j) => {
+              const column = table.columns[j];
+              if (v === null || v === undefined || v === '') return null;
+              if (column.kind === 'date' || column.kind === 'datetime')
+                return cellOut(column, v);
+              if (column.kind === 'string') return String(v);
+              return Number.isFinite(Number(v)) ? Number(v) : String(v);
+            }),
           ),
         ],
       },

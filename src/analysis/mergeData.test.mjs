@@ -262,7 +262,8 @@ test('every export format writes its file, and the bundle adds a codebook and RE
       new TextDecoder().decode(gunzipSync(b).slice(0, 5)) === 'RDX2\n',
     rds: (b) => new TextDecoder().decode(gunzipSync(b).slice(0, 2)) === 'X\n',
   };
-  for (const format of Object.keys(EXPORT_FORMATS)) {
+  // Shapefiles need your file's shapes: mergeSession.test.mjs covers them.
+  for (const format of Object.keys(EXPORT_FORMATS).filter((f) => f !== 'shp')) {
     const file = await exportTable(table, format);
     assert.ok(magic[format](file.bytes), format);
     assert.match(

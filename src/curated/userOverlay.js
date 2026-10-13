@@ -251,6 +251,12 @@ export class UserDataOverlay {
         ? entry.values.reduce((a, b) => a + b, 0) / entry.values.length
         : null;
     const valued = options.column;
+    // options.clamp === false: dots at sea level, drawn over everything
+    // anyway; clamping thousands of them to the ground stalls a frame.
+    const heightReference =
+      options.clamp === false
+        ? Cesium.HeightReference.NONE
+        : Cesium.HeightReference.CLAMP_TO_GROUND;
     // options.ramp / options.breaks: another palette or class breaks (the
     // analysis map's diverging residuals); quantiles of the gold ramp otherwise.
     const ramp = options.ramp || USER_RAMP;
@@ -342,7 +348,7 @@ export class UserDataOverlay {
           image: images.get(css),
           width: 14,
           height: 14,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          heightReference,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         });
       }
@@ -362,7 +368,7 @@ export class UserDataOverlay {
           image: images.get(css),
           width: 12,
           height: 12,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          heightReference,
           disableDepthTestDistance: Number.POSITIVE_INFINITY,
         });
       }

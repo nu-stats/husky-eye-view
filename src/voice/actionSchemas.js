@@ -1166,7 +1166,7 @@ const schemas = [
         },
         format: {
           type: 'string',
-          enum: ['csv', 'xlsx', 'dta', 'sav', 'rdata', 'rds'],
+          enum: ['csv', 'xlsx', 'dta', 'sav', 'rdata', 'rds', 'shp'],
         },
         send_to: {
           type: 'string',
