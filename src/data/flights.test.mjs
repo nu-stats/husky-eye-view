@@ -250,7 +250,9 @@ test('a newly seen aircraft appears at its delayed position, not ahead of it', a
   const nowSec = Math.floor(Date.now() / 1000);
   const realFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
-    if (!String(url).startsWith('/api/flights')) {
+    // Husky Eye View's flight route (God's Eye View renamed its own to
+    // /api/flights).
+    if (!String(url).startsWith('/api/opensky')) {
       return { ok: true, status: 200, json: async () => ({ ac: [] }) };
     }
     return {
@@ -1052,7 +1054,9 @@ test('a newly seen taxiing aircraft starts on the floor under its delayed positi
   const nowSec = Math.floor(Date.now() / 1000);
   const realFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
-    if (!String(url).startsWith('/api/flights')) {
+    // Husky Eye View's flight route (God's Eye View renamed its own to
+    // /api/flights).
+    if (!String(url).startsWith('/api/opensky')) {
       return { ok: true, status: 200, json: async () => ({ ac: [] }) };
     }
     return {
