@@ -514,6 +514,7 @@
   "src/data/satellites.js",
   "src/data/rocketLaunches.js",
   "src/layers/satellites/source.test.mjs",
+  "src/layers/satellites/orbits.test.mjs",
   "src/layers/launches/source.test.mjs",
   "src/layers/installations/lifecycle.js",
   "src/layers/installations/viewport.js",

@@ -38,7 +38,9 @@ export function createOrbits({ state: layerState, services, parts, source }) {
   }
 
   /**
-   * Parse TLE text into array of { name, line1, line2 } objects.
+   * Parse TLE text into array of { name, line1, line2 } objects. A malformed
+   * set is skipped without dropping the valid sets that follow (God's Eye
+   * View #936: stepping by three lost everything after one missing line).
    */
 
   function parseTLE(text) {
@@ -48,12 +50,13 @@ export function createOrbits({ state: layerState, services, parts, source }) {
       .map((l) => l.trim())
       .filter((l) => l.length > 0);
     const result = [];
-    for (let i = 0; i < lines.length - 2; i += 3) {
+    for (let i = 0; i < lines.length - 2; i++) {
       const name = lines[i];
       const line1 = lines[i + 1];
       const line2 = lines[i + 2];
       if (line1.startsWith('1 ') && line2.startsWith('2 ')) {
         result.push({ name, line1, line2 });
+        i += 2;
       }
     }
     return result;
