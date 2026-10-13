@@ -241,7 +241,7 @@ export class MergeSession {
     const notes = [...report.notes];
     if (expanded)
       notes.unshift(
-        `Each ${LEVEL_NOUN[expanded.from]} became one row per ${LEVEL_NOUN[expanded.to]} in it: ${expanded.rowsBefore.toLocaleString('en-US')} rows became ${expanded.rows.toLocaleString('en-US')}, each keeping its ${LEVEL_NOUN[expanded.from]}’s values${expanded.empty ? ` (${expanded.empty.toLocaleString('en-US')} without ${LEVEL_NOUN[expanded.to] === 'county' ? 'counties' : `${LEVEL_NOUN[expanded.to]}s`} ${expanded.empty === 1 ? 'stays' : 'stay'} one row)` : ''}.`,
+        `Each ${LEVEL_NOUN[expanded.from]} became one row per ${LEVEL_NOUN[expanded.to]} in it: ${expanded.rowsBefore.toLocaleString('en-US')} ${expanded.rowsBefore === 1 ? 'row' : 'rows'} became ${expanded.rows.toLocaleString('en-US')}, each keeping its ${LEVEL_NOUN[expanded.from]}’s values${expanded.empty ? ` (${expanded.empty.toLocaleString('en-US')} without ${LEVEL_NOUN[expanded.to] === 'county' ? 'counties' : `${LEVEL_NOUN[expanded.to]}s`} ${expanded.empty === 1 ? 'stays' : 'stay'} one row)` : ''}.`,
       );
     return {
       rows: report.rows,

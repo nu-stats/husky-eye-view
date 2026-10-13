@@ -1,0 +1,86 @@
+name: Husky Merge on GitHub Pages
+
+# Publishes Husky Merge (husky-merge/index.html, the stand-alone Merge &
+# Export app) as a static site at <pages>/husky-merge/. It needs no npm
+# packages: scripts/husky-merge.mjs copies the page, the modules it imports
+# and the Census data folders the engine reads.
+on:
+  push:
+    branches: [main]
+    paths:
+      - husky-merge/**
+      - scripts/husky-merge.mjs
+      - src/**
+      - public/context/**
+      - public/logo.svg
+      - .github/workflows/husky-merge-pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: husky-merge-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Husky Merge
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out what Husky Merge uses
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            husky-merge
+            scripts
+            src
+            public/context/tracts-2020
+            public/context/county-life-expectancy
+            public/context/states
+            public/context/life-expectancy
+            public/context/segregation
+            public/context/holc
+            public/context/enumeration-districts-1900
+            public/context/enumeration-districts-1910
+            public/context/enumeration-districts-1920
+            public/context/enumeration-districts-1930
+
+      - name: Use Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.14.0
+
+      - name: Test Husky Merge's file list
+        run: node --test src/huskyMerge.test.mjs src/analysis/flatMap.test.mjs
+
+      - name: Build the static site
+        run: |
+          node scripts/husky-merge.mjs build --out dist-pages/husky-merge
+          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=husky-merge/"><title>Husky Merge</title><a href="husky-merge/">Husky Merge</a>\n' > dist-pages/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist-pages
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}husky-merge/
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

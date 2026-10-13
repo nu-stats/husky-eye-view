@@ -717,7 +717,7 @@ export function replicationFiles(
         `   ${from} (${S(geoCol)}, ${S(nameCol)}; ${x.to === 'tract' ? 'Census TIGER/Line 2020 tracts' : 'Census counties'}), in GEOID order.`,
       );
       say(
-        `   ${x.rowsBefore.toLocaleString('en-US')} rows became ${x.rows.toLocaleString('en-US')}.${x.empty ? ` ${x.empty.toLocaleString('en-US')} row${x.empty === 1 ? '' : 's'} without a ${from} the map has stay${x.empty === 1 ? 's' : ''} one row, with ${S(geoCol)} empty.` : ''}`,
+        `   ${x.rowsBefore.toLocaleString('en-US')} ${x.rowsBefore === 1 ? 'row' : 'rows'} became ${x.rows.toLocaleString('en-US')}.${x.empty ? ` ${x.empty.toLocaleString('en-US')} row${x.empty === 1 ? '' : 's'} without a ${from} the map has stay${x.empty === 1 ? 's' : ''} one row, with ${S(geoCol)} empty.` : ''}`,
       );
       say('');
       st(

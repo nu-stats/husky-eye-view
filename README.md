@@ -446,7 +446,9 @@ node scripts/husky-merge.mjs serve
 node scripts/husky-merge.mjs build
 ```
 
-`serve` runs it at `http://127.0.0.1:4300/` (`--port`, `--host`); `build` writes it as a static site to `dist-husky-merge/` (about 200 MB, mostly Census outlines) for any web host such as GitHub Pages. Both publish only the page, the modules it imports (followed from `src/analysis/huskyMerge.js`), and the data folders the engine reads. A Pinokio launcher (`C:\pinokio\api\husky-merge`) installs it as a sparse checkout of this repository.
+**Online:** <https://nu-stats.github.io/husky-eye-view/husky-merge/> (GitHub Pages, rebuilt by `.github/workflows/husky-merge-pages.yml` on every push that touches it). **In Pinokio:** <https://github.com/nu-stats/husky-merge>.
+
+`serve` runs it at `http://127.0.0.1:4300/` (`--port`, `--host`); `build` writes it as a static site to `dist-husky-merge/` (about 200 MB, mostly Census outlines) for any web host. Both publish only the page, the modules it imports (followed from `src/analysis/huskyMerge.js`), and the data folders the engine reads. A Pinokio launcher (`C:\pinokio\api\husky-merge`) installs it as a sparse checkout of this repository.
 
 ---
 
