@@ -226,6 +226,8 @@ export class LayerPanel {
       container:
         container?.ownerDocument?.getElementById?.('weather-panel-body'),
       setLayerParams: this.setLayerParams,
+      // The WEATHER launcher opens when clicked, like the bottom row's others.
+      openOnFirstAppearance: false,
     });
     this._renderToggles();
   }

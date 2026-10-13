@@ -57,6 +57,9 @@ export function createWeatherPanel({
   clock,
   setLayerParams = () => {},
   onAction = () => {},
+  // Husky Eye View passes false: its bottom-row launchers open only when
+  // clicked, so the Weather popup never lands on another open popup.
+  openOnFirstAppearance = true,
 } = {}) {
   const document = container?.ownerDocument;
   if (!document?.createElement) return null;
@@ -248,6 +251,7 @@ export function createWeatherPanel({
       // choice exists (marked by the panel chrome when it restored the state).
       const preference = panel.dataset?.collapsedPreference;
       if (
+        openOnFirstAppearance &&
         panel.classList.contains('collapsed') &&
         (preference === undefined || preference === 'default')
       )
