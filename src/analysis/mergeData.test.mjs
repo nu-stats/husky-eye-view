@@ -133,9 +133,10 @@ test('a tract file is offered tract, county and state data; phrases pick measure
     'county:segregation-bw',
     'county:segregation-hw',
   ]);
+  // A state file takes county data as one row per county (no state poverty).
   assert.deepEqual(
     findMergeItems({ kind: 'geoid', level: 'state', ids: [] }, ['poverty']),
-    [],
+    ['county:poverty'],
   );
 });
 

@@ -13,6 +13,10 @@ let base = self.location.href;
 const readContext = async (path) => {
   const response = await fetch(new URL(path, base).href);
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+  // A server that answers a missing file with its page (status 200): the
+  // area has no file, as a 404 would say.
+  if (/text\/html/i.test(response.headers.get('content-type') || ''))
+    throw new Error(`${path}: not found`);
   return response.text();
 };
 

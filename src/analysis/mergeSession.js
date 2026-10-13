@@ -15,6 +15,10 @@ import {
   contextLibrary,
   countPoints,
   describeJoin,
+  expandRows,
+  expands,
+  LEVEL_NOUN,
+  levelOfGeoid,
   exportTable,
   fileStem,
   findJoin,
@@ -50,6 +54,20 @@ const csvCell = (v) => {
 };
 const codebookCsv = (table, format) =>
   `﻿${[CODEBOOK_HEADER, ...codebookRows(table, format)].map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n`;
+
+/** The app's file with a GEOID's outline (by the ID's own level), or null. */
+function outlineChunk(g) {
+  const level = levelOfGeoid(g);
+  if (level === 'tract') return `context/tracts-2020/${g.slice(0, 5)}.geojsonl`;
+  if (level === 'county')
+    return `context/county-life-expectancy/${g.slice(0, 2)}.geojsonl`;
+  if (level === 'state') return 'context/states/states.geojsonl';
+  if (level === 'place') {
+    const abbr = STATES[g.slice(0, 2)]?.[0];
+    return abbr ? `context/segregation/${abbr}.geojsonl` : null;
+  }
+  return null;
+}
 
 /** Polygons drawn at most; above this the map shows a dot per area. */
 export const MAX_MAP_POLYGONS = 1500;
@@ -130,6 +148,8 @@ export class MergeSession {
         return `Merged ${s.report.other} on ${s.report.leftKey} = ${s.report.rightKey} (${s.report.relation}): ${s.report.matched} matched; ${s.report.rows} rows.`;
       if (s.op === 'attach')
         return `Added ${s.items.map((i) => i.label).join('; ')}: ${s.report.matchedRows} of ${s.report.rows} rows matched.`;
+      if (s.op === 'expand')
+        return `Made one row per ${LEVEL_NOUN[s.report.to]} in each ${LEVEL_NOUN[s.report.from]}: ${s.report.rowsBefore} rows became ${s.report.rows}.`;
       return `Counted the points per ${s.report.level}: ${s.report.withPoints} of ${s.report.areas} areas have points.`;
     });
   }
@@ -138,11 +158,12 @@ export class MergeSession {
     return this.current
       ? mergeChoices(this.current.join).map(({ group, items }) => ({
           group,
-          items: items.map(({ id, label, level, source }) => ({
+          items: items.map(({ id, label, level, source, expands: grows }) => ({
             id,
             label,
             level,
             source,
+            expands: Boolean(grows),
           })),
         }))
       : [];
@@ -173,6 +194,30 @@ export class MergeSession {
   }
 
   async attach(ids, onProgress) {
+    // Smaller units than the file's own (tract data for a county file):
+    // first one row per tract (or county) in each area, then the data.
+    let expanded = null;
+    const wanted = [...new Set(ids)]
+      .map((id) => MERGE_CATALOG.find((i) => i.id === id))
+      .filter(Boolean);
+    const finer = ['tract', 'county'].find((l) =>
+      wanted.some((i) => i.level === l && expands(this.current.join, l)),
+    );
+    if (finer) {
+      const before = this.current.table;
+      const result = await expandRows(before, this.current.join, finer, {
+        library: this.library,
+        onProgress,
+      });
+      this.steps.push({
+        op: 'expand',
+        before,
+        after: result.table,
+        report: result.report,
+      });
+      this.current = { table: result.table, join: result.join };
+      expanded = result.report;
+    }
     const before = this.current.table;
     const join = this.current.join;
     const { table, report } = await attachData(before, join, ids, {
@@ -191,11 +236,17 @@ export class MergeSession {
       report,
     });
     this.current = { table, join };
+    const notes = [...report.notes];
+    if (expanded)
+      notes.unshift(
+        `Each ${LEVEL_NOUN[expanded.from]} became one row per ${LEVEL_NOUN[expanded.to]} in it: ${expanded.rowsBefore.toLocaleString('en-US')} rows became ${expanded.rows.toLocaleString('en-US')}, each keeping its ${LEVEL_NOUN[expanded.from]}’s values${expanded.empty ? ` (${expanded.empty.toLocaleString('en-US')} without ${LEVEL_NOUN[expanded.to] === 'county' ? 'counties' : `${LEVEL_NOUN[expanded.to]}s`} ${expanded.empty === 1 ? 'stays' : 'stay'} one row)` : ''}.`,
+      );
     return {
       rows: report.rows,
       matchedRows: report.matchedRows,
       attached: report.attached,
-      notes: report.notes,
+      notes,
+      expanded: Boolean(expanded),
     };
   }
 
@@ -254,34 +305,17 @@ export class MergeSession {
       };
     }
     if (join.kind !== 'geoid') return { mode: 'none', records: [] };
-    const level = join.level === 'block group' ? 'tract' : join.level;
     const byId = new Map();
     join.ids.forEach((g, i) => {
       if (!g) return;
-      const id = join.level === 'block group' ? g.slice(0, 11) : g;
+      // The map preview draws a block group as its tract.
+      const id = levelOfGeoid(g) === 'block group' ? g.slice(0, 11) : g;
       if (!byId.has(id)) byId.set(id, []);
       byId.get(id).push(value(i));
     });
-    const ids = [...byId.keys()];
-    const chunks =
-      level === 'tract'
-        ? [
-            ...new Set(
-              ids.map((g) => `context/tracts-2020/${g.slice(0, 5)}.geojsonl`),
-            ),
-          ]
-        : level === 'county'
-          ? [
-              ...new Set(
-                ids.map(
-                  (g) =>
-                    `context/county-life-expectancy/${g.slice(0, 2)}.geojsonl`,
-                ),
-              ),
-            ]
-          : level === 'state'
-            ? ['context/states/states.geojsonl']
-            : [];
+    const chunks = [
+      ...new Set([...byId.keys()].map(outlineChunk).filter(Boolean)),
+    ];
     if (!chunks.length) return { mode: 'none', records: [] };
     const shapes = new Map();
     for (const path of chunks)
@@ -335,35 +369,10 @@ export class MergeSession {
       source = `the points in ${this.base.name} (${join.how})`;
     } else if (join.kind === 'geoid') {
       const level = join.level;
-      const ids = [...new Set(join.ids.filter(Boolean))];
-      const chunks =
-        level === 'tract'
-          ? [
-              ...new Set(
-                ids.map((g) => `context/tracts-2020/${g.slice(0, 5)}.geojsonl`),
-              ),
-            ]
-          : level === 'county'
-            ? [
-                ...new Set(
-                  ids.map(
-                    (g) =>
-                      `context/county-life-expectancy/${g.slice(0, 2)}.geojsonl`,
-                  ),
-                ),
-              ]
-            : level === 'state'
-              ? ['context/states/states.geojsonl']
-              : level === 'place'
-                ? [
-                    ...new Set(
-                      ids
-                        .map((g) => STATES[g.slice(0, 2)]?.[0])
-                        .filter(Boolean)
-                        .map((abbr) => `context/segregation/${abbr}.geojsonl`),
-                    ),
-                  ]
-                : [];
+      // Each ID's own outline (block groups have none in the app).
+      const chunks = [
+        ...new Set(join.ids.filter(Boolean).map(outlineChunk).filter(Boolean)),
+      ];
       const outline = new Map();
       for (const path of chunks)
         for (const f of await this.library.features(path)) {
@@ -376,6 +385,7 @@ export class MergeSession {
         county: 'county',
         state: 'state',
         place: 'city (cities of 75,000+)',
+        mixed: 'area, at its own level',
       }[level];
       source = noun
         ? `the Census outline of each ${noun} in ${this.base.name} (matched by ${join.how})`

@@ -312,7 +312,7 @@ export const ACTION_DESCRIPTIONS = {
   },
   merge_and_export: {
     description:
-      "Merge & Export: with no data named, convert the user's own file (which they choose in the Merge & Export panel; this tool cannot open files) to another format. Otherwise add the map's data to it, optionally count their points per area first, then download the merged data (with a Stata do-file, an R script and the steps) and/or open it in an analysis box. Every row of their file is kept. Opens the panel. If no file is chosen yet, ask the user to choose one in the panel.",
+      "Merge & Export: with no data named, convert the user's own file (which they choose in the Merge & Export panel; this tool cannot open files) to another format. Otherwise add the map's data to it, optionally count their points per area first, then download the merged data (with a Stata do-file, an R script and the steps) and/or open it in an analysis box. Every row of their file is kept; a county or state file given tract or county data becomes one row per tract (or county) in each area, each keeping its area's values, and a file mixing tracts and counties is matched row by row at each row's own level. Opens the panel. If no file is chosen yet, ask the user to choose one in the panel.",
     parameters: {
       properties: {
         measures: {

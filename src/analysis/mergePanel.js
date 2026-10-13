@@ -700,8 +700,13 @@ export class MergePanel {
       );
       return;
     }
+    // Data for smaller units than the file's: each row becomes one per unit.
     const level = (i) =>
-      i.level === 'point' ? 'at each point' : `by ${LEVEL_NOUN[i.level]}`;
+      i.level === 'point'
+        ? 'at each point'
+        : i.expands
+          ? `by ${LEVEL_NOUN[i.level]} · one row per ${LEVEL_NOUN[i.level]} in each ${LEVEL_NOUN[join.level]}`
+          : `by ${LEVEL_NOUN[i.level]}`;
     this.choices.replaceChildren(
       ...groups.map(({ group, items }) =>
         element('details', { className: 'merge-group' }, [

@@ -52,8 +52,9 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     // boxes renamed Stata, R, SPSS and Excel (no "Analysis") in the wording.
     // 2026-10-10: merge_and_export (Merge & Export: the user's file with the
     // map's data, as CSV, Excel, Stata, SPSS or R, or sent to a box).
-    // 2026-10-13: merge_and_export converts a file too, and writes shapefiles.
-    '10301bd629de8125474ec3d3be2af9743b20b67b0016fbb9d05fe1db3f6ff2b4',
+    // 2026-10-13: merge_and_export converts a file too, and writes shapefiles;
+    // later, its wording on one row per tract / county and mixed-level files.
+    '55e5219f3e266549631e4a86550e21782782934146605079762a5529dfb6a333',
   );
 });
 

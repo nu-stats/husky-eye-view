@@ -100,6 +100,60 @@ export function replicationFiles(
   // The R script works with the input files' (Stata) names throughout and
   // gives the columns their R names at the end, as the .RData file has them.
   const Rn = S;
+  // Each row's clean GEOID as the app made it — hev__g in Stata, g in R
+  // (empty / NA unless it has the digits of one of the join's levels).
+  const geoidLines = (join, table) => {
+    const sl = [];
+    const rl = [];
+    const lens =
+      join.level === 'mixed'
+        ? join.present.map((l) => LEVEL_LENGTH[l])
+        : [LEVEL_LENGTH[join.level]];
+    const source = join.column
+      ? table.columns.find((c) => c.name === join.column)
+      : null;
+    if (source) {
+      sl.push(
+        `generate hev__g = ${numberLike(source) ? `string(${S(source)}, "%21.0g")` : `strtrim(${S(source)})`}`,
+        'replace hev__g = ustrregexra(ustrregexra(hev__g, "^.*[Uu][Ss]", ""), "\\.0+\\$", "")',
+        'replace hev__g = "" if !ustrregexm(hev__g, "^[0-9]+\\$")',
+        'replace hev__g = "0" + hev__g if inlist(strlen(hev__g), 1, 4, 6, 10)',
+      );
+      rl.push(
+        `g <- ${numberLike(source) ? `num_text(d[[${rq(Rn(source))}]])` : `d[[${rq(Rn(source))}]]`}`,
+        'g <- norm_geoid(g)',
+      );
+    } else {
+      // State / county / tract code columns.
+      const parts = ['statePart', 'countyPart', 'tractPart']
+        .map((p, q) => [join.parts?.[p], [2, 3, 6][q]])
+        .filter(([n]) => n)
+        .map(([n, w]) => [table.columns.find((c) => c.name === n), w]);
+      parts.forEach(([c, w], q) => {
+        sl.push(
+          `generate hev__p${q} = ustrregexra(strtrim(${numberLike(c) ? `string(${S(c)}, "%21.0g")` : S(c)}), "\\.0+\\$", "")`,
+          `replace hev__p${q} = "" if !ustrregexm(hev__p${q}, "^[0-9]+\\$") | strlen(hev__p${q}) > ${w}`,
+          `replace hev__p${q} = substr("${'0'.repeat(w)}", 1, ${w} - strlen(hev__p${q})) + hev__p${q} if hev__p${q} != ""`,
+        );
+        rl.push(
+          `p${q} <- sub("\\\\.0+$", "", trimws(${numberLike(c) ? `num_text(d[[${rq(Rn(c))}]])` : `d[[${rq(Rn(c))}]]`}))`,
+          `p${q}[!grepl("^[0-9]+$", p${q}) | nchar(p${q}) > ${w}] <- NA; p${q} <- ifelse(is.na(p${q}), NA, paste0(strrep("0", pmax(0, ${w} - nchar(p${q}))), p${q}))`,
+        );
+      });
+      sl.push(
+        `generate hev__g = ${parts.map((_, q) => `hev__p${q}`).join(' + ')} if ${parts.map((_, q) => `hev__p${q} != ""`).join(' & ')}`,
+        `drop ${parts.map((_, q) => `hev__p${q}`).join(' ')}`,
+      );
+      rl.push(
+        `g <- ifelse(${parts.map((_, q) => `is.na(p${q})`).join(' | ')}, NA, paste0(${parts.map((_, q) => `p${q}`).join(', ')}))`,
+      );
+    }
+    sl.push(
+      `replace hev__g = "" if !inlist(strlen(hev__g), ${lens.join(', ')})`,
+    );
+    rl.push(`g[!is.na(g) & !(nchar(g) %in% c(${lens.join(', ')}))] <- NA`);
+    return { sl, rl };
+  };
 
   // Headers.
   st(
@@ -407,6 +461,29 @@ export function replicationFiles(
         say(
           '   see geoinpoly (ssc install geoinpoly) with the Census shapefiles.',
         );
+      } else if (join.clean) {
+        say(
+          `   Rows were matched by ${join.how}, the ${LEVEL_NOUN[join.level]} GEOIDs added in an earlier step.`,
+        );
+        say(
+          '   County and state values come from the first 5 and 2 digits of the GEOID.',
+        );
+      } else if (join.level === 'mixed') {
+        say(
+          `   Rows were matched by ${join.how}: digits only, a "…US" prefix and a trailing ".0" removed, one lost`,
+        );
+        say(
+          `   leading zero restored (Excel), and kept (as hev_geoid) when it has the digits of one of the file's levels:`,
+        );
+        say(
+          `   ${join.present.map((l) => `${LEVEL_LENGTH[l]} for a ${LEVEL_NOUN[l]}`).join(', ')}. Each row is matched at its own level (hev_level):`,
+        );
+        say(
+          '   a tract row takes tract data and its county’s and state’s (the first 5 and 2 digits); a county row',
+        );
+        say(
+          `   takes county and state data, and no tract data;${join.present.includes('place') ? ' a city row takes city and state data (and county data by its center);' : ''} a state row takes state data only.`,
+        );
       } else {
         say(
           `   Rows were matched by ${join.how}: digits only, a "…US" prefix and a trailing ".0" removed, one lost`,
@@ -418,6 +495,10 @@ export function replicationFiles(
           '   County and state values come from the first 5 and 2 digits of the GEOID.',
         );
       }
+      if (a.placeCounty)
+        say(
+          `   A city's county is the one its center is in (inputs/hev_${tag}_city_county.csv).`,
+        );
       for (const level of ['tract', 'county', 'state', 'place']) {
         const fs = fields(level);
         if (!fs.length) continue;
@@ -471,88 +552,79 @@ export function replicationFiles(
           rKeyOf[x.level] = `d[[${rq(Rn(col(x.uid)))}]]`;
         }
       } else {
-        const len = LEVEL_LENGTH[join.level];
-        const source = join.column
-          ? before.columns.find((c) => c.name === join.column)
-          : null;
-        if (source) {
-          st(
-            `generate hev__g = ${numberLike(source) ? `string(${S(source)}, "%21.0g")` : `strtrim(${S(source)})`}`,
-          );
-          rs(
-            `g <- ${numberLike(source) ? `num_text(d[[${rq(Rn(source))}]])` : `d[[${rq(Rn(source))}]]`}`,
-          );
-        } else {
-          // State / county / tract code columns.
-          const parts = ['statePart', 'countyPart', 'tractPart']
-            .map((p, q) => [join.parts?.[p], [2, 3, 6][q]])
-            .filter(([n]) => n)
-            .map(([n, w]) => [before.columns.find((c) => c.name === n), w]);
-          parts.forEach(([c, w], q) => {
-            st(
-              `generate hev__p${q} = ustrregexra(strtrim(${numberLike(c) ? `string(${S(c)}, "%21.0g")` : S(c)}), "\\.0+\\$", "")`,
-            );
-            st(
-              `replace hev__p${q} = "" if !ustrregexm(hev__p${q}, "^[0-9]+\\$") | strlen(hev__p${q}) > ${w}`,
-            );
-            st(
-              `replace hev__p${q} = substr("${'0'.repeat(w)}", 1, ${w} - strlen(hev__p${q})) + hev__p${q} if hev__p${q} != ""`,
-            );
-            rs(
-              `p${q} <- sub("\\\\.0+$", "", trimws(${numberLike(c) ? `num_text(d[[${rq(Rn(c))}]])` : `d[[${rq(Rn(c))}]]`}))`,
-            );
-            rs(
-              `p${q}[!grepl("^[0-9]+$", p${q}) | nchar(p${q}) > ${w}] <- NA; p${q} <- ifelse(is.na(p${q}), NA, paste0(strrep("0", pmax(0, ${w} - nchar(p${q}))), p${q}))`,
-            );
-          });
-          st(
-            `generate hev__g = ${parts.map((_, q) => `hev__p${q}`).join(' + ')} if ${parts.map((_, q) => `hev__p${q} != ""`).join(' & ')}`,
-          );
-          st(`drop ${parts.map((_, q) => `hev__p${q}`).join(' ')}`);
-          rs(
-            `g <- ifelse(${parts.map((_, q) => `is.na(p${q})`).join(' | ')}, NA, paste0(${parts.map((_, q) => `p${q}`).join(', ')}))`,
-          );
-        }
-        if (source) {
-          st(
-            'replace hev__g = ustrregexra(ustrregexra(hev__g, "^.*[Uu][Ss]", ""), "\\.0+\\$", "")',
-          );
-          st('replace hev__g = "" if !ustrregexm(hev__g, "^[0-9]+\\$")');
-          st(
-            'replace hev__g = "0" + hev__g if inlist(strlen(hev__g), 1, 4, 6, 10)',
-          );
-          rs('g <- norm_geoid(g)');
-        }
-        st(`replace hev__g = "" if strlen(hev__g) != ${len}`);
-        rs(`g[!is.na(g) & nchar(g) != ${len}] <- NA`);
+        const { sl, rl } = geoidLines(join, before);
+        for (const line of sl) st(line);
+        for (const line of rl) rs(line);
         const geoidCol = a.added.find((x) => x.role === 'geoid');
         if (geoidCol) {
           st(`generate ${S(col(geoidCol.uid))} = hev__g`);
           rs(`d[[${rq(Rn(col(geoidCol.uid)))}]] <- g`);
         }
-        const own =
-          join.level === 'block group' ? 'substr(hev__g, 1, 11)' : 'hev__g';
-        keyOf.tract = ['tract', 'block group'].includes(join.level)
-          ? own
-          : null;
-        keyOf.county = ['tract', 'block group', 'county'].includes(join.level)
-          ? 'substr(hev__g, 1, 5)'
-          : null;
+        // Mixed files: each row's level, from its GEOID's length.
+        const levelCol = a.added.find((x) => x.role === 'level');
+        if (levelCol) {
+          const v = S(col(levelCol.uid));
+          st(`generate ${v} = ""`);
+          for (const l of join.present)
+            st(
+              `replace ${v} = "${LEVEL_NOUN[l]}" if strlen(hev__g) == ${LEVEL_LENGTH[l]}`,
+            );
+          rs(
+            `lv_names <- c(${join.present.map((l) => `"${LEVEL_LENGTH[l]}" = "${LEVEL_NOUN[l]}"`).join(', ')})`,
+          );
+          rs(
+            `d[[${rq(Rn(col(levelCol.uid)))}]] <- ifelse(is.na(g), NA, unname(lv_names[as.character(nchar(g))]))`,
+          );
+        }
+        // Each row's area at each level, as the app takes it from the GEOID
+        // (a tract's county and state are its first 5 and 2 digits).
+        keyOf.tract =
+          'cond(inlist(strlen(hev__g), 11, 12), substr(hev__g, 1, 11), "")';
+        keyOf.county =
+          'cond(inlist(strlen(hev__g), 5, 11, 12), substr(hev__g, 1, 5), "")';
         keyOf.state = 'substr(hev__g, 1, 2)';
-        keyOf.place = join.level === 'place' ? 'hev__g' : null;
-        rKeyOf.tract = ['tract', 'block group'].includes(join.level)
-          ? join.level === 'block group'
-            ? 'substr(g, 1, 11)'
-            : 'g'
-          : null;
-        rKeyOf.county = keyOf.county ? 'substr(g, 1, 5)' : null;
+        keyOf.place = 'cond(strlen(hev__g) == 7, hev__g, "")';
+        rKeyOf.tract =
+          'ifelse(!is.na(g) & nchar(g) %in% c(11, 12), substr(g, 1, 11), NA)';
+        rKeyOf.county =
+          'ifelse(!is.na(g) & nchar(g) %in% c(5, 11, 12), substr(g, 1, 5), NA)';
         rKeyOf.state = 'substr(g, 1, 2)';
-        rKeyOf.place = keyOf.place ? 'g' : null;
+        rKeyOf.place = 'ifelse(!is.na(g) & nchar(g) == 7, g, NA)';
       }
-      const matchLevel = a.matchLevel;
-      for (const level of ['tract', 'county', 'state', 'place']) {
+      const chosen = ['tract', 'county', 'state', 'place'].filter(
+        (level) => fields(level).length,
+      );
+      for (const level of chosen) {
+        st(`generate hev__k_${level} = ${keyOf[level]}`);
+        rs(`k_${level} <- ${rKeyOf[level]}`);
+      }
+      // A city's county: the one its center is in.
+      const cityCounty = a.placeCounty
+        ? [...a.placeCounty].filter(([, c]) => c)
+        : [];
+      if (chosen.includes('county') && cityCounty.length) {
+        const name = `inputs/hev_${tag}_city_county.csv`;
+        files.push({ name, data: csv(['hev__p', 'hev__c'], cityCounty) });
+        st('tempfile citycounty');
+        st('preserve');
+        st(
+          `import delimited using "${name}", varnames(1) case(preserve) stringcols(_all) encoding("utf-8") clear`,
+        );
+        st("save `citycounty'");
+        st('restore');
+        st(`generate hev__p = ${keyOf.place}`);
+        st(
+          "merge m:1 hev__p using `citycounty', keep(master match) nogenerate",
+        );
+        st('replace hev__k_county = hev__c if hev__k_county == ""');
+        st('drop hev__p hev__c');
+        rs(`cc <- read_input(${rq(name)})`);
+        rs(
+          `k_county <- ifelse(is.na(k_county), cc$hev__c[match(${rKeyOf.place}, cc$hev__p)], k_county)`,
+        );
+      }
+      for (const level of chosen) {
         const fs = fields(level);
-        if (!fs.length) continue;
         // The app's data for exactly the areas found, from the merged rows.
         const ids = a.ids[level] || [];
         const seen = new Map();
@@ -581,18 +653,16 @@ export function replicationFiles(
         if (nums.length) st(`destring ${nums.join(' ')}, replace`);
         st(`save \`${level}'`);
         st('restore');
-        st(`generate hev__k = ${keyOf[level]}`);
+        st(`generate hev__k = hev__k_${level}`);
         st(`merge m:1 hev__k using \`${level}', keep(master match)`);
-        if (level === matchLevel && join.kind !== 'points')
-          st('generate byte hev__m = _merge == 3');
+        st(`generate byte hev__m_${level} = _merge == 3`);
         st('drop _merge hev__k');
         rs(`lv <- read_input(${rq(name)})`);
         for (const c of fs.filter(numberLike))
           rs(`lv[[${rq(Rn(c))}]] <- as_num(lv[[${rq(Rn(c))}]])`);
-        rs(`i <- match(${rKeyOf[level]}, lv$hev__k)`);
+        rs(`i <- match(k_${level}, lv$hev__k)`);
         rs('for (v in setdiff(names(lv), "hev__k")) d[[v]] <- lv[[v]][i]');
-        if (level === matchLevel && join.kind !== 'points')
-          rs('m <- !is.na(i)');
+        rs(`m_${level} <- !is.na(i)`);
       }
       const matched = a.added.find((x) => x.role === 'matched');
       if (matched) {
@@ -603,13 +673,95 @@ export function replicationFiles(
             `d[[${rq(Rn(col(matched.uid)))}]] <- ifelse(!is.na(${rKeyOf.tract}), 3, 1)`,
           );
         } else {
-          st(`generate byte ${v} = cond(hev__m, 3, 1)`);
-          rs(`d[[${rq(Rn(col(matched.uid)))}]] <- ifelse(m, 3, 1)`);
+          // Matched at the row's finest level whose data was chosen.
+          st('generate byte hev__m = .');
+          rs('m <- rep(NA, nrow(d))');
+          for (const level of a.matchOrder) {
+            st(
+              `replace hev__m = hev__m_${level} if missing(hev__m) & hev__k_${level} != ""`,
+            );
+            rs(`m <- ifelse(is.na(m) & !is.na(k_${level}), m_${level}, m)`);
+          }
+          st(`generate byte ${v} = cond(hev__m == 1, 3, 1)`);
+          rs(`d[[${rq(Rn(col(matched.uid)))}]] <- ifelse(!is.na(m) & m, 3, 1)`);
         }
       }
+      if (chosen.length)
+        st(`drop ${chosen.map((l) => `hev__k_${l} hev__m_${l}`).join(' ')}`);
       if (join.kind !== 'points') st('capture drop hev__g hev__m');
       // merge sorts by its key: back to the rows' own order.
       st('sort hev__row');
+      st();
+      rs();
+    } else if (s.op === 'expand') {
+      const { report: x, before, after } = s;
+      const geoCol = after.columns.find((c) => c.uid === x.geoidUid);
+      const nameCol = after.columns.find((c) => c.uid === x.nameUid);
+      const from = LEVEL_NOUN[x.from];
+      const units = x.to === 'county' ? 'counties' : `${LEVEL_NOUN[x.to]}s`;
+      const name = `inputs/hev_${tag}_${units}.csv`;
+      files.push({
+        name,
+        data: csv(['hev__g', S(geoCol), S(nameCol)], x.pairs),
+      });
+      say(
+        `Step ${k}. One row per ${LEVEL_NOUN[x.to]}: each ${from} row became a row for every ${x.to === 'tract' ? '2020 census tract' : 'county'} in its ${from},`,
+      );
+      say(
+        `   keeping all of the ${from}'s values, so ${x.to === 'tract' ? 'tract' : 'county'} data can be attached to each and the ${from}'s data is on every one.`,
+      );
+      say(
+        `   The ${from} is found by ${x.parentJoin.how} as in the next step; ${name} lists the ${units} in each`,
+      );
+      say(
+        `   ${from} (${S(geoCol)}, ${S(nameCol)}; ${x.to === 'tract' ? 'Census TIGER/Line 2020 tracts' : 'Census counties'}), in GEOID order.`,
+      );
+      say(
+        `   ${x.rowsBefore.toLocaleString('en-US')} rows became ${x.rows.toLocaleString('en-US')}.${x.empty ? ` ${x.empty.toLocaleString('en-US')} row${x.empty === 1 ? '' : 's'} without a ${from} the map has stay${x.empty === 1 ? 's' : ''} one row, with ${S(geoCol)} empty.` : ''}`,
+      );
+      say('');
+      st(
+        `* ---- Step ${k}. One row per ${LEVEL_NOUN[x.to]} in each ${from} ----`,
+      );
+      rs(
+        `# ---- Step ${k}. One row per ${LEVEL_NOUN[x.to]} in each ${from} ----`,
+      );
+      const { sl, rl } = geoidLines(x.parentJoin, before);
+      for (const line of sl) st(line);
+      for (const line of rl) rs(line);
+      if (x.pairs.length) {
+        st('tempfile units');
+        st('preserve');
+        st(
+          `import delimited using "${name}", varnames(1) case(preserve) stringcols(_all) encoding("utf-8") bindquotes(strict) clear`,
+        );
+        st('generate long hev__u = _n');
+        st("save `units'");
+        st('restore');
+        st("joinby hev__g using `units', unmatched(master)");
+        st('sort hev__row hev__u');
+        st('drop _merge hev__g hev__u');
+        st('replace hev__row = _n');
+        rs(`un <- read_input(${rq(name)})`);
+        rs(
+          'hits <- split(seq_len(nrow(un)), factor(un$hev__g, levels = unique(un$hev__g)))',
+        );
+        rs(
+          'idx <- lapply(g, function(x) if (is.na(x) || is.null(hits[[x]])) NA_integer_ else hits[[x]])',
+        );
+        rs(
+          'ai <- rep(seq_along(g), lengths(idx)); ui <- unlist(idx, use.names = FALSE)',
+        );
+        rs('d <- d[ai, , drop = FALSE]; rownames(d) <- NULL');
+        for (const c of [geoCol, nameCol])
+          rs(`d[[${rq(Rn(c))}]] <- un[[${rq(Rn(c))}]][ui]`);
+      } else {
+        st(`generate ${S(geoCol)} = ""`);
+        st(`generate ${S(nameCol)} = ""`);
+        st('drop hev__g');
+        for (const c of [geoCol, nameCol])
+          rs(`d[[${rq(Rn(c))}]] <- rep(NA_character_, nrow(d))`);
+      }
       st();
       rs();
     } else if (s.op === 'count') {

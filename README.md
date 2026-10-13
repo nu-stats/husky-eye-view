@@ -391,11 +391,14 @@ Choose your file, choose the format, download. Tick **With a codebook** for a ZI
 2. **Another of your files (optional)** — linked by any shared column (a GEOID, or a school, site or survey ID; the likely pair is suggested). Keep every row of your file (the default), only rows in both, or every row of both. Like Stata's `merge`, a key repeated in both files is refused; `hev_merge` says where each row came from (1 = first file only, 2 = second only, 3 = both).
 3. **Husky Eye View data** — tick what to attach:
    - every Area Reports measure for the file's own areas *and the areas they sit in* (a tract file can take tract, county and state values, prefixed `tract_`, `county_`, `state_`);
+   - data for *smaller* areas than the file's: a county file given tract data becomes **one row per 2020 tract in each county** (a state file given county or tract data, one row per county or tract), every row keeping its county's (or state's) own values, so county data is attached to every tract in it. The new `hev_tract_geoid` / `hev_county_geoid` and name say which unit each row is; a row whose area has no units stays one row;
+   - **mixed files** (tracts and counties, or other levels, in one GEOID column): each row is matched at its own level and `hev_level` says which — a tract row takes tract, county and state data, a county row county and state data;
+   - city files take county data from the county the city's center is in;
    - tract life expectancy (USALEEP; 2020 tracts not among its 2010 tracts take the value of the 2010 tract containing their center);
    - city segregation (2000, 2010, 2020–24) for city files and points;
    - for **points**: the state, county, tract and city each point falls in, its **1930s HOLC grade** and its **1900–1930 enumeration district**. Or **count the points** per tract, county or state (with a rate per 1,000 residents) and attach data to the counts.
 
-   Every row of your file is kept; `hev_matched` (3 = matched, 1 = not) and `hev_geoid` (the clean GEOID used) are added. The restricted research datasets are never offered.
+   Every row of your file is kept (as one row per tract or county when data for smaller areas is added); `hev_matched` (3 = matched, 1 = not) and `hev_geoid` (the clean GEOID used) are added. The restricted research datasets are never offered.
 4. **Download, or analyze it** — the download is a ZIP that lets anyone check and repeat the merge:
    - the merged data in your format;
    - **`<file>_merge.do`** — rebuilds the merged data in Stata (14 or later) from the files in `inputs/`, step by step, and stops with an error unless every variable matches the delivered file (its count of values, its sum and its row-weighted sum; with a `.dta`, also Stata's `cf` of every value);

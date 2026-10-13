@@ -224,6 +224,31 @@ function geoidLevel(values) {
 }
 
 /**
+ * The levels a column's GEOIDs come in, finest first: every level held by at
+ * least 1% of its IDs (one row at least). More than one: a mixed file.
+ */
+function geoidLevels(values) {
+  const counts = {};
+  let valid = 0;
+  for (const v of values) {
+    const id = normalizeGeoid(v);
+    if (!id) continue;
+    valid += 1;
+    counts[id.level] = (counts[id.level] || 0) + 1;
+  }
+  const floor = Math.max(1, Math.ceil(valid * 0.01));
+  return Object.keys(counts)
+    .filter((l) => counts[l] >= floor)
+    .sort((a, b) => LEVEL_RANK[b] - LEVEL_RANK[a]);
+}
+
+/** A GEOID's level from its length. */
+export const levelOfGeoid = (g) =>
+  ({ 2: 'state', 5: 'county', 7: 'place', 11: 'tract', 12: 'block group' })[
+    String(g ?? '').length
+  ] || null;
+
+/**
  * How a table joins to the map: `{kind: 'geoid', level, ids, how}`,
  * `{kind: 'points', points, how}` or `{kind: 'none'}`. `ids` / `points` are
  * per row (null where a row has none).
@@ -237,10 +262,19 @@ export function findJoin(table) {
   // A column named for census IDs may hold any level; a generic "id" or
   // "code" column counts only with tract-length values (1, 2, 3 are not states).
   const CENSUS_NAME = /fips|geoid|geo_?id|gisjoin|tract|county|state/i;
+  // State + county (+ tract) code columns make one GEOID together (below):
+  // none of them is a GEOID column by itself.
+  const parts =
+    found.statePart && found.countyPart
+      ? [found.statePart, found.countyPart, found.tractPart]
+      : [];
   const candidates = names
     .map((n, j) => ({ n, j }))
     .filter(
-      ({ n }) => (ID_NAME.test(n) || n === found.geoid) && !NOT_GEOID.test(n),
+      ({ n }) =>
+        (ID_NAME.test(n) || n === found.geoid) &&
+        !NOT_GEOID.test(n) &&
+        !parts.includes(n),
     )
     .map(({ n, j }) => ({ n, j, level: geoidLevel(column(j)) }))
     .filter(
@@ -253,6 +287,23 @@ export function findJoin(table) {
     .sort((a, b) => LEVEL_RANK[b.level] - LEVEL_RANK[a.level]);
   if (candidates.length) {
     const { n, j, level } = candidates[0];
+    // Tracts and counties (or other levels) in one file: each row at its own.
+    const present = geoidLevels(column(j));
+    if (present.length > 1) {
+      const ids = column(j).map((v) => {
+        const id = normalizeGeoid(v);
+        return id && present.includes(id.level) ? id.geoid : null;
+      });
+      return {
+        kind: 'geoid',
+        level: 'mixed',
+        present,
+        levels: ids.map(levelOfGeoid),
+        ids,
+        how: `the ${n} column`,
+        column: n,
+      };
+    }
     return {
       kind: 'geoid',
       level,
@@ -333,17 +384,27 @@ export function findJoin(table) {
 /** One line on how a table joins. */
 export function describeJoin(table, join) {
   const n = table.rows.length.toLocaleString('en-US');
+  const PLURAL = {
+    state: 'states',
+    county: 'counties',
+    place: 'cities',
+    tract: 'tracts',
+    'block group': 'block groups',
+  };
   if (join.kind === 'geoid') {
     const matched = join.ids.filter(Boolean).length;
-    const plural = {
-      state: 'states',
-      county: 'counties',
-      place: 'cities',
-      tract: 'tracts',
-      'block group': 'block groups',
-    }[join.level];
     const missing = table.rows.length - matched;
-    return `${n} rows of ${plural}, joined by ${join.how}${missing ? `; ${missing.toLocaleString('en-US')} rows have no usable ID` : ''}.`;
+    const noId = missing
+      ? `; ${missing.toLocaleString('en-US')} ${missing === 1 ? 'row has' : 'rows have'} no usable ID`
+      : '';
+    if (join.level === 'mixed') {
+      const parts = join.present.map((l) => {
+        const k = join.levels.filter((x) => x === l).length;
+        return `${k.toLocaleString('en-US')} ${k === 1 ? LEVEL_NOUN[l] : PLURAL[l]}`;
+      });
+      return `${n} rows of mixed levels (${parts.join(', ')}), joined by ${join.how}: each row is matched at its own level${noId}.`;
+    }
+    return `${n} rows of ${PLURAL[join.level]}, joined by ${join.how}${noId}.`;
   }
   if (join.kind === 'points') {
     const located = join.points.filter(Boolean).length;
@@ -745,18 +806,35 @@ function catalogItems() {
 export const MERGE_CATALOG = Object.freeze(catalogItems());
 
 /** Levels whose data a join can take: its own and the areas it sits in. */
+const OWN_LEVELS = {
+  'block group': ['tract', 'county', 'state'],
+  tract: ['tract', 'county', 'state'],
+  county: ['county', 'state'],
+  // A city takes the county its center is in.
+  place: ['place', 'county', 'state'],
+  state: ['state'],
+};
+/** Finer levels a file of larger areas can take, one row per smaller unit. */
+export const EXPAND_TO = { county: ['tract'], state: ['county', 'tract'] };
+
+/**
+ * Levels whose data a join can take: its own, the areas it sits in, and
+ * (for counties and states) the smaller units inside it, as new rows.
+ */
 export function levelsFor(join) {
   if (join.kind === 'points')
     return ['tract', 'county', 'state', 'place', 'point'];
   if (join.kind !== 'geoid') return [];
-  return {
-    'block group': ['tract', 'county', 'state'],
-    tract: ['tract', 'county', 'state'],
-    county: ['county', 'state'],
-    place: ['place', 'state'],
-    state: ['state'],
-  }[join.level];
+  if (join.level === 'mixed')
+    return ['tract', 'place', 'county', 'state'].filter((l) =>
+      join.present.some((p) => OWN_LEVELS[p].includes(l)),
+    );
+  return [...OWN_LEVELS[join.level], ...(EXPAND_TO[join.level] || [])];
 }
+
+/** Whether data at `level` makes one row per smaller unit for this join. */
+export const expands = (join, level) =>
+  join.kind === 'geoid' && (EXPAND_TO[join.level] || []).includes(level);
 
 /** The catalog a join can take, grouped: `[{group, items}]`. */
 export function mergeChoices(join) {
@@ -774,7 +852,10 @@ export function mergeChoices(join) {
     .concat([...groups.keys()].filter((g) => !GROUP_ORDER.includes(g)))
     .map((group) => ({
       group,
-      items: groups.get(group).sort((a, b) => rank(a) - rank(b)),
+      items: groups
+        .get(group)
+        .sort((a, b) => rank(a) - rank(b))
+        .map((i) => (expands(join, i.level) ? { ...i, expands: true } : i)),
     }));
 }
 
@@ -996,9 +1077,16 @@ export async function attachData(
   const bad = items.find((i) => !levels.has(i.level));
   if (bad)
     throw new Error(
-      `${bad.label} cannot be attached to ${join.kind === 'points' ? 'points' : `a file of ${join.level ? LEVEL_NOUN[join.level] : ''} rows`}.`,
+      `${bad.label} cannot be attached to ${join.kind === 'points' ? 'points' : `a file of ${join.level ? LEVEL_NOUN[join.level] || 'mixed' : ''} rows`}.`,
+    );
+  // Smaller units than the file's own make new rows first (expandRows).
+  const finer = items.find((i) => expands(join, i.level));
+  if (finer)
+    throw new Error(
+      `${finer.label}: expand the file to one row per ${LEVEL_NOUN[finer.level]} first (MergeSession does this).`,
     );
   const n = table.rows.length;
+  const report0 = { attached: [], matched: {}, notes: [] };
   const columns = [...table.columns];
   const rows = table.rows.map((r) => [...r]);
   const names = new Set(columns.map((c) => c.name.toLowerCase()));
@@ -1064,27 +1152,69 @@ export async function attachData(
         { role: 'located', level: 'place' },
       );
   } else {
+    const mixed = join.level === 'mixed';
     // The clean GEOID the join used (Excel drops leading zeros).
-    if (!columns.some((c) => c.name === 'hev_geoid'))
+    if (!join.clean && !columns.some((c) => c.name === 'hev_geoid'))
       add(
         {
           name: 'hev_geoid',
-          label: `Census GEOID used for the merge (${LEVEL_NOUN[join.level]}, from ${join.how})`,
+          label: mixed
+            ? `Census GEOID used for the merge (each row's own level, from ${join.how})`
+            : `Census GEOID used for the merge (${LEVEL_NOUN[join.level]}, from ${join.how})`,
           kind: 'string',
         },
         join.ids,
         { role: 'geoid' },
       );
-    const own = join.ids.map((g) =>
-      g && join.level === 'block group' ? g.slice(0, 11) : g,
+    // Each row's level: one for the whole file, or its own (mixed files).
+    const levelOf = (i) => (mixed ? join.levels[i] : join.level);
+    if (mixed && !columns.some((c) => c.name === 'hev_level'))
+      add(
+        {
+          name: 'hev_level',
+          label: 'Level of the row’s GEOID (tract, county, state, …)',
+          kind: 'string',
+        },
+        join.ids.map((g, i) => (g ? LEVEL_NOUN[levelOf(i)] : null)),
+        { role: 'level' },
+      );
+    const pick = (fn) => join.ids.map((g, i) => (g ? fn(g, levelOf(i)) : null));
+    ids.tract = pick((g, l) =>
+      l === 'tract' ? g : l === 'block group' ? g.slice(0, 11) : null,
     );
-    if (['tract', 'block group'].includes(join.level)) ids.tract = own;
-    if (['tract', 'block group', 'county'].includes(join.level))
-      ids.county = own.map((g) => (g ? g.slice(0, 5) : null));
-    if (join.level === 'place') ids.place = own;
-    ids.state = own.map((g) => (g ? g.slice(0, 2) : null));
+    ids.county = pick((g, l) =>
+      ['tract', 'block group', 'county'].includes(l) ? g.slice(0, 5) : null,
+    );
+    ids.place = pick((g, l) => (l === 'place' ? g : null));
+    ids.state = pick((g) => g.slice(0, 2));
+    // A city's county: the one its center is in (cities can span several).
+    if (items.some((i) => i.level === 'county') && ids.place.some(Boolean)) {
+      const places = [...new Set(ids.place.filter(Boolean))];
+      const outlines = new Map();
+      for (const abbr of new Set(
+        places.map((g) => STATES[g.slice(0, 2)]?.[0]).filter(Boolean),
+      ))
+        for (const f of await library.features(
+          `context/segregation/${abbr}.geojsonl`,
+        ))
+          outlines.set(String(f.properties?.geoid), f.geometry);
+      const centers = places.map((g) =>
+        outlines.has(g) ? geometryPoint(outlines.get(g)) : null,
+      );
+      onProgress?.('Finding each city’s county…');
+      const tagged = await tagPoints(centers, library, {});
+      const countyOf = new Map(places.map((g, k) => [g, tagged.county[k]]));
+      ids.county = ids.county.map(
+        (c, i) =>
+          c ?? (ids.place[i] ? countyOf.get(ids.place[i]) || null : null),
+      );
+      report0.placeCounty = countyOf;
+      report0.notes.push(
+        'City rows take the county their center is in (a city can span several counties).',
+      );
+    }
   }
-  const report = { attached: [], matched: {}, notes: [] };
+  const report = report0;
   // Which rows found their area: at the finest level whose data was chosen.
   const found = {};
   // Area data, level by level.
@@ -1205,14 +1335,19 @@ export async function attachData(
     report.matched[item.id] = found.filter(Boolean).length;
   }
   // Did each row find its area? Points: located in a tract. Files of areas:
-  // the row's own area (or the finest area chosen) is one of the map's.
-  const level = ['tract', 'place', 'county', 'state'].find((l) => found[l]);
+  // each row's finest area whose data was chosen (its own, when chosen) is
+  // one of the map's.
+  const matchOrder = ['tract', 'place', 'county', 'state'].filter(
+    (l) => found[l],
+  );
   const matchedRows =
     join.kind === 'points'
       ? ids.tract.map((g) => (g ? 3 : 1))
-      : (ids[level] || ids.state).map((g) =>
-          g && found[level]?.has(g) ? 3 : 1,
-        );
+      : join.ids.map((_, i) => {
+          const l = matchOrder.find((x) => ids[x]?.[i]);
+          return l && found[l].has(ids[l][i]) ? 3 : 1;
+        });
+  const level = matchOrder[0];
   if (!columns.some((c) => c.name === 'hev_matched'))
     add(
       {
@@ -1235,9 +1370,122 @@ export async function attachData(
   report.ids = ids;
   report.found = found;
   report.matchLevel = join.kind === 'points' ? 'tract' : level;
+  report.matchOrder = matchOrder;
   return {
     table: { ...table, columns, rows, geometries: table.geometries },
     report,
+  };
+}
+
+/**
+ * One row per smaller unit: each row of a county (or state) file becomes a
+ * row for every tract (or county) inside it, with all of the row's values,
+ * so the units can take their own data and keep the larger area's. A row
+ * whose area has no units (or no ID) stays as one row. Returns `{table,
+ * join, report}`; `table.origin` keeps each row's row of your file.
+ */
+export async function expandRows(
+  table,
+  join,
+  to,
+  { readContext, library = contextLibrary(readContext), onProgress } = {},
+) {
+  if (!expands(join, to))
+    throw new Error(
+      `A file of ${LEVEL_NOUN[join.level] || 'these'} rows cannot be expanded to ${LEVEL_NOUN[to]}s.`,
+    );
+  const parents = [...new Set(join.ids.filter(Boolean))];
+  const noun = LEVEL_NOUN[to];
+  const parentNoun = LEVEL_NOUN[join.level];
+  onProgress?.(
+    `Finding the ${noun === 'county' ? 'counties' : `${noun}s`} in each ${parentNoun}…`,
+  );
+  // The chunks that hold the units, and each unit's parent.
+  let paths;
+  if (to === 'county')
+    paths = parents.map((s) => `context/county-life-expectancy/${s}.geojsonl`);
+  else if (join.level === 'county')
+    paths = parents.map((c) => `context/tracts-2020/${c}.geojsonl`);
+  else {
+    const index = (await library.json('context/tracts-2020/index.json')) || [];
+    paths = index
+      .filter((e) => parents.includes(String(e.id).slice(0, 2)))
+      .map((e) => `context/tracts-2020/${e.id}.geojsonl`);
+  }
+  const units = new Map(parents.map((p) => [p, []]));
+  await pool(paths, 12, async (path) => {
+    for (const f of await library.features(path)) {
+      const g = String(f.properties?.geoid ?? '');
+      const parent = g.slice(0, join.level === 'state' ? 2 : 5);
+      if (units.has(parent))
+        units.get(parent).push({ geoid: g, name: f.properties?.name ?? null });
+    }
+  });
+  for (const list of units.values())
+    list.sort((a, b) => (a.geoid < b.geoid ? -1 : a.geoid > b.geoid ? 1 : 0));
+  const names = new Set(table.columns.map((c) => c.name.toLowerCase()));
+  const geoidColumn = withUid({
+    name: freeName(names, `hev_${to}_geoid`),
+    label: `${noun[0].toUpperCase()}${noun.slice(1)} in the row’s ${parentNoun} (${to === 'tract' ? '2020 ' : ''}GEOID)`,
+    kind: 'string',
+    source:
+      to === 'tract' ? 'Census TIGER/Line 2020 tracts' : 'Census counties',
+  });
+  const nameColumn = withUid({
+    name: freeName(names, `hev_${to}_name`),
+    label: `${noun[0].toUpperCase()}${noun.slice(1)} name`,
+    kind: 'string',
+  });
+  const rows = [];
+  const origin = [];
+  const pairs = [];
+  let empty = 0;
+  table.rows.forEach((row, i) => {
+    const list = join.ids[i] ? units.get(join.ids[i]) || [] : [];
+    const from = table.origin ? table.origin[i] : i;
+    if (!list.length) {
+      empty += 1;
+      rows.push([...row, null, null]);
+      origin.push(from);
+      return;
+    }
+    for (const u of list) {
+      rows.push([...row, u.geoid, u.name]);
+      origin.push(from);
+    }
+  });
+  for (const [parent, list] of units)
+    for (const u of list) pairs.push([parent, u.geoid, u.name]);
+  const ids = rows.map((r) => r[r.length - 2]);
+  return {
+    table: {
+      ...table,
+      columns: [...table.columns, geoidColumn, nameColumn],
+      rows,
+      origin,
+      geometries: null,
+    },
+    // `clean`: the column already holds clean GEOIDs (no hev_geoid copy).
+    join: {
+      kind: 'geoid',
+      level: to,
+      ids,
+      how: `${geoidColumn.name} (each ${parentNoun}’s ${noun === 'county' ? 'counties' : `${noun}s`})`,
+      column: geoidColumn.name,
+      clean: true,
+    },
+    report: {
+      from: join.level,
+      to,
+      rowsBefore: table.rows.length,
+      rows: rows.length,
+      empty,
+      // For the replication scripts.
+      pairs,
+      geoidUid: geoidColumn.uid,
+      nameUid: nameColumn.uid,
+      parentJoin: join,
+    },
   };
 }
 
