@@ -1,5 +1,16 @@
 # Changelog
 
+- From God's Eye View (K, 2026-10-13): OpenStreetMap layers no longer use the
+  public Overpass servers, which often refuse or time out. Traffic roads load
+  from OpenFreeMap vector tiles (with a TomTom / OSM / Hybrid road-source
+  chip when a TomTom key is set), Mapped Installations from OpenFreeMap
+  military areas and a bundled name index, ALPR cameras from an hourly OSM
+  extract, and the cockpit's place context and voice outlines from bundled
+  Natural Earth and Census data. Overpass is used only when
+  `OVERPASS_UPSTREAMS` names an instance (Husky Eye View's own identity is
+  sent). Keyless terrain retries when rate-limited, and one OpenStreetMap
+  credit appears when an OSM layer first shows.
+
 - From God's Eye View (upstream, chosen by the project 2026-10-13): a
   **Weather** group in Data Layers (Wind, Weather Radar, Satellite Clouds,
   Lightning, Hurricanes & Cyclones) with a Weather launcher in the bottom
