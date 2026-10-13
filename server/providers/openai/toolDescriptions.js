@@ -310,6 +310,30 @@ export const ACTION_DESCRIPTIONS = {
       },
     },
   },
+  merge_and_export: {
+    description:
+      "Merge & Export: add the map's data to the user's own file (which they choose in the Merge & Export panel; this tool cannot open files), optionally count their points per area first, then download it in a format and/or open it in an analysis box. Every row of their file is kept. Opens the panel. If no file is chosen yet, ask the user to choose one in the panel.",
+    parameters: {
+      properties: {
+        measures: {
+          description:
+            'Data to add, by name: e.g. "poverty", "median income", "life expectancy", "segregation", "unemployment", "PM2.5", "HOLC grade" (points), "enumeration district 1930" (points). Each is added at the finest level the file allows (tract, county, state).',
+        },
+        count_points_per: {
+          description:
+            'For a file of points: first make a table of areas with the number of points in each and a rate per 1,000 residents.',
+        },
+        format: {
+          description:
+            'Download as csv, xlsx (Excel), dta (Stata), sav (SPSS), rdata (R .RData) or rds (R .rds), with a codebook and README.',
+        },
+        send_to: {
+          description:
+            'Open the merged data in the Stata, R, SPSS or Excel box, ready to analyze.',
+        },
+      },
+    },
+  },
   generate_area_report: {
     description:
       'Gather data and generate a report that ranks US counties, census tracts (within one state) or states by one measure and lists other measures as columns, saved as PDF, CSV and XLSX (one ZIP). Use for requests like "a report of the 50 counties with the largest immigrant populations with poverty, unemployment, life expectancy and cluster status". Identifiers (state and county FIPS codes, state and county names) are always included. No key needed. After it runs, say the report title, the file name and the first few areas with their values; mention any problems the result lists.',

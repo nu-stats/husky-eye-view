@@ -1147,6 +1147,34 @@ const schemas = [
       },
     },
   },
+  // Merge & Export (src/analysis/mergePanel.js): the user's file (chosen in
+  // the panel) with the map's data, downloaded or sent to an analysis box.
+  {
+    name: 'merge_and_export',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        measures: {
+          type: 'array',
+          items: { type: 'string', maxLength: 80 },
+          maxItems: 20,
+        },
+        count_points_per: {
+          type: 'string',
+          enum: ['tract', 'county', 'state'],
+        },
+        format: {
+          type: 'string',
+          enum: ['csv', 'xlsx', 'dta', 'sav', 'rdata', 'rds'],
+        },
+        send_to: {
+          type: 'string',
+          enum: ['stata', 'r', 'spss', 'excel'],
+        },
+      },
+    },
+  },
   // Curated Flights (src/curated/): needs its own key; GVA/MKDB values also
   // need the research key.
   {

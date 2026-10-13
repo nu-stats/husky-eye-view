@@ -678,8 +678,50 @@ export class LayerPanel {
       this._buildRRow(),
       this._buildSpssRow(),
       this._buildExcelRow(),
+      this._buildMergeRow(),
       this._buildSurpriseRow(),
     );
+  }
+
+  /** Analysis menu → Merge & Export: your file + the map's data, in any format. */
+  _buildMergeRow() {
+    const group = ANALYSIS_GROUP;
+    const row = document.createElement('div');
+    row.className =
+      'data-toggle-row data-view-row data-curated-row data-merge-row';
+    row.dataset.group = group;
+    this._groups.get(group)?.rows.push({ row, label: 'merge export data' });
+    const top = document.createElement('div');
+    top.className = 'data-toggle-top';
+    const left = document.createElement('div');
+    left.className = 'data-toggle-left';
+    const icon = document.createElement('span');
+    icon.className = 'data-icon';
+    icon.textContent = '⧉';
+    const name = document.createElement('span');
+    name.className = 'data-name';
+    name.textContent = 'Merge & Export';
+    left.append(icon, name);
+    const right = document.createElement('div');
+    right.className = 'data-toggle-right';
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'data-toggle-btn data-view-start';
+    open.setAttribute('aria-label', 'Open Merge & Export');
+    open.textContent = 'OPEN';
+    open.title =
+      'Put your own data on the map, merge it with another file and the map’s data, and download it for Stata, SPSS, R, Excel or as CSV';
+    this._bind(open, 'click', () =>
+      window.dispatchEvent(new CustomEvent('gev:merge-export-open')),
+    );
+    right.appendChild(open);
+    top.append(left, right);
+    const meta = document.createElement('div');
+    meta.className = 'data-toggle-meta';
+    meta.textContent =
+      'Your data + the map’s · .dta, .sav, .RData, .xlsx, .csv';
+    row.append(top, meta);
+    return row;
   }
 
   /** Analysis menu → Surprise: a random photo of one of the dogs. */

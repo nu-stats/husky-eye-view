@@ -503,6 +503,26 @@ export class StyleManager extends ShellFacade {
           readView,
         })),
     );
+    // Merge & Export: your file with the map's data; "Analyze in" hands the
+    // merged table to the Stata, R, SPSS or Excel box.
+    this.mergeExport = null;
+    this.ensureMergeExport = lazyPanel(
+      this,
+      'gev:merge-export-open',
+      () => import('../analysis/mergePanel.js'),
+      ({ MergePanel }) =>
+        (this.mergeExport = new MergePanel({
+          viewer,
+          showToast: (message) => this._showToast(message),
+          openAnalysis: (engine) =>
+            ({
+              stata: this.ensureStataAnalysis,
+              r: this.ensureRAnalysis,
+              spss: this.ensureSpssAnalysis,
+              excel: this.ensureExcelAnalysis,
+            })[engine]?.(),
+        })),
+    );
     this.ensureAreaReports = lazyPanel(
       this,
       'gev:area-reports-open',
@@ -1687,6 +1707,7 @@ export class StyleManager extends ShellFacade {
     this.rAnalysis?.destroy();
     this.spssAnalysis?.destroy();
     this.excelAnalysis?.destroy();
+    this.mergeExport?.destroy();
     this.timeLens?.destroy();
     this._contextControls.disconnect();
     this._layerBindings.disconnect();

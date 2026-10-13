@@ -50,7 +50,9 @@ test('the complete Realtime tool payload retains its pre-extraction contract and
     // 2026-10-08: run_spss_analysis and open_in_spss (SPSS on this computer).
     // 2026-10-09: run_excel_analysis and open_in_excel (Excel), then the
     // boxes renamed Stata, R, SPSS and Excel (no "Analysis") in the wording.
-    'be175b44fcd7940471cfc9045ebd3ca6c768e9ade67e5a12344fa7c088268dc0',
+    // 2026-10-10: merge_and_export (Merge & Export: the user's file with the
+    // map's data, as CSV, Excel, Stata, SPSS or R, or sent to a box).
+    '803d87610f3487e816737ac133b3c681de58cf44a5c986dce3609f3712be5c89',
   );
 });
 

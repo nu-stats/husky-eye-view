@@ -1078,6 +1078,21 @@ export function createGevActionRunner({
       return { action: name, ...result };
     }
 
+    if (name === 'merge_and_export') {
+      const panel =
+        (await styleManager?.ensureMergeExport?.()) ||
+        styleManager?.mergeExport;
+      if (!panel)
+        return { ok: false, action: name, error: 'Merge & Export unavailable' };
+      const result = await panel.voiceMerge({
+        measures: Array.isArray(args.measures) ? args.measures : [],
+        countPer: args.count_points_per || null,
+        format: args.format || null,
+        sendTo: args.send_to || null,
+      });
+      return { action: name, ...result };
+    }
+
     if (name === 'plan_curated_flight' || name === 'control_curated_flight') {
       return curatedFlightAction(
         (await styleManager?.ensureCuratedFlights?.()) ||

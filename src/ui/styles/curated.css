@@ -346,6 +346,82 @@
 .stata-panel {
   width: min(560px, calc(100vw - 32px));
 }
+/* Merge & Export: numbered steps, data ticks by group, a small preview. */
+.merge-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+}
+.merge-step:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.merge-step-n {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #c8102e;
+  color: #fff;
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0;
+}
+.merge-info {
+  margin: 0;
+}
+.merge-choices {
+  display: grid;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.merge-group summary {
+  cursor: pointer;
+  color: var(--text-primary, #e8eaed);
+  font-size: 12px;
+}
+.merge-item {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 3px 0 3px 14px;
+  font-size: 12px;
+}
+.merge-level {
+  color: var(--text-secondary, #b6b9be);
+  font: 700 9px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.merge-send {
+  align-items: center;
+}
+.merge-table-wrap {
+  max-height: 200px;
+  margin-top: 6px;
+  overflow: auto;
+}
+.merge-table {
+  border-collapse: collapse;
+  font: 11px/1.3 var(--font-mono);
+}
+.merge-table th,
+.merge-table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+  text-align: left;
+  white-space: nowrap;
+}
+.merge-table th {
+  color: var(--text-secondary, #b6b9be);
+  font-weight: 700;
+}
 .stata-commands {
   width: 100%;
   box-sizing: border-box;

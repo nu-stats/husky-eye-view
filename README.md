@@ -375,6 +375,44 @@ Every Stata, R, SPSS and Excel session also saves its data as **`data.xlsx`**: t
 
 Every run is kept in `Documents/HuskyEyeView-Analyses/<date>_<areas>/`: `data.csv`, `data.dta`, the do-file, the log, graphs as PNG and `results.xlsx` for models. `HEV_STATA_PATH` points at Stata if it is installed somewhere unusual; `HEV_ANALYSIS_DIR` moves the sessions folder.
 
+## 🔀 Merge & Export
+
+**Analysis → Merge & Export** puts your own data on the map, merges it with a second file of yours and with the map's data, and gives it back as **CSV, Excel (.xlsx), Stata (.dta), SPSS (.sav) or R (.RData / .rds)**, with a codebook. No Stata, SPSS or R is needed to write the files, and everything runs in your browser: your files never leave the computer.
+
+1. **Your file** — a CSV, Excel workbook, GeoJSON or zipped shapefile with census GEOIDs (tracts, block groups, counties, cities or states; leading zeros Excel dropped and separate STATE / COUNTY / TRACT columns work) or latitude/longitude. It appears on the map, shaded by any column. Tick **Keep files I choose** to keep it in **Your saved files**, in this browser only, to pick again later.
+2. **Another of your files (optional)** — linked by any shared column (a GEOID, or a school, site or survey ID; the likely pair is suggested). Keep every row of your file (the default), only rows in both, or every row of both. Like Stata's `merge`, a key repeated in both files is refused; `hev_merge` says where each row came from (1 = first file only, 2 = second only, 3 = both).
+3. **Husky Eye View data** — tick what to attach, by group:
+   - every Area Reports measure for the file's own areas *and the areas they sit in* (a tract file can take tract, county and state values, prefixed `tract_`, `county_`, `state_`);
+   - tract life expectancy (USALEEP; 2020 tracts not among its 2010 tracts take the value of the 2010 tract containing their center);
+   - city segregation (2000, 2010, 2020–24) for city files and points;
+   - for **points**: the state, county, tract and city each point falls in, its **1930s HOLC grade**, and its **1900–1930 enumeration district**. Or **count the points** per tract, county or state (with a rate per 1,000 residents) and attach data to the counts.
+
+   Every row of your file is kept; `hev_matched` (3 = matched, 1 = not) and `hev_geoid` (the clean GEOID used) are added. The restricted research datasets are never offered.
+4. **Download, or analyze it** — choose the format; **With codebook and README** gives a ZIP with the data, `codebook.csv` (each variable's name in that file, original name, label, type, codes, source and years) and `README.txt` (every step, the sources and their terms). Names are fitted to each program (Stata's 32 characters, SPSS's rules, R's syntactic names) and listed in the codebook. **Analyze in Stata / R / SPSS / Excel** opens the merged table in that box as *Your own file*.
+
+- **By voice** (after choosing the file): "add poverty and life expectancy and give it to me as a Stata file", "count the points per tract, add median income and open it in R".
+- **From a terminal** (same engine, no browser):
+
+  ```bash
+  node scripts/merge-export.mjs my_tracts.csv --add poverty,median-income,life-expectancy --format dta
+  node scripts/merge-export.mjs sites.csv --count tract --add poverty --format rdata
+  node scripts/merge-export.mjs survey.csv --with schools.xlsx --on school_id=SchoolID --format sav
+  node scripts/merge-export.mjs my_tracts.csv --list
+  ```
+
+- **From JavaScript** (`src/analysis/mergeData.js`, browser or Node):
+
+  ```js
+  import { readTable, findJoin, attachData, exportBundle } from './src/analysis/mergeData.js';
+  const table = await readTable('my_tracts.csv', bytes);
+  const { table: merged } = await attachData(table, findJoin(table), ['tract:poverty', 'county:life-expectancy'], {
+    readContext: (p) => fetch(p).then((r) => r.text()), // or fs.readFileSync(`public/${p}`, 'utf8')
+  });
+  const zip = await exportBundle(merged, 'dta'); // {fileName, bytes, renames}
+  ```
+
+- **Reading the files:** Stata `use my_tracts.dta`; R `load("my_tracts.RData")` (a data frame `hev_data`, labels in each column's `label` attribute) or `d <- readRDS("my_tracts.rds")`; SPSS opens the `.sav`; Python `pandas.read_stata("my_tracts.dta")`, `pandas.read_spss("my_tracts.sav")` (needs `pyreadstat`) or `pandas.read_csv("my_tracts.csv", dtype={"hev_geoid": str})`.
+
 ---
 
 ## 🎖️ Field Missions
