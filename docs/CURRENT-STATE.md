@@ -3924,6 +3924,11 @@ are omitted rather than framing the wrong part of the globe.
 
 ### Recent Imagery (September 2026)
 
+Programmatic boxes passed to the exported `setBox` and `searchHls` operations
+reject missing, blank or boolean edges instead of interpreting them as zero
+coordinates. Valid finite numeric edges remain accepted; the app’s drag tool,
+pins and share links already supply complete boxes.
+
 - The layer sits in the Data Layers panel's Cameras group beside Cameras (CCTV); Mapped ALPR Cameras moved to the Infrastructure group to make room.
 - DATA ▸ **Recent Imagery** (`recent-imagery`, `src/layers/recentImagery/`) lists the last 30 UTC days of imagery for a selected box and drapes the days you pick: HLS S30 (Sentinel-2) and L30 (Landsat 8/9) at 30 m, and the VIIRS NOAA-21 daily overview at 250 m. Keyless and browser-direct: NASA CMR for which days have HLS granules in the box (`catalog.js`, both collections concurrently, paged with `CMR-Search-After` up to 2,000 records each, `truncated` against CMR `hits`), GIBS WMTS for tiles, Worldview Snapshots for thumbnails and exports. Worldview's `Data-Present` header is the only availability signal: GIBS answers an empty tile with HTTP 200, and the JPEG overview would drape black, so a day confirmed empty never drapes.
 - **Box.** SELECT BOX (`src/ui/imageryBoxTool.js`) claims the pointer like Draw, borrows the stock click actions and freezes the camera only mid-drag; USE VIEW takes the camera rectangle; `boxFromPinAt` grows a 10 km box. Boxes must be ≤ 1,000 km a side, on one side of the dateline and inside the Web-Mercator limit (`validateBox`). A refusal (`boxError`, including the tool's own via `reportBoxRefusal`) stays at the top of the panel until a box succeeds; a view over the cap is refused with its size, never shrunk. An oversized box or view (`Box is … km wide · limit 1,000 km`, `View is … wide · …`) sets the hint to `Zoom in or draw a smaller box` and enables ZOOM IN: `zoomToFit()` flies top-down (1.2 s) to the refused box's centre, or the ground under the canvas centre for a view, at the height whose view is about 400 km wide for the canvas aspect and the camera's vertical FOV (`fitViewHeightM`, clamped 5–400 km), and returns that height.
