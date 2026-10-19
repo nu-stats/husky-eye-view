@@ -1,5 +1,15 @@
 # Changelog
 
+- From God's Eye View (C, 2026-10-18): **Recent Imagery** in Data Layers →
+  Live Feeds. Select a box (or use the view) and browse the last 30 days of
+  free NASA satellite imagery over it, keyless: Harmonized Landsat
+  Sentinel-2 at 30 m and the daily VIIRS overview at 250 m. A day strip with
+  cloud cover, IMAGE / VS BASEMAP / A / B modes with a full-screen swipe
+  divider, PNG export and share links (token `ri`). Its panel opens above
+  the bottom row like the other launchers. Upstream fixes included: a box
+  missing an edge is rejected (#1036), the NASA catalog query has a page
+  budget (#1042), and DETAILS scrolls into view when opened (#970).
+
 - From God's Eye View (K, 2026-10-13): OpenStreetMap layers no longer use the
   public Overpass servers, which often refuse or time out. Traffic roads load
   from OpenFreeMap vector tiles (with a TomTom / OSM / Hybrid road-source
