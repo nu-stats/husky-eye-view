@@ -92,3 +92,113 @@
   font: 10px var(--font-mono);
   letter-spacing: 0.8px;
 }
+
+/* CIRCLE / SWIPE */
+.time-lens-shapes {
+  display: inline-flex;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.time-lens-shape {
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 0;
+  background: #11161b;
+  color: #a2aaad;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 1.2px;
+  cursor: pointer;
+}
+
+.time-lens-shape + .time-lens-shape {
+  border-left: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.time-lens-shape[aria-pressed='true'] {
+  background: rgba(200, 16, 46, 0.85);
+  color: #fff;
+}
+
+.time-lens-shape:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+
+/* SWIPE: today right of a full-height divider; the map keeps the mouse. */
+.time-lens--swipe {
+  cursor: default;
+}
+
+.time-lens-ring[hidden] {
+  display: none;
+}
+
+#time-lens-split-line {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: var(--time-lens-split, 50%);
+  z-index: 130;
+  width: 2px;
+  margin-left: -1px;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 0 0 1px rgba(200, 16, 46, 0.85),
+    0 0 16px rgba(0, 0, 0, 0.55);
+}
+
+#time-lens-split-line[hidden] {
+  display: none;
+}
+
+#time-lens-split-line span {
+  position: absolute;
+  /* Just under the handle, clear of the Time Lens bar at the top. */
+  top: calc(50% + 30px);
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(10, 14, 18, 0.86);
+  color: #fff;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 1.2px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+#time-lens-split-line span.before {
+  right: 10px;
+  color: #f2c4a8;
+}
+
+#time-lens-split-line span.after {
+  left: 10px;
+}
+
+#time-lens-split-line .time-lens-split-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(10, 14, 18, 0.94);
+  box-shadow:
+    0 0 0 2px rgba(200, 16, 46, 0.85),
+    0 0 16px rgba(0, 0, 0, 0.55);
+  font: 700 15px/1 var(--font-mono);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: ew-resize;
+}
+
+#time-lens-split-line .time-lens-split-handle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}

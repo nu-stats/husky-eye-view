@@ -692,6 +692,7 @@
       "src/ui/researchKeyPrompt.js",
       "src/ui/dataPanelPlacement.js",
       "src/ui/timeLens.js",
+      "src/ui/imagerySplit.js",
       "src/ui/layerProfile.js",
       "src/ui/weatherPanel.js",
       "src/ui/railCards.js",

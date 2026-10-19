@@ -4,14 +4,24 @@ import {
   MIN_LENS_RADIUS,
   TIME_LENS_BASE_LAYER,
   TIME_LENS_LAYERS,
+  TIME_LENS_SHAPES,
   clampLensRadius,
   lensClipPath,
+  swipeClipPath,
   timeLensLabel,
 } from './timeLens.js';
 import { REGISTERED_LAYER_IDS } from '../data/layerState.js';
 
 test('the lens clip path is a circle in whole pixels', () => {
   assert.equal(lensClipPath(452.4, 577.6, 215.2), 'circle(215px at 452px 578px)');
+});
+
+test('the swipe shows today right of the divider, in whole pixels and inside the window', () => {
+  assert.deepEqual(TIME_LENS_SHAPES, ['circle', 'swipe']);
+  assert.equal(swipeClipPath(1600, 0.5), 'inset(0px 0px 0px 800px)');
+  assert.equal(swipeClipPath(1003, 0.3333), 'inset(0px 0px 0px 334px)');
+  assert.equal(swipeClipPath(1600, -0.2), 'inset(0px 0px 0px 0px)');
+  assert.equal(swipeClipPath(1600, 1.4), 'inset(0px 0px 0px 1600px)');
 });
 
 test('the lens radius stays between the minimum and 45% of the window', () => {

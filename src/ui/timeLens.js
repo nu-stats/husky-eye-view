@@ -8,8 +8,14 @@
  * same base map plus the chosen layer of today, and is clipped to a circle
  * with CSS (clip-path also limits where it takes pointer events). Inside the
  * circle: drag to move it, scroll to resize it, click an area for its card.
+ *
+ * SWIPE shows the two times across the whole window instead: 1930s HOLC left
+ * of a full-height divider, the layer of today right of it (the shared
+ * before/after divider, src/ui/imagerySplit.js). The map moves as usual under
+ * it, and a click on the today side opens that layer's card.
  */
 import * as Cesium from 'cesium';
+import { createImagerySplit } from './imagerySplit.js';
 
 export const TIME_LENS_OPEN_EVENT = 'gev:time-lens-open';
 export const TIME_LENS_BASE_LAYER = 'local-holc-redlining';
@@ -33,10 +39,22 @@ const ESRI_IMAGERY =
   'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer';
 export const MIN_LENS_RADIUS = 60;
 const DRAG_THRESHOLD_PX = 4;
+/** The lens shapes: a movable circle, or a divider across the whole window. */
+export const TIME_LENS_SHAPES = Object.freeze(['circle', 'swipe']);
+const SHAPE_HINTS = Object.freeze({
+  circle: 'drag to move · scroll to resize',
+  swipe: 'drag the divider · the map moves as usual',
+});
 
 /** CSS clip-path for a lens centered at (x, y) with radius r, in pixels. */
 export function lensClipPath(x, y, r) {
   return `circle(${Math.round(r)}px at ${Math.round(x)}px ${Math.round(y)}px)`;
+}
+
+/** CSS clip-path for the today side of the swipe: right of the divider. */
+export function swipeClipPath(width, split) {
+  const left = Math.round(Math.max(0, Math.min(1, split)) * width);
+  return `inset(0px 0px 0px ${left}px)`;
 }
 
 /** Radius kept between the minimum and 45% of the smaller window side. */
@@ -79,6 +97,8 @@ export class TimeLens {
   }) {
     Object.assign(this, { viewer, readDataManager, showToast, createLayers });
     this.layerId = TIME_LENS_LAYERS[0][0];
+    // The last shape chosen this session (the next lens opens with it).
+    this.shape = 'circle';
     this.lens = null;
     this.removers = [];
     const onOpen = (event) => this.open(event?.detail?.layerId);
@@ -119,18 +139,61 @@ export class TimeLens {
     });
     this.buildDom(lens);
     this.buildViewer(lens);
+    this.setShape(this.shape);
     await this.addBaseMap(lens);
     await this.setLayer(layerId);
     this.sync(lens);
     this.showToast(
-      'Time Lens: the 1930s HOLC map outside, today inside. Drag to move, scroll to resize.',
+      lens.shape === 'swipe'
+        ? 'Time Lens: the 1930s HOLC map left of the divider, today right of it. Drag the divider.'
+        : 'Time Lens: the 1930s HOLC map outside, today inside. Drag to move, scroll to resize, or choose SWIPE.',
     );
+  }
+
+  /** Switch the lens between the movable circle and the full-window swipe. */
+  setShape(shape) {
+    if (!TIME_LENS_SHAPES.includes(shape)) shape = 'circle';
+    this.shape = shape;
+    const lens = this.lens;
+    if (!lens) return;
+    lens.shape = shape;
+    const swipe = shape === 'swipe';
+    for (const [name, button] of Object.entries(lens.shapeButtons))
+      button.setAttribute('aria-pressed', String(name === shape));
+    lens.hint.textContent = SHAPE_HINTS[shape];
+    lens.root.classList.toggle('time-lens--swipe', swipe);
+    lens.ring.hidden = swipe;
+    if (swipe && !lens.split) {
+      lens.split = createImagerySplit({
+        parent: document.body,
+        initialValue: lens.splitValue ?? 0.5,
+        id: 'time-lens-split-line',
+        handleClass: 'time-lens-split-handle',
+        cssProperty: '--time-lens-split',
+        beforeLabel: '1930s HOLC',
+        afterLabel: `TODAY · ${timeLensLabel(this.layerId)}`,
+        ariaLabel: 'Time Lens divider: 1930s HOLC left, today right',
+        formatValueText: (before, after) =>
+          `1930s HOLC ${before} percent, today ${after} percent`,
+        onChange: (value) => {
+          lens.splitValue = value;
+          this.layout(lens);
+        },
+      });
+    } else if (!swipe && lens.split) {
+      lens.splitValue = lens.split.getValue();
+      lens.split.destroy();
+      lens.split = null;
+    }
+    this.layout(lens);
   }
 
   close() {
     const lens = this.lens;
     if (!lens) return;
     this.lens = null;
+    lens.split?.destroy();
+    lens.split = null;
     for (const remove of lens.removers.splice(0)) remove();
     for (const layer of lens.layers || []) {
       try {
@@ -188,6 +251,30 @@ export class TimeLens {
       textContent: 'CLOSE',
     });
     close.addEventListener('click', () => this.close());
+    lens.shapeButtons = {};
+    const shapes = element(
+      'span',
+      {
+        className: 'time-lens-shapes',
+        role: 'group',
+        ariaLabel: 'Lens shape',
+      },
+      TIME_LENS_SHAPES.map((shape) => {
+        const button = element('button', {
+          type: 'button',
+          className: 'time-lens-shape',
+          textContent: shape === 'swipe' ? 'SWIPE' : 'CIRCLE',
+          title:
+            shape === 'swipe'
+              ? 'Divide the whole window: 1930s HOLC left, today right'
+              : 'A movable circle onto today',
+        });
+        button.addEventListener('click', () => this.setShape(shape));
+        lens.shapeButtons[shape] = button;
+        return button;
+      }),
+    );
+    lens.hint = element('span', { className: 'time-lens-hint' });
     lens.bar = element('div', { className: 'time-lens-bar' }, [
       element('span', {
         className: 'curated-kicker',
@@ -195,21 +282,61 @@ export class TimeLens {
       }),
       element('span', {
         className: 'time-lens-key',
-        textContent: 'Outside: 1930s HOLC · Inside:',
+        textContent: '1930s HOLC · Today:',
       }),
       lens.select,
-      element('span', {
-        className: 'time-lens-hint',
-        textContent: 'drag to move · scroll to resize',
-      }),
+      shapes,
+      lens.hint,
       close,
     ]);
     document.body.append(lens.bar);
 
-    // Move: drag inside the lens. Resize: scroll inside it. A click without
-    // a drag still reaches the lens view, so its areas open their cards.
+    // CIRCLE: drag inside the lens to move it, scroll to resize it.
+    // SWIPE: the today side keeps the mouse, so a click opens that layer's
+    // card (a click the main map also saw would close it again). A drag, any
+    // other button and the wheel are handed to the main map, which takes the
+    // pointer over (Cesium captures it) and moves as usual.
     let drag = null;
+    const toMap = (type, event, extra = {}) => {
+      const canvas = this.viewer?.canvas;
+      if (!canvas) return;
+      const init = {
+        bubbles: true,
+        cancelable: true,
+        clientX: extra.clientX ?? event.clientX,
+        clientY: extra.clientY ?? event.clientY,
+        ctrlKey: event.ctrlKey,
+        shiftKey: event.shiftKey,
+        altKey: event.altKey,
+        metaKey: event.metaKey,
+      };
+      canvas.dispatchEvent(
+        type === 'wheel'
+          ? new WheelEvent('wheel', {
+              ...init,
+              deltaX: event.deltaX,
+              deltaY: event.deltaY,
+              deltaMode: event.deltaMode,
+            })
+          : new PointerEvent(type, {
+              ...init,
+              pointerId: event.pointerId,
+              pointerType: event.pointerType || 'mouse',
+              isPrimary: event.isPrimary,
+              button: event.button,
+              buttons: event.buttons,
+            }),
+      );
+    };
     const onDown = (event) => {
+      if (lens.shape === 'swipe') {
+        if (event.button !== 0) {
+          toMap('pointerdown', event);
+          return;
+        }
+        drag = { swipe: true, x: event.clientX, y: event.clientY, event };
+        return;
+      }
       if (event.button !== 0) return;
       drag = {
         x: event.clientX,
@@ -224,6 +351,14 @@ export class TimeLens {
       const dx = event.clientX - drag.x;
       const dy = event.clientY - drag.y;
       if (!drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+      if (drag.swipe) {
+        // From here on the map has the pointer: press where the drag began.
+        const press = drag.event;
+        drag = null;
+        toMap('pointerdown', press);
+        toMap('pointermove', event);
+        return;
+      }
       drag.moved = true;
       lens.x = Math.min(window.innerWidth, Math.max(0, drag.lx + dx));
       lens.y = Math.min(window.innerHeight, Math.max(0, drag.ly + dy));
@@ -234,6 +369,10 @@ export class TimeLens {
     };
     const onWheel = (event) => {
       event.preventDefault();
+      if (lens.shape === 'swipe') {
+        toMap('wheel', event);
+        return;
+      }
       lens.r = clampLensRadius(
         lens.r - event.deltaY * 0.25,
         window.innerWidth,
@@ -252,6 +391,9 @@ export class TimeLens {
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
     lens.root.addEventListener('wheel', onWheel, { passive: false });
+    lens.root.addEventListener('contextmenu', (event) => {
+      if (lens.shape === 'swipe') event.preventDefault();
+    });
     window.addEventListener('resize', onResize);
     window.addEventListener('keydown', onKey);
     lens.removers.push(() => {
@@ -264,6 +406,13 @@ export class TimeLens {
   }
 
   layout(lens) {
+    if (lens.shape === 'swipe') {
+      lens.root.style.clipPath = swipeClipPath(
+        window.innerWidth,
+        lens.split?.getValue() ?? 0.5,
+      );
+      return;
+    }
     lens.root.style.clipPath = lensClipPath(lens.x, lens.y, lens.r);
     Object.assign(lens.ring.style, {
       left: `${lens.x - lens.r}px`,
@@ -334,6 +483,10 @@ export class TimeLens {
     this.layerId = layerId;
     lens.select.value = layerId;
     lens.todayLabel.textContent = `TODAY · ${timeLensLabel(layerId)}`;
+    const after = document
+      .getElementById('time-lens-split-line')
+      ?.querySelector('.after');
+    if (after) after.textContent = lens.todayLabel.textContent;
     const manager = this.readDataManager?.();
     // Outside the lens only HOLC shows: switch the chosen layer off there.
     if (manager?.isEnabled?.(layerId)) {

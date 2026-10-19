@@ -1,5 +1,11 @@
 # Changelog
 
+- Time Lens: a **SWIPE** shape beside the circle. A full-height divider
+  splits the whole window: the 1930s HOLC map left of it, the chosen layer of
+  today right of it. Drag the divider (or use the arrow keys on its handle)
+  to sweep one time across the other. The map still pans and zooms on both
+  sides, and a click on either side opens that side's card.
+
 - From God's Eye View (C, 2026-10-18): **Recent Imagery** in Data Layers →
   Live Feeds. Select a box (or use the view) and browse the last 30 days of
   free NASA satellite imagery over it, keyless: Harmonized Landsat
