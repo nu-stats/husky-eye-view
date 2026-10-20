@@ -96,7 +96,7 @@ export const ANALYSIS_ENGINES = Object.freeze({
     ],
     hint: 'Models (lm, glm, glm.nb), summaries, tests, plots and spatial tools (moran.test, lagsarlm with contiguity weights W). Lines may call only these functions; anything else: upload an R script.',
     requires:
-      'Needs R 4.0 or newer; RStudio is optional. Spatial lines (moran.test, lagsarlm) also need the sf, spdep and spatialreg packages.',
+      'Needs R 4.0 or newer (4.2+ recommended on Windows, for accented place names); RStudio is optional. Spatial lines (moran.test, lagsarlm) also need the sf, spdep and spatialreg packages.',
     scriptLabel: 'R script',
     scriptAccept: '.R,.r,text/plain',
     scriptBytes: MAX_R_SCRIPT_BYTES,
