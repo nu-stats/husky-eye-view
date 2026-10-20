@@ -227,8 +227,11 @@ test('SPSS is found in its standard places, newest version first, with its Pytho
     }),
     null,
   );
-  const env = spssProcessEnv(found, { Path: 'C:\\Windows' });
-  assert.match(env.Path, /^C:\\Program Files\\IBM\\SPSS Statistics 30;/);
+  const env = spssProcessEnv(found, { Path: 'C:\\Windows' }, 'win32');
+  assert.equal(
+    env.Path,
+    'C:\\Program Files\\IBM\\SPSS Statistics 30;C:\\Program Files\\IBM\\SPSS Statistics 30\\Python3;C:\\Windows',
+  );
 });
 
 test('an SPSS session folder holds the data and the syntax; a bad line is refused', (t) => {

@@ -281,16 +281,21 @@ except Exception:
 `;
 
 /** The environment SPSS's Python runs in: the SPSS folder on PATH (its libraries). */
-export function spssProcessEnv(spssInfo, base = process.env) {
+export function spssProcessEnv(
+  spssInfo,
+  base = process.env,
+  platform = process.platform,
+) {
+  const paths = platform === 'win32' ? path.win32 : path.posix;
   const key =
     Object.keys(base).find((k) => k.toUpperCase() === 'PATH') || 'PATH';
   const extra = [
     spssInfo.root,
-    spssInfo.python && path.dirname(spssInfo.python),
+    spssInfo.python && paths.dirname(spssInfo.python),
   ].filter(Boolean);
   return {
     ...base,
-    [key]: [...extra, base[key] || ''].join(path.delimiter),
+    [key]: [...extra, base[key] || ''].join(paths.delimiter),
     PYTHONIOENCODING: 'utf-8',
   };
 }

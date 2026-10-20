@@ -234,9 +234,18 @@ test('R from a conda environment gets its version and its libraries on PATH', ()
   });
   assert.equal(r.version, '4.4.3');
   assert.ok(r.pathPrefix.includes('C:\\envs\\hev-r\\Library\\bin'));
-  const env = rProcessEnv(r, { Path: 'C:\\Windows' });
+  const env = rProcessEnv(r, { Path: 'C:\\Windows' }, 'win32');
   assert.match(env.Path, /^C:\\envs\\hev-r;/);
   assert.match(env.Path, /C:\\Windows$/);
+  // PATH is joined the target platform's way, whatever runs the test.
+  assert.equal(
+    rProcessEnv(
+      { pathPrefix: ['/opt/conda/envs/hev-r/bin'] },
+      { PATH: '/usr/bin' },
+      'linux',
+    ).PATH,
+    '/opt/conda/envs/hev-r/bin:/usr/bin',
+  );
   // A standard install needs nothing added.
   assert.deepEqual(rProcessEnv({ pathPrefix: [] }, { Path: 'x' }), {
     Path: 'x',

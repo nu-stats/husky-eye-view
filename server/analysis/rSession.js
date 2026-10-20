@@ -232,13 +232,18 @@ export function prepareRSession(request = {}, options = {}) {
 }
 
 /** The environment R runs in: its own conda libraries first, when it has them. */
-export function rProcessEnv(r, base = process.env) {
+export function rProcessEnv(
+  r,
+  base = process.env,
+  platform = process.platform,
+) {
   if (!r?.pathPrefix?.length) return base;
+  const paths = platform === 'win32' ? path.win32 : path.posix;
   const key =
     Object.keys(base).find((k) => k.toUpperCase() === 'PATH') || 'PATH';
   return {
     ...base,
-    [key]: [...r.pathPrefix, base[key] || ''].join(path.delimiter),
+    [key]: [...r.pathPrefix, base[key] || ''].join(paths.delimiter),
   };
 }
 
