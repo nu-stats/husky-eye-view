@@ -1,5 +1,11 @@
 # Changelog
 
+- Analysis: the Stata, R, SPSS and Excel windows now say at the top which
+  version each needs: Stata 18 or newer; R 4.0 or newer (sf, spdep and
+  spatialreg for the spatial lines); IBM SPSS Statistics 24 or newer, with
+  its Python 3; and for Excel, nothing to run, Excel 2010 or newer (or
+  another .xlsx program) to open the workbook.
+
 - Time Lens: a **SWIPE** shape beside the circle. A full-height divider
   splits the whole window: the 1930s HOLC map left of it, the chosen layer of
   today right of it. Drag the divider (or use the arrow keys on its handle)

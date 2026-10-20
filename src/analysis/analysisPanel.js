@@ -60,6 +60,8 @@ export const ANALYSIS_ENGINES = Object.freeze({
       'twoway scatter foreign_born_share poverty',
     ],
     hint: `${STATA_COMMAND_NAMES.join(', ')} — with if, in and options. Spatial models get inverse-distance weights W built on the areas with valid values. Anything else: upload a do-file.`,
+    // Every do-file starts with `version 18`.
+    requires: 'Needs Stata 18 or newer (any edition, StataNow too).',
     scriptLabel: 'Do-file',
     scriptAccept: '.do,text/plain',
     scriptBytes: MAX_DO_FILE_BYTES,
@@ -93,6 +95,8 @@ export const ANALYSIS_ENGINES = Object.freeze({
       'plot(d$poverty, d$foreign_born_share)',
     ],
     hint: 'Models (lm, glm, glm.nb), summaries, tests, plots and spatial tools (moran.test, lagsarlm with contiguity weights W). Lines may call only these functions; anything else: upload an R script.',
+    requires:
+      'Needs R 4.0 or newer; RStudio is optional. Spatial lines (moran.test, lagsarlm) also need the sf, spdep and spatialreg packages.',
     scriptLabel: 'R script',
     scriptAccept: '.R,.r,text/plain',
     scriptBytes: MAX_R_SCRIPT_BYTES,
@@ -123,6 +127,9 @@ export const ANALYSIS_ENGINES = Object.freeze({
       'GRAPH /SCATTERPLOT(BIVAR)=poverty WITH foreign_born_share',
     ],
     hint: `${SPSS_COMMAND_NAMES.join(', ')} — one command per line, with its subcommands. A linear REGRESSION sends its residuals and fitted values to the map. Anything else: upload a syntax file.`,
+    // RUN drives SPSS through its Python 3 plug-in, first shipped in 24.
+    requires:
+      'Needs IBM SPSS Statistics 24 or newer, with the Python 3 that comes with it.',
     scriptLabel: 'Syntax file',
     scriptAccept: '.sps,text/plain',
     scriptBytes: MAX_SPSS_SYNTAX_BYTES,
@@ -161,6 +168,9 @@ export const ANALYSIS_ENGINES = Object.freeze({
       '=CORREL(poverty, bachelors)',
     ],
     hint: `${EXCEL_COMMAND_NAMES.join(', ')} — each may end with IF poverty > 5 AND …. Each command becomes a sheet of analysis.xlsx with live Excel formulas (LINEST for regressions) and charts; REGRESSION sends its residuals to the map. Excel itself is needed only to open the workbook.`,
+    // The sheets use Excel 2010 functions (STDEV.S, T.DIST.2T, F.DIST.RT).
+    requires:
+      'Excel is not needed to run. To open the workbook: Excel 2010 or newer, or another program that opens .xlsx files.',
     scriptLabel: 'Command file',
     scriptAccept: '.txt,text/plain',
     scriptBytes: MAX_EXCEL_FILE_BYTES,
@@ -568,6 +578,10 @@ export class AnalysisPanel {
         close,
       ]),
       element('div', { className: 'curated-form' }, [
+        element('p', {
+          className: 'curated-hint analysis-requires',
+          textContent: this.engine.requires,
+        }),
         element('label', { className: 'curated-check stata-layer' }, [
           'Layer ',
           this.layer,
