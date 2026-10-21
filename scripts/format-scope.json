@@ -1003,5 +1003,8 @@
   "src/data/geoFileImport.test.mjs",
   "src/ui/geoFileImport.test.mjs",
   "src/ui/flyToDataSource.test.mjs",
-  "src/ui/myFileTables.test.mjs"
+  "src/ui/myFileTables.test.mjs",
+  "src/layers/migrationFlows/migrationFlows.test.mjs",
+  "scripts/build-migration-flows.mjs",
+  "scripts/lib/xlsx-lite.mjs"
 ]

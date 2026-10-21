@@ -292,6 +292,24 @@ export const LAYER_MANIFEST = Object.freeze(
         'county immigrant population',
       ],
     },
+    // Flows between the US and each country (src/layers/migrationFlows/):
+    // UN DESA migrant stock 2024, UNHCR 2025, World Bank remittances 2021.
+    {
+      id: 'local-migration-flows',
+      token: 'mf',
+      group: CENSUS_GROUP,
+      vintage: '2021–2025',
+      aliases: [
+        'migration flows',
+        'migration and refugee flows',
+        'refugee flows',
+        'refugees',
+        'asylum seekers',
+        'migrant stock',
+        'remittances',
+        'immigration arcs',
+      ],
+    },
 
     // ---- Internet Access Over Time: CPS states, ACS counties and tracts ----
     {

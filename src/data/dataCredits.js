@@ -515,6 +515,16 @@ export const DATA_CREDITS = [
       'moved onto 2020 tracts with the Census tract relationship files',
   },
   {
+    key: 'migration-flows',
+    html:
+      'Migration & refugee flows: United Nations DESA Population Division (2024), ' +
+      '<a href="https://www.un.org/development/desa/pd/content/international-migrant-stock" target="_blank" rel="noopener">International Migrant Stock 2024</a> ' +
+      '(<a href="https://creativecommons.org/licenses/by/3.0/igo/" target="_blank" rel="noopener">CC BY 3.0 IGO</a>); ' +
+      '<a href="https://www.unhcr.org/refugee-statistics/" target="_blank" rel="noopener">UNHCR Refugee Population Statistics</a> (CC BY 4.0); ' +
+      '<a href="https://www.knomad.org/data/remittances" target="_blank" rel="noopener">KNOMAD / World Bank Bilateral Remittance Matrix 2021</a> (CC BY 4.0); ' +
+      'country points: Natural Earth (public domain); arcs adapted from uxhimanshuk/ground-view (MIT)',
+  },
+  {
     key: 'chicago-historical-homicides',
     html:
       'Chicago homicides 1870–1930 (key-locked): Leigh Bienen, ' +
