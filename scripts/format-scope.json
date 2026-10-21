@@ -592,6 +592,7 @@
   "src/layers/bikeshare/proxyRoute.test.mjs",
   "src/layers/bikeshare/stationNames.test.mjs",
   "src/layers/bikeshare/failureReporting.test.mjs",
+  "src/layers/bikeshare/registry.test.mjs",
   "scripts/traffic-fixtures.mjs",
   "src/layers/traffic/navigation.test.mjs",
   "scripts/qa-traffic-navigation.mjs",
