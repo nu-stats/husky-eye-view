@@ -316,6 +316,29 @@ export const NYC_ANCHORS = [
   { lat: 40.8448, lon: -73.8648 }, // Bronx
   { lat: 40.5795, lon: -74.1502 }, // Staten Island
 ];
+
+/** FL511 (Florida DOT) cameras: keyless ArcGIS FeatureServer layer, paged. */
+export const FLORIDA_CCTV_URL =
+  'https://services.arcgis.com/3wFbqsFPLeKqOlIK/arcgis/rest/services/FL511_Traffic_Cameras/FeatureServer/0/query';
+export const FLORIDA_IMAGE_HOSTS = [
+  'images-dis.divas.cloud',
+  'snapshots.divas.cloud',
+];
+export const DEFAULT_FLORIDA_MAX_SOURCES = 500;
+/** Byte cap per catalog page (2,000 rows, about 650 KiB measured). */
+export const FLORIDA_MAX_CATALOG_BYTES = 2 * 1024 * 1024;
+/** Catalog page ceiling: 40 pages covers 4,000+ cameras even at 100 rows a page. */
+export const FLORIDA_MAX_CATALOG_PAGES = 40;
+export const FLORIDA_ANCHORS = [
+  { lat: 25.7617, lon: -80.1918 }, // Miami
+  { lat: 28.5384, lon: -81.3789 }, // Orlando
+  { lat: 27.9506, lon: -82.4572 }, // Tampa
+  { lat: 30.3322, lon: -81.6557 }, // Jacksonville
+  { lat: 30.4383, lon: -84.2807 }, // Tallahassee
+  { lat: 26.1224, lon: -80.1373 }, // Fort Lauderdale
+  { lat: 26.7153, lon: -80.0534 }, // West Palm Beach
+  { lat: 30.4213, lon: -87.2169 }, // Pensacola (panhandle)
+];
 /** Camera CATALOGS change rarely; 15 min keeps multi-megabyte upstream list refetches (Austin rows.json + 4 Caltrans districts + TfL + Ontario 511) infrequent. Frames are fetched per-request and are unaffected. */
 export const CCTV_SOURCE_CACHE_MS = 15 * 60 * 1000;
 /** Per-provider catalog-fetch timeout. Bounds the worst-case refresh so one

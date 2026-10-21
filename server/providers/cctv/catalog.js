@@ -21,6 +21,7 @@ import {
   loadKingCountySourcesFromOpenData,
   loadWsdotSourcesFromOpenData,
   loadNycSourcesFromOpenData,
+  loadFloridaSourcesFromOpenData,
 } from './sources.js';
 
 /** Env kill switch: unset or anything but "0" means enabled. */
@@ -119,6 +120,14 @@ const LIVE_PACKS = [
     name: 'nyc',
     enabled: () => envTermsOptIn('CCTV_NYC_ENABLED'),
     load: loadNycSourcesFromOpenData,
+  },
+  {
+    // FL511's terms limit its content to individual, personal use (other use
+    // needs FDOT's written consent), so the pack is off unless the operator
+    // opts in (see DATA_SOURCES.md).
+    name: 'florida',
+    enabled: () => envTermsOptIn('CCTV_FLORIDA_ENABLED'),
+    load: loadFloridaSourcesFromOpenData,
   },
 ];
 /**
