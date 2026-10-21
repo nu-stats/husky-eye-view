@@ -1063,7 +1063,8 @@
       "src/layers/satellites/state.js",
       "src/layers/satellites/testing.js",
       "src/layers/satellites/tracking.js",
-      "src/data/inputOwnership.js"
+      "src/data/inputOwnership.js",
+      "src/sources/tle.js"
     ],
     "external": ["cesium", "satellite.js"]
   },
@@ -1807,6 +1808,7 @@
       "src/layers/satellites/state.js",
       "src/layers/satellites/testing.js",
       "src/layers/satellites/tracking.js",
+      "src/sources/tle.js",
       "src/layers/submarineCables/bundledSource.js",
       "src/layers/submarineCables/geometry.js",
       "src/layers/submarineCables/index.js",
@@ -2529,6 +2531,7 @@
       "src/layers/satellites/state.js",
       "src/layers/satellites/testing.js",
       "src/layers/satellites/tracking.js",
+      "src/sources/tle.js",
       "src/layers/submarineCables/geometry.js",
       "src/layers/submarineCables/index.js",
       "src/layers/submarineCables/ingestion.js",

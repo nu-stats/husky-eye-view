@@ -8,6 +8,7 @@ import {
   twoline2satrec,
 } from 'satellite.js';
 import { findNextSatellitePass } from '../../data/satellitePass.js';
+import { noradIdFromSatnum, parseTleText } from '../../sources/tle.js';
 import { ORBIT_PATH_STEPS, ISS_NORAD } from './policy.js';
 
 export function createOrbits({ state: layerState, services, parts, source }) {
@@ -37,29 +38,10 @@ export function createOrbits({ state: layerState, services, parts, source }) {
     );
   }
 
-  /**
-   * Parse TLE text into array of { name, line1, line2 } objects. A malformed
-   * set is skipped without dropping the valid sets that follow (God's Eye
-   * View #936: stepping by three lost everything after one missing line).
-   */
+  /** Parse TLE text into array of { name, line1, line2 } objects. */
 
   function parseTLE(text) {
-    const lines = text
-      .trim()
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-    const result = [];
-    for (let i = 0; i < lines.length - 2; i++) {
-      const name = lines[i];
-      const line1 = lines[i + 1];
-      const line2 = lines[i + 2];
-      if (line1.startsWith('1 ') && line2.startsWith('2 ')) {
-        result.push({ name, line1, line2 });
-        i += 2;
-      }
-    }
-    return result;
+    return parseTleText(text);
   }
 
   /**
@@ -303,7 +285,7 @@ export function createOrbits({ state: layerState, services, parts, source }) {
     const current = propagatePosition(satrec, referenceDate);
     if (!current) return null;
     return {
-      noradId: Number(satrec.satnum),
+      noradId: noradIdFromSatnum(satrec.satnum),
       name: String(name || '').trim(),
       current,
       periodSec: orbitalPeriodSeconds(satrec),
