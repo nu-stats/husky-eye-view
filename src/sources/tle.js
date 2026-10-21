@@ -2,7 +2,8 @@
  * Parse three-line TLE catalog text into `{ name, line1, line2 }` entries.
  * A malformed set is skipped without dropping the valid sets that follow
  * (God's Eye View #936: stepping by three lost everything after one missing
- * line).
+ * line). Line 1 and line 2 must carry the same catalog number, so two
+ * satellites' halves are never spliced into one set (God's Eye View #1101).
  */
 export function parseTleText(text) {
   const lines = String(text)
@@ -15,7 +16,14 @@ export function parseTleText(text) {
     const name = lines[i];
     const line1 = lines[i + 1];
     const line2 = lines[i + 2];
-    if (line1.startsWith('1 ') && line2.startsWith('2 ')) {
+    const cat1 = tleCatalogNumber(line1);
+    const cat2 = tleCatalogNumber(line2);
+    if (
+      line1.startsWith('1 ') &&
+      line2.startsWith('2 ') &&
+      cat1 !== null &&
+      cat1 === cat2
+    ) {
       result.push({ name, line1, line2 });
       i += 2;
     }
@@ -63,8 +71,8 @@ export function noradIdFromSatnum(satnum) {
   return decodeCatalogField(String(satnum ?? '').trim()) ?? Number.NaN;
 }
 
-/** The NORAD catalog number from TLE line 1 (columns 3–7), or null. */
-export function tleCatalogNumber(line1) {
-  const field = String(line1).slice(2, 7);
+/** The NORAD catalog number from TLE line 1 or 2 (columns 3–7), or null. */
+export function tleCatalogNumber(line) {
+  const field = String(line).slice(2, 7);
   return decodeCatalogField(field.replace(/^ +/, ''));
 }
