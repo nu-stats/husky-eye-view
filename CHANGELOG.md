@@ -7,7 +7,9 @@
   show or hide it, fly to it and remove it. Files are read in this browser
   only, never uploaded, and are gone on reload (the browser asks first): at
   most 12 files of up to 50 MB, with limits on map objects, and KML network
-  links are left out. A table with only GEOIDs points to Merge & Export.
+  links are left out. A table with only GEOIDs points to Merge & Export. Each
+  row also has **Analyze**, which opens Merge & Export with that file as Your
+  file (KML, KMZ and GPX go as GeoJSON of what they drew).
 
 - Security (from the c0d3x fork of God's Eye View, adapted): the server now
   refuses cross-site requests to every `/api` route, so a page from another

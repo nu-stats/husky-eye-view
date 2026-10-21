@@ -2,7 +2,11 @@ import { SceneDirector } from '../scenes/director.js';
 import { initAnnotations } from '../annotations/index.js';
 import { initDrawTool } from '../annotations/drawTool.js';
 import { initGeoFileImport } from '../ui/geoFileImport.js';
-import { MY_FILES_ACCEPT, loadMyFile } from '../ui/myFileTables.js';
+import {
+  MY_FILES_ACCEPT,
+  analyzeMyFile,
+  loadMyFile,
+} from '../ui/myFileTables.js';
 import { initImageryBoxTool } from '../ui/imageryBoxTool.js';
 import { createRecentImageryPanel } from '../ui/recentImagery.js';
 import { initGevVoiceCommands } from '../voice/gevRealtime.js';
@@ -64,6 +68,7 @@ export function createApplicationTools({
     subscribeMapSource: (listener) => mapStackController?.subscribe?.(listener),
     load: loadMyFile,
     accept: MY_FILES_ACCEPT,
+    onAnalyze: analyzeMyFile,
   });
   defer(() => geoFileImport?.destroy());
   // DATA ▸ Recent Imagery: the box tool claims the pointer like Draw and the

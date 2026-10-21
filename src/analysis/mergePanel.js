@@ -127,7 +127,12 @@ export class MergePanel {
       appName: this.dataName,
     });
     this.build();
-    const onOpen = () => this.open();
+    // `detail.file`: a file handed over (My files ▸ Analyze) becomes Your file.
+    const onOpen = (event) => {
+      this.open();
+      const file = event?.detail?.file;
+      if (file) void this.chooseFile(file, 'first');
+    };
     window.addEventListener(MERGE_OPEN_EVENT, onOpen);
     this.removers.push(() =>
       window.removeEventListener(MERGE_OPEN_EVENT, onOpen),

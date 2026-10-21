@@ -39,6 +39,9 @@ export function initGeoFileImport({
   ground = null,
   subscribeMapSource = null,
   accept = GEO_FILE_ACCEPT,
+  // Husky Eye View: a row's Analyze button hands its file on (My files ▸
+  // Merge & Export). No button without it.
+  onAnalyze = null,
 }) {
   const button = doc?.getElementById('geo-import-button');
   const input = doc?.getElementById('geo-import-input');
@@ -174,6 +177,15 @@ export function initGeoFileImport({
             'toggle',
           ],
           ['my_location', t('Fly to {name}', { name: item.name }), 'fly'],
+          ...(onAnalyze
+            ? [
+                [
+                  'query_stats',
+                  t('Analyze {name} in Merge & Export', { name: item.name }),
+                  'analyze',
+                ],
+              ]
+            : []),
           ['close', t('Remove {name}', { name: item.name }), 'remove'],
         ].map(([icon, label, action]) => {
           const btn = doc.createElement('button');
@@ -248,6 +260,15 @@ export function initGeoFileImport({
       ? navigation.reassertDeferredLocationNavigation(generation) === true
       : true;
   };
+
+  /** Hand one imported file to the caller's analysis (Merge & Export). */
+  function analyze(id) {
+    const item = find(id);
+    if (!item || typeof onAnalyze !== 'function') return false;
+    const { name, format, file, dataSource } = item;
+    onAnalyze({ id, name, format, file, dataSource });
+    return true;
+  }
 
   /** Remove one imported file from the globe and the list. */
   function remove(id) {
@@ -331,6 +352,8 @@ export function initGeoFileImport({
         dataSource: loaded.dataSource,
         revoke: loaded.revoke,
         refreshGround: loaded.refreshGround,
+        // The file as chosen, for Analyze.
+        file,
       };
       await viewer.dataSources.add(item.dataSource);
       if (destroyed) {
@@ -377,6 +400,7 @@ export function initGeoFileImport({
     const action = btn.dataset.action;
     if (action === 'toggle') setVisible(id, !find(id)?.visible);
     else if (action === 'fly') flyTo(id);
+    else if (action === 'analyze') analyze(id);
     else if (action === 'remove') remove(id);
   });
 
@@ -435,6 +459,7 @@ export function initGeoFileImport({
       })),
     setVisible,
     flyTo,
+    analyze,
     remove,
     diagnostics: () => ({
       files: imports.length,

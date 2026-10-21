@@ -73,10 +73,18 @@ function lazyPanel(shell, openEvent, load, construct) {
       window.removeEventListener(openEvent, onFirstOpen);
       return shell._lazyPanelsDestroyed ? null : construct(module);
     }));
-  const onFirstOpen = () => {
+  const onFirstOpen = (event) => {
     window.removeEventListener(openEvent, onFirstOpen);
+    const detail = event?.detail;
     void ensure()
-      .then((panel) => panel?.open())
+      .then((panel) => {
+        if (!panel) return;
+        // An open that carries something (My files ▸ Analyze hands Merge &
+        // Export a file) goes to the panel's own listener, which reads it.
+        if (detail != null)
+          window.dispatchEvent(new CustomEvent(openEvent, { detail }));
+        else panel.open();
+      })
       .catch((error) => {
         console.error(`[panels] ${openEvent} failed to load:`, error);
         shell._showToast?.('That panel could not load. Reload and try again.');

@@ -135,7 +135,13 @@ class FakeElement {
   }
 }
 
-function setup({ load, navigation, flyToSource, subscribeMapSource } = {}) {
+function setup({
+  load,
+  navigation,
+  flyToSource,
+  subscribeMapSource,
+  onAnalyze,
+} = {}) {
   focus.active = null;
   const els = {
     'geo-import-button': new FakeElement('button', 'geo-import-button'),
@@ -192,6 +198,7 @@ function setup({ load, navigation, flyToSource, subscribeMapSource } = {}) {
     document,
     ...(navigation ? { navigation } : {}),
     ...(subscribeMapSource ? { subscribeMapSource } : {}),
+    ...(onAnalyze ? { onAnalyze } : {}),
     flyToSource: flyToSource || ((_viewer, ds) => flights.push(ds)),
   });
   return {
@@ -729,4 +736,23 @@ test('the map-object count in a row title keeps digit grouping', async () => {
   const [row] = rows(t.els);
   assert.match(row.children[1].title, /12,345 map objects/);
   t.tool.destroy();
+});
+
+test('Husky Eye View: Analyze hands the row file on, and is absent without a handler', async () => {
+  const handed = [];
+  const t = setup({ onAnalyze: (item) => handed.push(item) });
+  const chosen = file('sites.csv');
+  await t.tool.importFiles([chosen]);
+  const button = action(rows(t.els)[0], 'analyze');
+  assert.ok(button, 'each row has an Analyze button');
+  assert.match(button.getAttribute('aria-label'), /Merge & Export/);
+  t.els['geo-import-list'].emit('click', { target: button });
+  assert.equal(handed.length, 1);
+  assert.equal(handed[0].file, chosen, 'the file as chosen');
+  assert.equal(handed[0].id, t.tool.list()[0].id);
+  assert.ok(handed[0].dataSource);
+  const plain = setup();
+  await plain.tool.importFiles([file('a.geojson')]);
+  assert.equal(action(rows(plain.els)[0], 'analyze'), undefined);
+  assert.equal(plain.tool.analyze(plain.tool.list()[0].id), false);
 });

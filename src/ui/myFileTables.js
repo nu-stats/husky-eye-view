@@ -6,6 +6,7 @@
  * through the same GeoJSON path as an imported .geojson file, in the browser
  * only.
  */
+import * as Cesium from 'cesium';
 import { readUpload } from '../curated/userData.js';
 import {
   GEO_FILE_ACCEPT,
@@ -99,4 +100,108 @@ export async function loadMyFile(
   );
   const loaded = await load(asGeoJson, options);
   return { ...loaded, name: importDisplayName(file.name), format: kind };
+}
+
+// ---------- My files ▸ Analyze (Merge & Export) ----------
+
+/** Formats Merge & Export reads as they are (its own readers). */
+export const MERGE_READS = new Set(['geojson', 'csv', 'excel', 'shapefile']);
+
+const toLonLat = (cartesian) => {
+  const c = Cesium.Cartographic.fromCartesian(cartesian);
+  return c
+    ? [
+        Number(Cesium.Math.toDegrees(c.longitude).toFixed(7)),
+        Number(Cesium.Math.toDegrees(c.latitude).toFixed(7)),
+      ]
+    : null;
+};
+
+/**
+ * What a file drew, as GeoJSON: points (pins), lines and areas with their
+ * names and properties. For KML, KMZ and GPX, which Merge & Export does not
+ * read: it gets what is on the map.
+ * @param {object} dataSource A Cesium data source.
+ * @param {object} [time]
+ */
+export function dataSourceToGeoJson(
+  dataSource,
+  time = Cesium.JulianDate.now(),
+) {
+  const features = [];
+  // Pins live outside the entity list once drawn (src/data/geoImportPins.js
+  // keeps them all in importedEntities).
+  const entities =
+    dataSource?.importedEntities || dataSource?.entities?.values || [];
+  for (const entity of entities) {
+    let geometry = null;
+    const hierarchy = entity.polygon?.hierarchy?.getValue?.(time);
+    const line = entity.polyline?.positions?.getValue?.(time);
+    const position = entity.position?.getValue?.(time);
+    if (hierarchy?.positions?.length >= 3) {
+      const ring = (positions) => {
+        const coordinates = positions.map(toLonLat).filter(Boolean);
+        if (coordinates.length) coordinates.push(coordinates[0]);
+        return coordinates;
+      };
+      geometry = {
+        type: 'Polygon',
+        coordinates: [
+          ring(hierarchy.positions),
+          ...(hierarchy.holes || []).map((hole) => ring(hole.positions || [])),
+        ],
+      };
+    } else if (line?.length >= 2) {
+      geometry = {
+        type: 'LineString',
+        coordinates: line.map(toLonLat).filter(Boolean),
+      };
+    } else if (position) {
+      const point = toLonLat(position);
+      if (point) geometry = { type: 'Point', coordinates: point };
+    }
+    if (!geometry) continue;
+    const properties = {};
+    if (entity.name) properties.name = String(entity.name);
+    for (const key of entity.properties?.propertyNames || []) {
+      const value = entity.properties[key]?.getValue?.(time);
+      if (
+        value === null ||
+        ['string', 'number', 'boolean'].includes(typeof value)
+      )
+        properties[key] = value;
+    }
+    features.push({ type: 'Feature', geometry, properties });
+  }
+  return { type: 'FeatureCollection', features };
+}
+
+/**
+ * The file Merge & Export should read for a My files row: the file as chosen
+ * when Merge & Export reads its format, otherwise what it drew, as GeoJSON.
+ * @param {{name: string, format: string, file?: File, dataSource?: object}} item
+ * @returns {File}
+ */
+export function fileForMerge(item) {
+  if (MERGE_READS.has(item.format) && item.file) return item.file;
+  const base = String(item.name || 'my-file').replace(/\.[a-z0-9]+$/i, '');
+  return new File(
+    [JSON.stringify(dataSourceToGeoJson(item.dataSource))],
+    `${base}.geojson`,
+    { type: 'application/geo+json' },
+  );
+}
+
+/**
+ * My files ▸ Analyze: open Merge & Export with this file as Your file, where it
+ * can take the map's data and leave as a merged file with Stata and R scripts.
+ * @param {object} item A My files row (name, format, file, dataSource).
+ * @param {EventTarget} [target]
+ */
+export function analyzeMyFile(item, target = globalThis) {
+  target.dispatchEvent(
+    new CustomEvent('gev:merge-export-open', {
+      detail: { file: fileForMerge(item) },
+    }),
+  );
 }
