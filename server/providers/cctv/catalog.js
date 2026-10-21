@@ -19,6 +19,7 @@ import {
   loadCalgarySourcesFromOpenData,
   loadDelDOTSourcesFromOpenData,
   loadKingCountySourcesFromOpenData,
+  loadWsdotSourcesFromOpenData,
 } from './sources.js';
 
 /** Env kill switch: unset or anything but "0" means enabled. */
@@ -101,6 +102,11 @@ const LIVE_PACKS = [
     name: 'kingcounty',
     enabled: () => envEnabled('CCTV_KINGCOUNTY_ENABLED'),
     load: loadKingCountySourcesFromOpenData,
+  },
+  {
+    name: 'wsdot',
+    enabled: () => envEnabled('CCTV_WSDOT_ENABLED'),
+    load: loadWsdotSourcesFromOpenData,
   },
 ];
 /**
