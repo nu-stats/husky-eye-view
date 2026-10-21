@@ -26,6 +26,8 @@ export function createModel({ state: layerState, services, parts, source }) {
    */
 
   function toNonNegativeInteger(value, fallback = null) {
+    // Number(null) and Number('') are 0: an unreported count must stay unknown.
+    if (value == null || value === '') return fallback;
     const n = Number(value);
     if (!Number.isFinite(n) || n < 0) return fallback;
     return Math.round(n);
