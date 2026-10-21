@@ -1,5 +1,14 @@
 # Changelog
 
+- **My files** in Data Layers: show your own map files on the globe. Add a
+  file (or drop it onto the globe): GeoJSON, KML, KMZ or GPX (God's Eye View
+  #925, #1122), a zipped shapefile, or a CSV or Excel table with latitude and
+  longitude (read with Husky Eye View's own readers). Each file gets a row to
+  show or hide it, fly to it and remove it. Files are read in this browser
+  only, never uploaded, and are gone on reload (the browser asks first): at
+  most 12 files of up to 50 MB, with limits on map objects, and KML network
+  links are left out. A table with only GEOIDs points to Merge & Export.
+
 - Security (from the c0d3x fork of God's Eye View, adapted): the server now
   refuses cross-site requests to every `/api` route, so a page from another
   site, or another app on a different localhost port, can't call HEV's

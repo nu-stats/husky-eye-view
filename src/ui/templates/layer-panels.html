@@ -8,6 +8,19 @@
         <span class="panel-divider"></span>
         <button class="panel-collapse-btn" data-collapse-target="data-panel" title="Collapse panel">▲</button>
       </div>
+      <!-- My files: your own map files on the globe (src/ui/geoFileImport.js,
+           God's Eye View's import, plus shapefile ZIPs and CSV/Excel tables
+           with latitude and longitude through src/ui/myFileTables.js). Read in
+           this browser only, never uploaded, gone on reload. -->
+      <section id="my-files" class="my-files" aria-label="My files">
+        <div class="my-files-head">
+          <span class="my-files-title">MY FILES</span>
+          <button class="data-toggle-btn my-files-add" id="geo-import-button" type="button" title="Show your own map file on the globe, or drop it onto the globe. It is read in this browser only and is gone when the page reloads.">ADD A FILE</button>
+        </div>
+        <input type="file" id="geo-import-input" multiple hidden aria-label="Choose map files: GeoJSON, KML, KMZ, GPX, a zipped shapefile, or a CSV or Excel table with latitude and longitude" />
+        <ul class="geo-import-list" id="geo-import-list" aria-label="My files on the map"></ul>
+        <p class="my-files-hint geo-import-hint" id="geo-import-hint" aria-live="polite">GeoJSON, KML, KMZ, GPX, zipped shapefile, or CSV/Excel with latitude and longitude. Stays in this browser; gone on reload.</p>
+      </section>
       <div id="data-toggles" class="data-toggle-list"></div>
     </div>
   </div>

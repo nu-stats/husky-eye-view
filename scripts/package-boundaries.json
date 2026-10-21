@@ -2202,7 +2202,15 @@
       "src/layers/recentImagery/thumbnails.js",
       "src/maps/imageryHost.js",
       "src/ui/recentImagery.js",
-      "src/ui/imageryBoxTool.js"
+      "src/ui/imageryBoxTool.js",
+      "src/data/geoFileImport.js",
+      "src/data/geoImportPins.js",
+      "src/data/geoImportImages.js",
+      "src/data/cameraFraming.js",
+      "src/ui/flyToDataSource.js",
+      "src/ui/geoFileImport.js",
+      "src/ui/myFileTables.js",
+      "src/ui/unsavedWork.js"
     ],
     "external": [
       "hls.js",

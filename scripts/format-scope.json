@@ -984,5 +984,17 @@
   "src/ui/imageryBoxTool.test.mjs",
   "src/ui/recentImagery.test.mjs",
   "src/layers/recentImagery/testDoubles.mjs",
-  "scripts/qa-recent-imagery.mjs"
+  "scripts/qa-recent-imagery.mjs",
+  "src/data/geoFileImport.js",
+  "src/data/geoImportPins.js",
+  "src/data/geoImportImages.js",
+  "src/data/cameraFraming.js",
+  "src/ui/flyToDataSource.js",
+  "src/ui/geoFileImport.js",
+  "src/ui/myFileTables.js",
+  "src/ui/unsavedWork.js",
+  "src/data/geoFileImport.test.mjs",
+  "src/ui/geoFileImport.test.mjs",
+  "src/ui/flyToDataSource.test.mjs",
+  "src/ui/myFileTables.test.mjs"
 ]
