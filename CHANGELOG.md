@@ -1,5 +1,14 @@
 # Changelog
 
+- Security (from the c0d3x fork of God's Eye View, adapted): the server now
+  refuses cross-site requests to every `/api` route, so a page from another
+  site, or another app on a different localhost port, can't call HEV's
+  routes (the analysis programs, research data, voice token, paid
+  providers) through your browser. CORS is off on the dev and production
+  servers, and the development server no longer serves the voice logs,
+  provider caches, `.claude` settings, or the plaintext research data in
+  `data/restricted` (nor `data/source` and `data/inputs`).
+
 - Analysis: the Stata, R, SPSS and Excel windows now say at the top which
   version each needs: Stata 18 or newer; R 4.0 or newer, 4.2+ recommended on
   Windows (sf, spdep and spatialreg for the spatial lines); IBM SPSS Statistics 24 or newer, with

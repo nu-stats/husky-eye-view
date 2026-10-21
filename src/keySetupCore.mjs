@@ -254,8 +254,9 @@ export function isSharingEnabled(env = {}) {
  *    localhost, and a non-browser caller must not bypass that boundary merely
  *    by omitting the header;
  *  - JSON Content-Type on POST: forces cross-origin browsers into a CORS
- *    preflight this server never answers, closing the simple-request CSRF
- *    write primitive.
+ *    preflight that this server never approves (build/vite.js turns Vite's
+ *    CORS off, and the /api guard refuses cross-site requests), closing the
+ *    simple-request CSRF write primitive.
  *
  * @returns {{ok: true} | {ok: false, status: number, error: string}}
  */

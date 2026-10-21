@@ -9,6 +9,7 @@ const APP_VERSION = JSON.parse(
 ).version;
 import cesium from 'vite-plugin-cesium';
 import { DEFAULT_ALLOWED_HOSTS, hostCheckPlugin } from './allowedHosts.js';
+import { apiRequestGuardPlugin } from './api-request-guard.js';
 
 /**
  * Content-Security-Policy for every document the dev/preview server serves.
@@ -66,6 +67,8 @@ export function createBrowserViteConfig({
     plugins: [
       // First, so no provider route answers a Host the server does not allow.
       hostCheckPlugin(),
+      // Next, so no /api route answers another site's page.
+      apiRequestGuardPlugin(),
       cesium(),
       applicationHtmlPlugin(),
       contextCompressionPlugin(),
@@ -80,8 +83,32 @@ export function createBrowserViteConfig({
       // Host-header check. LAN hostnames are added explicitly (see
       // build/allowedHosts.js); IP addresses are always accepted.
       allowedHosts: [...allowedHosts],
+      // No CORS. Vite's default lets any localhost origin read what this
+      // server returns: API results, the Realtime token, served files. The
+      // app itself only ever calls its own origin.
+      cors: false,
       fs: {
-        deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/ENVIRONMENT'],
+        // Also private: the voice logs and provider caches, local Claude
+        // settings, and the data folders that are never served — raw source
+        // datasets, build inputs, and the plaintext research data whose
+        // encrypted copies the app unlocks (server/providers/research.js).
+        // Vite matches these against the whole file path, so the .claude
+        // patterns skip .claude/worktrees: a checkout there is served from
+        // inside it.
+        deny: [
+          '.env',
+          '.env.*',
+          '*.{crt,pem}',
+          '**/.git/**',
+          '**/ENVIRONMENT',
+          '**/.gev-logs/**',
+          '**/.gev-cache/**',
+          '**/.claude/*',
+          '**/.claude/!(worktrees)/**',
+          '**/data/restricted/**',
+          '**/data/source/**',
+          '**/data/inputs/**',
+        ],
       },
       // Build inputs under data/ are never served; watching a large file
       // while it is being written crashed the dev server (EBUSY on Windows).
@@ -94,7 +121,7 @@ export function createBrowserViteConfig({
     },
     // The preview server serves the same documents, so it carries the same
     // framing + CSP hardening (one constant, no drift).
-    preview: { headers: BROWSER_HEADERS },
+    preview: { headers: BROWSER_HEADERS, cors: false },
     define: {
       'import.meta.env.GOOGLE_MAPS_API_KEY': JSON.stringify(googleApiKey),
       'import.meta.env.CESIUM_ION_TOKEN': JSON.stringify(cesiumToken),

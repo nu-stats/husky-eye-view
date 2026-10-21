@@ -36,7 +36,9 @@
       "build/application-html.js",
       "build/context-compression.js",
       "build/runtime-serving.js",
-      "build/allowedHosts.js"
+      "build/allowedHosts.js",
+      "build/api-request-guard.js",
+      "src/localRequestGate.mjs"
     ],
     "external": ["vite-plugin-cesium"]
   },

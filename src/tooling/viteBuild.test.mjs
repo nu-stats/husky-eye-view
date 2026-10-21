@@ -12,14 +12,16 @@ test('explicit build inputs preserve browser-only defines, plugin order and loop
     googleApiKey: 'browser-fixture',
     cesiumToken: 'ion-fixture',
   });
-  // The Host check first (it runs before every other middleware), then
-  // cesium, application HTML, context compression, runtime serving, then
-  // the caller's plugins.
+  // The Host check first (it runs before every other middleware), then the
+  // cross-site guard for /api, cesium, application HTML, context
+  // compression, runtime serving, then the caller's plugins.
   assert.equal(config.plugins[0].name, 'host-check');
   assert.equal(config.plugins[0].enforce, 'pre');
-  assert.equal(config.plugins[3].name, 'hev-context-compression');
-  assert.equal(config.plugins[4].name, 'hev-runtime-serving');
-  assert.equal(config.plugins[5], plugin);
+  assert.equal(config.plugins[1].name, 'api-request-guard');
+  assert.equal(config.plugins[1].enforce, 'pre');
+  assert.equal(config.plugins[4].name, 'hev-context-compression');
+  assert.equal(config.plugins[5].name, 'hev-runtime-serving');
+  assert.equal(config.plugins[6], plugin);
   assert.equal(config.server.host, 'localhost');
   assert.equal(config.server.port, 4173);
   assert.deepEqual(config.server.allowedHosts, ['localhost', '127.0.0.1']);
@@ -75,9 +77,9 @@ test('build helper does not discover environment values or construct local provi
       config.define['import.meta.env.GOOGLE_MAPS_API_KEY'],
       undefined,
     );
-    // The Host check, cesium, application HTML, context compression and
-    // runtime serving: no providers.
-    assert.equal(config.plugins.length, 5);
+    // The Host check, the /api guard, cesium, application HTML, context
+    // compression and runtime serving: no providers.
+    assert.equal(config.plugins.length, 6);
   } finally {
     if (before === undefined) delete process.env.GOOGLE_MAPS_API_KEY;
     else process.env.GOOGLE_MAPS_API_KEY = before;
@@ -89,7 +91,7 @@ test('root config retains existing named exports and standalone provider order',
     assert.equal(compatibility[name], value, name);
   const config = standaloneConfig({ mode: 'test' });
   assert.deepEqual(
-    config.plugins.slice(5, -1).map((plugin) => plugin.name),
+    config.plugins.slice(6, -1).map((plugin) => plugin.name),
     providers.localProviderPlugins().map((plugin) => plugin.name),
   );
   assert.equal(config.plugins.at(-2).name, 'gev-key-setup');
