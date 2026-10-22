@@ -400,7 +400,7 @@ function missionSpy({ contextOk = true, layerResult = () => true, globe = async 
   };
 }
 
-test('the menu is the four owner-ordered missions', () => {
+test('the menu is the six owner-ordered missions', () => {
   // INFRASTRUCTURE was removed after the owner playtested it: enabling all
   // three bundled layers at once put ~5,700 entities on a full-earth view and
   // tanked the frame rate. The layers stay reachable by hand and by voice; what
@@ -408,8 +408,10 @@ test('the menu is the four owner-ordered missions', () => {
   // globe-LOD declutter first.
   // Husky Eye View (2026-09-30): the research start leads. Space Missions stays
   // a valid mission (voice and links can still run it) but has no tile.
+  // 2026-10-18: YOUR DATA, MAPPED leads (the researcher's first win) and
+  // THEN AND NOW follows Boston Neighborhoods.
   assert.deepEqual(Object.keys(FIRST_RUN_MISSIONS), [
-    'neighborhoods', 'contacts', 'space-missions', 'environmental', 'explore',
+    'your-data', 'neighborhoods', 'then-and-now', 'contacts', 'space-missions', 'environmental', 'explore',
   ]);
   assert.equal(FIRST_RUN_MISSIONS.infrastructure, undefined,
     'the infrastructure mission must be gone, not dormant');
@@ -443,6 +445,37 @@ test('Boston Neighborhoods enables the research layers and frames Boston, not th
   const fallback = missionSpy();
   assert.equal((await runFirstRunChoice('neighborhoods', fallback.deps)).ok, true);
   assert.equal(fallback.calls.globeFlights, 1);
+});
+
+test('YOUR DATA opens Merge & Export through its own open event, with no layers or flight', async () => {
+  const spy = missionSpy();
+  const opened = [];
+  const outcome = await runFirstRunChoice('your-data', {
+    ...spy.deps,
+    openSurface: (event, detail) => opened.push([event, detail]) > 0,
+  });
+  assert.equal(outcome.ok, true);
+  assert.deepEqual(opened, [['gev:merge-export-open', undefined]]);
+  assert.deepEqual(spy.calls.layerIds, []);
+  assert.equal(spy.calls.globeFlights, 0);
+  // Without a way to open it, the tile fails and stays open (retry or explore).
+  assert.equal((await runFirstRunChoice('your-data', spy.deps)).ok, false);
+});
+
+test('THEN AND NOW frames Boston, then opens the Time Lens as a swipe over income', async () => {
+  const spy = missionSpy();
+  const steps = [];
+  const outcome = await runFirstRunChoice('then-and-now', {
+    ...spy.deps,
+    flyToView: async (view) => steps.push(['fly', view]),
+    openSurface: (event, detail) => steps.push(['open', event, detail]) > 0,
+  });
+  assert.equal(outcome.ok, true);
+  assert.deepEqual(steps, [
+    ['fly', { longitude: -71.08, latitude: 42.33, height: 14000 }],
+    ['open', 'gev:time-lens-open', { layerId: 'local-acs-income', shape: 'swipe' }],
+  ]);
+  assert.deepEqual(spy.calls.layerIds, []);
 });
 
 test('Environmental enables BOTH its feeds and pulls out to the globe', async () => {
@@ -575,7 +608,7 @@ test('markup, startup ordering and accessibility remain pinned', () => {
   const css = readStylesheet(new URL('../style.css', import.meta.url));
 
   assert.match(html, /id="first-run-launcher" role="dialog"[^>]*aria-labelledby="first-run-title"[^>]*hidden/);
-  assert.equal((html.match(/data-first-run-choice=/g) || []).length, 4);
+  assert.equal((html.match(/data-first-run-choice=/g) || []).length, 6);
   assert.match(html, /data-first-run-status[^>]*role="status"[^>]*aria-live="polite"/);
   assert.match(html, /<input type="checkbox" data-first-run-suppress \/>/);
   assert.match(html, /<strong data-first-run-environmental-title>/);
@@ -596,7 +629,7 @@ test('markup, startup ordering and accessibility remain pinned', () => {
 
   // Menu order, read straight off the markup: research first.
   const order = [...html.matchAll(/data-first-run-choice="([a-z-]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(order, ['neighborhoods', 'contacts', 'environmental', 'explore']);
+  assert.deepEqual(order, ['your-data', 'neighborhoods', 'then-and-now', 'contacts', 'environmental', 'explore']);
   assert.doesNotMatch(html, /data-first-run-choice="infrastructure"/,
     'the removed tile must leave no markup behind');
 

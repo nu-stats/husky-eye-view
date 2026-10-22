@@ -12,9 +12,21 @@
          second. Tile subcopy stays purely functional. -->
     <p id="first-run-description">Neighborhood research on a live 3D globe: life expectancy, redlining, air quality and green space, beside live flights, ships and fires.</p>
     <div class="first-run-choices">
+      <!-- The researcher's first win: their own file on the map, with the files
+           that rebuild it (Merge & Export). -->
+      <button type="button" data-first-run-choice="your-data">
+        <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+        <span><strong>YOUR DATA, MAPPED</strong><small>Bring a CSV or Excel file: joined to tracts or counties, shaded, and exported with Stata and R files</small></span>
+        <span class="material-symbols-outlined first-run-arrow" aria-hidden="true">arrow_forward</span>
+      </button>
       <button type="button" data-first-run-choice="neighborhoods">
         <span class="material-symbols-outlined" aria-hidden="true">map</span>
         <span><strong>BOSTON NEIGHBORHOODS</strong><small>Life expectancy and 1930s redlining maps, by census tract</small></span>
+        <span class="material-symbols-outlined first-run-arrow" aria-hidden="true">arrow_forward</span>
+      </button>
+      <button type="button" data-first-run-choice="then-and-now">
+        <span class="material-symbols-outlined" aria-hidden="true">compare</span>
+        <span><strong>THEN AND NOW</strong><small>Swipe between the 1930s redlining map and today's incomes</small></span>
         <span class="material-symbols-outlined first-run-arrow" aria-hidden="true">arrow_forward</span>
       </button>
       <button type="button" data-first-run-choice="contacts">

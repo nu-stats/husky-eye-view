@@ -101,7 +101,14 @@ export class TimeLens {
     this.shape = 'circle';
     this.lens = null;
     this.removers = [];
-    const onOpen = (event) => this.open(event?.detail?.layerId);
+    const onOpen = (event) => {
+      const shape = event?.detail?.shape;
+      if (TIME_LENS_SHAPES.includes(shape)) {
+        if (this.lens) this.setShape(shape);
+        else this.shape = shape;
+      }
+      return this.open(event?.detail?.layerId);
+    };
     window.addEventListener(TIME_LENS_OPEN_EVENT, onOpen);
     this.removers.push(() =>
       window.removeEventListener(TIME_LENS_OPEN_EVENT, onOpen),

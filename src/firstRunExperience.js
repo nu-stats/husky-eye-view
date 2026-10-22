@@ -89,6 +89,13 @@ export function environmentalLabel(choice = ENVIRONMENTAL_LABEL_CHOICE) {
 
 /** @type {Readonly<Record<string, object>>} */
 export const FIRST_RUN_MISSIONS = Object.freeze({
+  // The first win for a researcher (2026-10-18): their own file joined to the
+  // map, shaded, and exported with the do-file and R script that rebuild it.
+  'your-data': Object.freeze({
+    kind: 'open',
+    event: 'gev:merge-export-open',
+    busyText: 'Opening Merge & Export…',
+  }),
   // Husky Eye View's research start: Boston's census tracts with life
   // expectancy and the 1930s redlining maps, framed over the city.
   neighborhoods: Object.freeze({
@@ -96,6 +103,15 @@ export const FIRST_RUN_MISSIONS = Object.freeze({
     layerIds: Object.freeze(['local-life-expectancy', 'local-holc-redlining']),
     view: Object.freeze({ longitude: -71.08, latitude: 42.33, height: 30000 }),
     busyText: 'Opening Boston neighborhood data…',
+  }),
+  // The same place at two times: 1930s HOLC left of a divider, today's
+  // median income right of it (src/ui/timeLens.js, SWIPE).
+  'then-and-now': Object.freeze({
+    kind: 'open',
+    event: 'gev:time-lens-open',
+    detail: Object.freeze({ layerId: 'local-acs-income', shape: 'swipe' }),
+    view: Object.freeze({ longitude: -71.08, latitude: 42.33, height: 14000 }),
+    busyText: 'Opening the Time Lens over Boston…',
   }),
   contacts: Object.freeze({
     kind: 'context',
@@ -268,15 +284,25 @@ export function rememberFirstRunSessionDismissed(sessionStorageRef) {
  * @param {() => Promise<any>} deps.flyToGlobe
  * @param {(view: {longitude: number, latitude: number, height: number}) => Promise<any>} [deps.flyToView]
  *   Frames a mission that names a `view`; without it the globe pull-out runs.
+ * @param {(event: string, detail?: object) => boolean} [deps.openSurface]
+ *   Opens a tool by its open event (the Analysis menu's own way in).
  * @returns {Promise<{ok: boolean, choice: string, result?: object, failedLayerIds?: string[]}>}
  */
 export async function runFirstRunChoice(
   choice,
-  { setContextMode, setLayerEnabled, flyToGlobe, flyToView },
+  { setContextMode, setLayerEnabled, flyToGlobe, flyToView, openSurface },
 ) {
   const mission = FIRST_RUN_MISSIONS[choice];
   if (!mission) return { ok: false, choice };
   if (mission.kind === 'none') return { ok: true, choice };
+  if (mission.kind === 'open') {
+    if (typeof openSurface !== 'function') return { ok: false, choice };
+    // Frame first: the Time Lens follows the camera from where it opens.
+    if (mission.view && typeof flyToView === 'function')
+      await Promise.resolve(flyToView(mission.view)).catch(() => null);
+    const opened = openSurface(mission.event, mission.detail);
+    return { ok: opened !== false, choice };
+  }
   if (mission.kind === 'context') {
     const result = await setContextMode(mission.contextMode);
     return { ok: Boolean(result?.ok), choice, result };
@@ -486,6 +512,12 @@ export function initFirstRunExperience({
         setLayerEnabled: (layerId) =>
           dataManager.setEnabled(layerId, true, { origin: 'user' }),
         flyToGlobe: () => styleManager.resetToGlobeView(),
+        openSurface: (event, detail) => {
+          const target = documentRef?.defaultView || globalThis;
+          if (typeof target?.dispatchEvent !== 'function') return false;
+          target.dispatchEvent(new CustomEvent(event, { detail }));
+          return true;
+        },
         flyToView: ({ longitude, latitude, height }) => {
           const viewer = dataManager?.viewer;
           const ellipsoid = viewer?.scene?.globe?.ellipsoid;
