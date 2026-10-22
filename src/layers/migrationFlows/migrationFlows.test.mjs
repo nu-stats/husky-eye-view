@@ -449,6 +449,46 @@ test('layer: a bad table reports an error instead of throwing', async () => {
   assert.match(layer.getStats().error, /Malformed/);
 });
 
+test('layer: the click handler lives only while the layer is on', async () => {
+  const handlers = [];
+  const layer = createMigrationFlowsLayer({
+    overlayHost: { setEntries() {}, clearSource() {}, setVisible() {} },
+    createRenderer: () => ({
+      attach() {},
+      draw() {},
+      setVisible() {},
+      destroy() {},
+    }),
+    screenSpaceEventHandlerFactory: () => {
+      const handler = {
+        actions: 0,
+        destroyed: false,
+        setInputAction() {
+          this.actions += 1;
+        },
+        destroy() {
+          this.destroyed = true;
+        },
+      };
+      handlers.push(handler);
+      return handler;
+    },
+    dataUrl: 'test://flows.json',
+    fetchImpl: async () => ({ ok: true, json: async () => BUNDLE }),
+  });
+  layer.init({ scene: { canvas: {} } });
+  assert.equal(handlers.length, 0, 'none while off');
+  await layer.enable();
+  assert.equal(handlers.length, 1);
+  assert.equal(handlers[0].actions, 1);
+  layer.disable();
+  assert.equal(handlers[0].destroyed, true);
+  await layer.enable();
+  assert.equal(handlers.length, 2, 'a fresh handler each time it is turned on');
+  layer.destroy();
+  assert.equal(handlers[1].destroyed, true);
+});
+
 test('manifest: one off-by-default entry next to the foreign-born layers', () => {
   const entry = layerManifestEntry(MIGRATION_FLOWS_LAYER_ID);
   assert.equal(entry.token, 'mf');

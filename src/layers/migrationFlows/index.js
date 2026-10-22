@@ -231,15 +231,17 @@ export function createMigrationFlowsLayer({
       viewer = nextViewer;
       renderer.attach(viewer);
       overlayHost.setVisible(id, false);
-      if (!handler && screenSpaceEventHandlerFactory && viewer?.scene?.canvas) {
-        handler = screenSpaceEventHandlerFactory(viewer.scene.canvas);
-        handler.setInputAction(onClick, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-      }
       return true;
     },
 
     async enable() {
       enabled = true;
+      // Every live handler costs a layout read per mouse move, so the click
+      // handler exists only while the layer is on (disable destroys it).
+      if (!handler && screenSpaceEventHandlerFactory && viewer?.scene?.canvas) {
+        handler = screenSpaceEventHandlerFactory(viewer.scene.canvas);
+        handler.setInputAction(onClick, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+      }
       overlayHost.setVisible(id, true);
       renderer.setVisible(true);
       return true;
@@ -262,6 +264,8 @@ export function createMigrationFlowsLayer({
 
     disable() {
       enabled = false;
+      handler?.destroy?.();
+      handler = null;
       selected = null;
       renderer.setVisible(false);
       clearCard();
