@@ -7,14 +7,20 @@
  * only.
  */
 import * as Cesium from 'cesium';
-import { readUpload } from '../curated/userData.js';
 import {
   GEO_FILE_ACCEPT,
   GeoImportError,
   MAX_IMPORT_BYTES,
-  importDisplayName,
-  loadGeoFile,
-} from '../data/geoFileImport.js';
+} from '../data/geoFileLimits.js';
+
+// The readers load with the first file, not at boot: God's Eye View's import
+// (~50 KB) and Husky Eye View's table and shapefile readers (~90 KB with the
+// Excel reader and the Curated Flights model they share).
+const geoReaders = () => import('../data/geoFileImport.js');
+const loadGeoFile = async (...args) =>
+  (await geoReaders()).loadGeoFile(...args);
+const readUpload = async (...args) =>
+  (await import('../curated/userData.js')).readUpload(...args);
 
 /** Every file My files takes. */
 export const MY_FILES_ACCEPT = `${GEO_FILE_ACCEPT},.zip,.csv,.tsv,.txt,.xlsx`;
@@ -99,6 +105,7 @@ export async function loadMyFile(
     },
   );
   const loaded = await load(asGeoJson, options);
+  const { importDisplayName } = await geoReaders();
   return { ...loaded, name: importDisplayName(file.name), format: kind };
 }
 

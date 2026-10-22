@@ -183,18 +183,66 @@ export function parseGeoJson(text) {
   throw new Error('This file is not valid GeoJSON.');
 }
 
-async function inflateRaw(bytes) {
+/**
+ * Most bytes one archive may unpack to, all entries read together — a zip
+ * bomb stops here. Higher than My files' KMZ cap (120 MiB) because an Excel
+ * sheet's XML is often 10–20 times its zipped size and uploads go to 100 MiB.
+ */
+export const MAX_ZIP_INFLATED_BYTES = 256 * 1024 * 1024;
+
+const tooBig = (maxBytes) =>
+  new Error(
+    `This file unpacks to more than ${Math.round(maxBytes / 1024 / 1024)} MiB, too much to open in the browser.`,
+  );
+
+/** Inflate raw-deflate bytes, stopping as soon as `maxBytes` is passed. */
+async function inflateRaw(bytes, maxBytes, limit) {
   if (typeof DecompressionStream !== 'function')
     throw new Error('This browser cannot open ZIP files.');
-  const stream = new Blob([bytes])
+  const reader = new Blob([bytes])
     .stream()
-    .pipeThrough(new DecompressionStream('deflate-raw'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+    .pipeThrough(new DecompressionStream('deflate-raw'))
+    .getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.length;
+      if (total > maxBytes) throw tooBig(limit);
+      chunks.push(value);
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    if (total > maxBytes) throw error;
+    throw new Error('This ZIP archive is damaged and could not be unpacked.');
+  }
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, at);
+    at += chunk.length;
+  }
+  return out;
 }
 
-/** The files in a ZIP archive: `[{name, read(): Promise<Uint8Array>}]`. */
-export function readZip(bytes) {
+/**
+ * The files in a ZIP archive: `[{name, read(): Promise<Uint8Array>}]`. Entries
+ * are unpacked when read, and all reads of one archive share
+ * `maxInflatedBytes`, checked against each entry's declared size first and
+ * while it inflates (declared sizes can lie).
+ * @param {Uint8Array} bytes
+ * @param {{maxInflatedBytes?: number}} [options]
+ */
+export function readZip(
+  bytes,
+  { maxInflatedBytes = MAX_ZIP_INFLATED_BYTES } = {},
+) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const damaged = () => new Error('This ZIP archive is damaged.');
+  const unsupported = () =>
+    new Error('This ZIP archive uses a format this reader does not open.');
   let end = -1;
   for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65_557); i--)
     if (view.getUint32(i, true) === 0x06054b50) {
@@ -204,13 +252,19 @@ export function readZip(bytes) {
   if (end < 0) throw new Error('This file is not a ZIP archive.');
   const count = view.getUint16(end + 10, true);
   let offset = view.getUint32(end + 16, true);
+  if (count === 0xffff || offset === 0xffffffff) throw unsupported();
+  let inflated = 0;
   const entries = [];
   for (let n = 0; n < count; n++) {
-    if (view.getUint32(offset, true) !== 0x02014b50)
-      throw new Error('This ZIP archive is damaged.');
+    if (
+      offset + 46 > bytes.length ||
+      view.getUint32(offset, true) !== 0x02014b50
+    )
+      throw damaged();
     const flags = view.getUint16(offset + 8, true);
     const method = view.getUint16(offset + 10, true);
     const compressed = view.getUint32(offset + 20, true);
+    const size = view.getUint32(offset + 24, true);
     const nameLength = view.getUint16(offset + 28, true);
     const extraLength = view.getUint16(offset + 30, true);
     const commentLength = view.getUint16(offset + 32, true);
@@ -224,15 +278,34 @@ export function readZip(bytes) {
     entries.push({
       name,
       read: async () => {
+        if (flags & 0x1) throw new Error(`${name} is encrypted.`);
+        if (compressed === 0xffffffff || size === 0xffffffff)
+          throw unsupported();
+        if (size > maxInflatedBytes - inflated) throw tooBig(maxInflatedBytes);
+        if (
+          local + 30 > bytes.length ||
+          view.getUint32(local, true) !== 0x04034b50
+        )
+          throw damaged();
         const start =
           local +
           30 +
           view.getUint16(local + 26, true) +
           view.getUint16(local + 28, true);
+        if (start + compressed > bytes.length) throw damaged();
         const data = bytes.subarray(start, start + compressed);
-        if (method === 0) return data;
-        if (method === 8) return inflateRaw(data);
-        throw new Error(`Unsupported ZIP compression in ${name}.`);
+        let contents;
+        if (method === 0) contents = data;
+        else if (method === 8)
+          contents = await inflateRaw(
+            data,
+            maxInflatedBytes - inflated,
+            maxInflatedBytes,
+          );
+        else throw new Error(`Unsupported ZIP compression in ${name}.`);
+        inflated += contents.length;
+        if (inflated > maxInflatedBytes) throw tooBig(maxInflatedBytes);
+        return contents;
       },
     });
   }

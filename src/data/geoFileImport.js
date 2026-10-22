@@ -2,16 +2,26 @@
 import * as Cesium from 'cesium';
 import { createImportImageBudget } from './geoImportImages.js';
 import { createImportedPins } from './geoImportPins.js';
+import {
+  GEO_FILE_ACCEPT,
+  GeoImportError,
+  MAX_IMPORT_BYTES,
+  MAX_IMPORTED_FILES,
+} from './geoFileLimits.js';
 // God's Eye View marks these messages for translation; Husky Eye View is
 // English only, so a message is its own text.
 const msg = (text) => text;
 
-/** Largest file accepted, in bytes. */
-export const MAX_IMPORT_BYTES = 50 * 1024 * 1024;
+// Husky Eye View: the limits and error type live in geoFileLimits.js so the
+// My files controls load without these readers; they are still exported here.
+export {
+  GEO_FILE_ACCEPT,
+  GeoImportError,
+  MAX_IMPORT_BYTES,
+  MAX_IMPORTED_FILES,
+};
 /** Largest total a KMZ may inflate to — a zip bomb stops here. */
 export const MAX_KMZ_INFLATED_BYTES = 120 * 1024 * 1024;
-/** Most files on the globe at once. */
-export const MAX_IMPORTED_FILES = 12;
 /** Most entities one file may create before it is refused. */
 export const MAX_IMPORT_ENTITIES = 20_000;
 /** Most vertices (points of every line, ring and marker) in one file. */
@@ -20,8 +30,6 @@ export const MAX_IMPORT_POSITIONS = 250_000;
 export const MAX_KML_LINKS = 2_000;
 /** Longest plain-text name kept from a file's features. */
 export const MAX_IMPORT_NAME_LENGTH = 120;
-/** What the file picker offers. */
-export const GEO_FILE_ACCEPT = '.geojson,.json,.kml,.kmz,.gpx';
 
 const GEOJSON_TYPES = new Set([
   'FeatureCollection',
@@ -63,20 +71,6 @@ const KML_REMOVED_ELEMENTS = new Set([
   'viewFormat',
   'httpQuery',
 ]);
-
-/**
- * An error whose message is meant for the person who chose the file. The
- * message stays English; `template` and `values`, when given, let the UI show
- * it in the active language.
- */
-export class GeoImportError extends Error {
-  constructor(message, template = message, values = {}) {
-    super(message);
-    this.name = 'GeoImportError';
-    this.template = template;
-    this.values = values;
-  }
-}
 
 /**
  * The format of a file, from its name first and its first bytes second.

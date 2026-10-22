@@ -15,6 +15,7 @@ export class LayerPresentation {
     this.manager = manager;
     this.weatherClock = weatherClock;
     this._panel = null;
+    this._recentImageryFactory = null;
     this.pendingVisible = false;
     this._unsubscribe = manager.subscribeActivity((change) => {
       if (change.type === 'status') this.refresh();
@@ -35,7 +36,7 @@ export class LayerPresentation {
     });
   }
   get panel() {
-    if (!this._panel)
+    if (!this._panel) {
       this._panel = new LayerPanel({
         weatherClock: this.weatherClock,
         getLayers: () => this.manager.getAll(),
@@ -65,6 +66,9 @@ export class LayerPresentation {
           this.pendingVisible = true;
         },
       });
+      if (this._recentImageryFactory)
+        this._panel.attachRecentImagery(this._recentImageryFactory);
+    }
     return this._panel;
   }
   mount(container) {
@@ -72,9 +76,10 @@ export class LayerPresentation {
   }
   /** Hand the Recent Imagery readout factory to the panel (see LayerPanel). */
   attachRecentImagery(factory) {
-    // Detaching never builds a panel that teardown already released.
-    if (factory) this.panel.attachRecentImagery(factory);
-    else this._panel?.attachRecentImagery(null);
+    // Kept here and handed over when the panel is built, so attaching (or
+    // detaching after teardown released the panel) never builds one.
+    this._recentImageryFactory = factory || null;
+    this._panel?.attachRecentImagery(this._recentImageryFactory);
   }
   refresh() {
     this._panel?._refreshTogglePanel();
@@ -87,6 +92,7 @@ export class LayerPresentation {
   destroy() {
     this._panel?.destroy();
     this._panel = null;
+    this._recentImageryFactory = null;
     this.pendingVisible = false;
     this._unsubscribe?.();
     this._unsubscribe = null;

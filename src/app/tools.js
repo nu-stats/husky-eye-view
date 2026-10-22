@@ -7,8 +7,6 @@ import {
   analyzeMyFile,
   loadMyFile,
 } from '../ui/myFileTables.js';
-import { initImageryBoxTool } from '../ui/imageryBoxTool.js';
-import { createRecentImageryPanel } from '../ui/recentImagery.js';
 import { initGevVoiceCommands } from '../voice/gevRealtime.js';
 import { installScopeMask, destroyScopeMask } from '../scopeMask.js';
 import {
@@ -77,31 +75,64 @@ export function createApplicationTools({
   const recentImagery = dataManager.layers.get('recent-imagery')?.module;
   if (recentImagery) {
     recentImagery.attachTileset(tileset);
-    const imageryBoxTool = initImageryBoxTool({
-      viewer,
-      onBox: (box) => recentImagery.setBox(box),
-      onCancel: (reason, message, box) => {
-        if (message) recentImagery.reportBoxRefusal(message, box);
-      },
-      onActive: (active) => recentImagery.setToolActive(active),
-      // The tool takes Escape in a capture listener, so the panel's order
-      // (clear a preview before cancelling the tool) is applied here.
-      onEscape: () => recentImagery.clearPreview(),
-    });
-    // The readout mounts in its rail body through the layer panel, like the
-    // weather readout.
-    data.presentation.attachRecentImagery((container) =>
-      createRecentImageryPanel({
-        container,
-        viewer,
-        layer: recentImagery,
-        tool: imageryBoxTool,
-      }),
-    );
-    // The live gate's handle (scripts/qa-recent-imagery.mjs).
-    const recentImageryHandle = { layer: recentImagery, tool: imageryBoxTool };
+    // The live gate's handle (scripts/qa-recent-imagery.mjs); `tool` fills in
+    // when the readout loads.
+    const recentImageryHandle = { layer: recentImagery, tool: null };
     window.__gevRecentImagery = recentImageryHandle;
+    // The readout (~140 KB with its box tool and styles' code) loads the
+    // first time the layer is on, which is when its rail panel first shows
+    // — including a share link (`ri`) that turns it on at load.
+    let imageryBoxTool = null;
+    let released = false;
+    let stopWaiting = null;
+    const loadReadout = () => {
+      stopWaiting?.();
+      stopWaiting = null;
+      Promise.all([
+        import('../ui/imageryBoxTool.js'),
+        import('../ui/recentImagery.js'),
+      ])
+        .then(([{ initImageryBoxTool }, { createRecentImageryPanel }]) => {
+          if (released) return;
+          imageryBoxTool = initImageryBoxTool({
+            viewer,
+            onBox: (box) => recentImagery.setBox(box),
+            onCancel: (reason, message, box) => {
+              if (message) recentImagery.reportBoxRefusal(message, box);
+            },
+            onActive: (active) => recentImagery.setToolActive(active),
+            // The tool takes Escape in a capture listener, so the panel's
+            // order (clear a preview before cancelling the tool) is applied
+            // here.
+            onEscape: () => recentImagery.clearPreview(),
+          });
+          recentImageryHandle.tool = imageryBoxTool;
+          // The readout mounts in its rail body through the layer panel, like
+          // the weather readout.
+          data.presentation.attachRecentImagery((container) =>
+            createRecentImageryPanel({
+              container,
+              viewer,
+              layer: recentImagery,
+              tool: imageryBoxTool,
+            }),
+          );
+        })
+        .catch((error) =>
+          console.warn('[Data:RecentImagery] readout failed to load:', error),
+        );
+    };
+    if (recentImagery.getSnapshot?.().enabled) loadReadout();
+    else {
+      const off = recentImagery.subscribe((snapshot) => {
+        if (snapshot?.enabled) loadReadout();
+      });
+      stopWaiting = typeof off === 'function' ? off : null;
+    }
     defer(() => {
+      released = true;
+      stopWaiting?.();
+      stopWaiting = null;
       if (window.__gevRecentImagery === recentImageryHandle)
         delete window.__gevRecentImagery;
       data.presentation.attachRecentImagery(null);

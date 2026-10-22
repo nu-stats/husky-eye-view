@@ -3,9 +3,12 @@ import {
   GEO_FILE_ACCEPT,
   GeoImportError,
   MAX_IMPORTED_FILES,
-  loadGeoFile,
-} from '../data/geoFileImport.js';
+} from '../data/geoFileLimits.js';
 import { registerUnsavedWork } from './unsavedWork.js';
+
+// Husky Eye View: the readers (~50 KB) load with the first file, not at boot.
+const loadGeoFile = async (...args) =>
+  (await import('../data/geoFileImport.js')).loadGeoFile(...args);
 
 // God's Eye View translates these strings; Husky Eye View fills them in English.
 const fill = (template, values = {}) =>

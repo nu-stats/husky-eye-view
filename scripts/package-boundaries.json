@@ -2220,6 +2220,7 @@
       "src/ui/recentImagery.js",
       "src/ui/imageryBoxTool.js",
       "src/data/geoFileImport.js",
+      "src/data/geoFileLimits.js",
       "src/data/geoImportPins.js",
       "src/data/geoImportImages.js",
       "src/data/cameraFraming.js",

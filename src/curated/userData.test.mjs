@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { deflateRawSync } from 'node:zlib';
 import { buildZip } from './curatedFiles.js';
 import {
+  MAX_ZIP_INFLATED_BYTES,
   USER_LAYER_KEY,
   buildDataset,
   classOf,
@@ -397,6 +399,62 @@ test('a ZIP holding a CSV reads the CSV', async () => {
   ]);
   const dataset = await readUpload('data.zip', zip);
   assert.equal(dataset.level, 'county');
+});
+
+// The central directory's sizes of a zip's first entry.
+const centralSizes = (zip) => {
+  const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+  for (let i = zip.length - 46; i >= 0; i--)
+    if (view.getUint32(i, true) === 0x02014b50)
+      return {
+        get: () => view.getUint32(i + 24, true),
+        set: (size) => view.setUint32(i + 24, size, true),
+      };
+  throw new Error('no central directory');
+};
+
+test('a zip bomb is refused: a declared size over the cap', async () => {
+  const zip = buildZip(
+    [{ name: 'data.csv', data: bytes(`GEOID,v\n${'25025,1\n'.repeat(200)}`) }],
+    new Date(),
+    { deflate: deflateRawSync },
+  );
+  centralSizes(zip).set(MAX_ZIP_INFLATED_BYTES + 1);
+  await assert.rejects(
+    readUpload('bomb.zip', zip),
+    /unpacks to more than 256 MiB, too much to open in the browser/,
+  );
+});
+
+test('a zip bomb is refused: inflating past the cap, whatever it declares', async () => {
+  const zeros = new Uint8Array(3 * 1024 * 1024);
+  const zip = buildZip([{ name: 'big.shp', data: zeros }], new Date(), {
+    deflate: deflateRawSync,
+  });
+  assert.ok(zip.length < 16 * 1024, 'the archive itself is small');
+  const sizes = centralSizes(zip);
+  assert.equal(sizes.get(), zeros.length);
+  sizes.set(10); // lies about its size
+  const [entry] = readZip(zip, { maxInflatedBytes: 1024 * 1024 });
+  await assert.rejects(entry.read(), /unpacks to more than 1 MiB/);
+  // The same archive under a cap it fits in opens.
+  const [fits] = readZip(zip, { maxInflatedBytes: 4 * 1024 * 1024 });
+  assert.equal((await fits.read()).length, zeros.length);
+});
+
+test('all reads of one archive share its cap', async () => {
+  const data = new Uint8Array(600 * 1024).fill(65);
+  const zip = buildZip(
+    [
+      { name: 'a.csv', data },
+      { name: 'b.csv', data },
+    ],
+    new Date(),
+    { deflate: deflateRawSync },
+  );
+  const [a, b] = readZip(zip, { maxInflatedBytes: 1024 * 1024 });
+  assert.equal((await a.read()).length, data.length);
+  await assert.rejects(b.read(), /unpacks to more than 1 MiB/);
 });
 
 test('the upload joins the flight table as its own layer', () => {
