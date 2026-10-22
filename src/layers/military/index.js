@@ -24,7 +24,8 @@ export function createMilitaryFlightLayer({
   parts.tracking = createTracking(context);
   parts.controller = createController(context);
   parts.lifecycle = createLifecycle(context);
-  parts.testing = createTesting(context);
+  // Test seams: production builds fold this to {} and drop testing.js.
+  parts.testing = import.meta.env?.DEV === false ? {} : createTesting(context);
   parts.queries = createQueries(context);
   const applySnapshot = createMilitarySnapshotRenderer({
     flightState,

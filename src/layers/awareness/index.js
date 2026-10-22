@@ -24,7 +24,8 @@ export function createAwarenessLayer({ services, source }) {
   parts.queries = createQueries(context);
   parts.navigation = createNavigation(context);
   parts.focus = createFocus(context);
-  parts.testing = createTesting(context);
+  // Test seams: production builds fold this to {} and drop testing.js.
+  parts.testing = import.meta.env?.DEV === false ? {} : createTesting(context);
   parts.history = createHistory(context);
   parts.rendering = createRendering(context);
   parts.lifecycle = createLifecycle(context);

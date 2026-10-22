@@ -28,7 +28,8 @@ export function createCivilFlightLayer({
   parts.enrichment = createEnrichment(context);
   parts.lifecycle = createLifecycle(context);
   parts.evidence = createEvidence(context);
-  parts.testing = createTesting(context);
+  // Test seams: production builds fold this to {} and drop testing.js.
+  parts.testing = import.meta.env?.DEV === false ? {} : createTesting(context);
   parts.queries = createQueries(context);
   const applySnapshot = createFlightSnapshotRenderer({
     flightState,

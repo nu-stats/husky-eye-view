@@ -31,7 +31,8 @@ export function createCctvLayer({ services, source }) {
   const parts = {};
   const context = { state, services, parts, source };
   parts.calibration = createCalibration(context);
-  parts.testing = createTesting(context);
+  // Test seams: production builds fold this to {} and drop testing.js.
+  parts.testing = import.meta.env?.DEV === false ? {} : createTesting(context);
   parts.projection = createProjection(context);
   parts.cards = createCards(context);
   parts.model = createModel(context);

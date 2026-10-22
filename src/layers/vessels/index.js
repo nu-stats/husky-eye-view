@@ -20,7 +20,8 @@ export function createVesselLayer({ source, services, options = {} } = {}) {
   parts.selection = createSelection(context);
   parts.tracking = createTracking(context);
   parts.cards = createCards(context);
-  parts.testing = createTesting(context);
+  // Test seams: production builds fold this to {} and drop testing.js.
+  parts.testing = import.meta.env?.DEV === false ? {} : createTesting(context);
   parts.evidence = createEvidence(context);
   parts.queries = createQueries(context);
   parts.snapshots = createVesselSnapshotRenderer({

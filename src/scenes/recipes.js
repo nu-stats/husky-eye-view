@@ -560,6 +560,9 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
 });
 
 // The Nepal flood scenes are off for now (2026-10-06), with their layers.
+// While false, the production build already drops nepalEvidencePack and the
+// Bhote Koshi path data (pure, unused). Turning it back on also means restoring
+// the bhote-koshi.css import in style.css.
 const NEPAL_SCENES_ENABLED = false;
 
 const BHOTE_KOSHI_NEPAL_APPEND_RECIPE = NEPAL_SCENES_ENABLED

@@ -22,7 +22,8 @@ export function createBikeshareLayer({ services, source }) {
   parts.rendering = createRendering(context);
   parts.selection = createSelection(context);
   parts.queries = createQueries(context);
-  parts.testing = createTesting(context);
+  // Test seams: production builds fold this to {} and drop testing.js.
+  parts.testing = import.meta.env?.DEV === false ? {} : createTesting(context);
   parts.controls = createControls(context);
   parts.lifecycle = createLifecycle(context);
   return Object.assign(

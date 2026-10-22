@@ -34,7 +34,8 @@ export function createRocketLaunchesLayer({ services, source }) {
   parts.camera = createCamera(context);
   parts.model = createModel(context);
   parts.rendering = createRendering(context);
-  parts.testing = createTesting(context);
+  // Test seams: production builds fold this to {} and drop testing.js.
+  parts.testing = import.meta.env?.DEV === false ? {} : createTesting(context);
   parts.controls = createControls(context);
   parts.lifecycle = createLifecycle(context);
   return Object.assign(

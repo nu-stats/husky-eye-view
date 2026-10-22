@@ -25,7 +25,8 @@ export function createSatellitesLayer({ services, source }) {
   parts.records = createRecords(context);
   parts.rendering = createRendering(context);
   parts.tracking = createTracking(context);
-  parts.testing = createTesting(context);
+  // Test seams: production builds fold this to {} and drop testing.js.
+  parts.testing = import.meta.env?.DEV === false ? {} : createTesting(context);
   parts.interaction = createInteraction(context);
   parts.lifecycle = createLifecycle(context);
   parts.ingestion = createIngestion(context);

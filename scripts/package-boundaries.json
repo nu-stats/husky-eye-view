@@ -1572,7 +1572,6 @@
       "src/data/localGeojsonCore.js",
       "src/data/localLabelSettings.js",
       "src/data/localGeojsonLod.js",
-      "src/data/localLayers.js",
       "src/data/local_data/natural_earth/marine.json",
       "src/data/local_data/natural_earth/regions.json",
       "src/data/local_data/neighborhoods/san-francisco.json",
@@ -2234,7 +2233,6 @@
       "@mapbox/vector-tile",
       "cesium",
       "egm96-universal",
-      "mgrs",
       "pbf",
       "satellite.js"
     ]
@@ -2734,8 +2732,7 @@
       "egm96-universal",
       "satellite.js",
       "@mapbox/vector-tile",
-      "pbf",
-      "mgrs"
+      "pbf"
     ]
   },
   "application-operations": {
@@ -2795,8 +2792,7 @@
       "egm96-universal",
       "satellite.js",
       "@mapbox/vector-tile",
-      "pbf",
-      "mgrs"
+      "pbf"
     ]
   },
   "layer-lifecycle": {

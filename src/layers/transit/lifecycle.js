@@ -206,7 +206,7 @@ export function createLifecycle({ state, services, parts }) {
     disable(viewer) {
       state._enabled = false;
       unbindVisibility();
-      parts.testing._stopTransitProbeForTest();
+      parts.testing._stopTransitProbeForTest?.();
       state._qaFixtureFloors?.clear();
       state._generation += 1;
       clearInterval(state._maintenanceTimer);

@@ -53,7 +53,8 @@ export function createTransitLayer({
   parts.queries = createQueries(context);
   parts.controls = createControls(context);
   parts.lifecycle = createLifecycle(context);
-  parts.testing = createTesting(context);
+  // Test seams: production builds fold this to {} and drop testing.js.
+  parts.testing = import.meta.env?.DEV === false ? {} : createTesting(context);
 
   return Object.assign(
     { updateInterval: TRANSIT_POLL_MS },
