@@ -1,5 +1,30 @@
 # Changelog
 
+- New layers, US only (2026-10-21):
+  - **Migration & Refugee Flows** (People & Economy, after foreign-born):
+    arcs between the US and each country for immigrants living in the US
+    by country of birth (UN DESA migrant stock, 2024), refugees and asylum
+    seekers and refugees resettled in the US by origin (UNHCR, 2025), and
+    remittances sent from the US (KNOMAD / World Bank, 2021). Top 25, 50 or
+    all; a click gives the number, rank, share of the US total, year,
+    source and caveat. Bundled data, rebuilt by
+    `scripts/build-migration-flows.mjs`. Adapted from the
+    uxhimanshuk/ground-view fork of God's Eye View.
+  - **Wildfire Smoke (NOAA HMS)** and **Night Lights (NASA Black Marble,
+    2016)** in Air & Green Space, keyless, both kept to the US (smoke
+    filtered on the server, night-light tiles fetched only over the US).
+    Adapted from the Sheldondouthat fork.
+- More US traffic cameras (from God's Eye View #645, #644, #1085, #605):
+  King County and Washington State (WSDOT) on by default; NYC DOT and
+  Florida FL511 off by default because of their terms (CCTV_NYC_ENABLED=1,
+  CCTV_FLORIDA_ENABLED=1).
+- Fixes from God's Eye View: bikeshare station names in GBFS v3 (#1120),
+  unknown bike counts no longer shown as zero (#1114), one failing
+  bikeshare feed no longer fails the whole layer, and Tucson, Fort Worth
+  and Buffalo moved to their new feeds while retired Columbus and Broward
+  are gone (#641); Alpha-5 satellite numbers (#767) and mismatched TLE
+  pairs (#1101); missing weather readings stay unknown instead of clear
+  (#1027).
 - **My files** in Data Layers: show your own map files on the globe. Add a
   file (or drop it onto the globe): GeoJSON, KML, KMZ or GPX (God's Eye View
   #925, #1122), a zipped shapefile, or a CSV or Excel table with latitude and
