@@ -73,6 +73,19 @@ function readSharedChunk(url) {
   return read;
 }
 
+/**
+ * Trim an insertion-ordered Map to `limit` entries, oldest first, skipping
+ * (not stopping at) entries `keep(key)` protects, such as chunks still drawn.
+ * Deleting while iterating a Map is safe.
+ */
+export function evictLeastRecent(map, limit, keep = () => false) {
+  if (map.size <= limit) return;
+  for (const key of map.keys()) {
+    if (map.size <= limit) break;
+    if (!keep(key)) map.delete(key);
+  }
+}
+
 /** Test seams: forget every shared chunk; read one directly. */
 export function _resetSharedChunksForTest() {
   sharedChunks.clear();
@@ -584,12 +597,11 @@ export function createChunkedAreaLayer(
     const features = source.filter
       ? parsed.filter((feature) => source.filter(feature.properties || {}))
       : parsed;
+    // A read that lands after the layer was turned off is not kept: the
+    // shared parsed-chunk cache already makes turning it back on fast.
+    if (!enabled) return features;
     cache.set(chunkId, features);
-    while (cache.size > CHUNK_CACHE_LIMIT) {
-      const oldest = cache.keys().next().value;
-      if (drawn.has(oldest)) break;
-      cache.delete(oldest);
-    }
+    evictLeastRecent(cache, CHUNK_CACHE_LIMIT, (key) => drawn.has(key));
     return features;
   }
 
@@ -1027,6 +1039,9 @@ export function createChunkedAreaLayer(
       clickHandler?.destroy();
       clickHandler = null;
       releaseAll();
+      // Off layers hold no parsed areas of their own; the shared, bounded
+      // parsed-chunk cache (readSharedChunk) makes turning back on fast.
+      cache.clear();
       clearSelectedEntityContextForLayer(id);
       removeEntityContextsForLayer(id);
       status = null;
@@ -1163,5 +1178,7 @@ export function createChunkedAreaLayer(
 
     /** Test/QA seam: chunk ids currently drawn. */
     getDrawnChunkIds: () => [...drawn.keys()],
+    /** Test/QA seam: chunk ids held in this layer's parsed-chunk cache. */
+    getCachedChunkIds: () => [...cache.keys()],
   };
 }

@@ -8,6 +8,7 @@ import {
   _resetSharedChunksForTest,
   chunksInView,
   createChunkedAreaLayer,
+  evictLeastRecent,
   getChunkedAreaFillAlpha,
   horizonViewBox,
   setChunkedAreaFillAlpha,
@@ -817,4 +818,34 @@ test('a county leaving the view destroys its primitive and its selection', async
   } finally {
     env.cleanup();
   }
+});
+
+test('turning a layer off drops its own parsed chunks; back on reads the shared cache, no refetch', async () => {
+  const env = await createHarness();
+  try {
+    await env.layer.enable(env.viewer);
+    assert.deepEqual(env.layer.getCachedChunkIds(), ['17031']);
+    env.layer.disable(env.viewer);
+    assert.deepEqual(env.layer.getCachedChunkIds(), []);
+    const fetchedBefore = env.fetched.length;
+    await env.layer.enable(env.viewer);
+    assert.deepEqual(env.layer.getDrawnChunkIds(), ['17031']);
+    assert.equal(env.fetched.length, fetchedBefore, 'served from shared cache');
+  } finally {
+    env.cleanup();
+  }
+});
+
+test('evictLeastRecent skips protected entries instead of stopping at them', () => {
+  const map = new Map(['a', 'b', 'c', 'd', 'e'].map((key) => [key, key]));
+  // 'a' (the oldest) is still drawn; the old loop stopped there for good.
+  evictLeastRecent(map, 3, (key) => key === 'a');
+  assert.deepEqual([...map.keys()], ['a', 'd', 'e']);
+  // Everything protected: the map may stay over its limit, nothing breaks.
+  const all = new Map([
+    ['x', 1],
+    ['y', 2],
+  ]);
+  evictLeastRecent(all, 1, () => true);
+  assert.equal(all.size, 2);
 });
