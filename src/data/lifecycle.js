@@ -57,6 +57,10 @@ function cancelPendingLayerRestore(entry, origin, reason) {
   }
 }
 
+function isPageHidden() {
+  return globalThis.document?.visibilityState === 'hidden';
+}
+
 function refreshFailureFromStats(stats, label) {
   const specific = stats?.error || stats?.lastError;
   if (specific)
@@ -128,6 +132,10 @@ export class LayerLifecycle {
       enabled: false,
       initialized: false,
       intervalId: null,
+      // A periodic refresh that fell due while the page was hidden; it runs
+      // once when the page is visible again (see _armUpdateLoop).
+      updateDue: false,
+      pageResume: null,
       // Periodic data refreshes are manager-owned work, independent from the
       // authoritative enable/disable lifecycle above. Every registered layer
       // receives the same normalized presentation contract even when its own
@@ -534,9 +542,26 @@ export class LayerLifecycle {
           ? updateInterval
           : 0;
     if (refreshInterval > 0) {
+      // A hidden tab shows nobody the result, so polled feeds (flights,
+      // quakes, weather...) skip their refresh while hidden and catch up
+      // with one refresh when the page is shown again.
       entry.intervalId = setInterval(() => {
+        if (isPageHidden()) {
+          entry.updateDue = true;
+          return;
+        }
         void this._runPeriodicUpdate(layerId, entry);
       }, refreshInterval);
+      const doc = globalThis.document;
+      if (typeof doc?.addEventListener === 'function') {
+        const listener = () => {
+          if (isPageHidden() || !entry.updateDue || !entry.intervalId) return;
+          entry.updateDue = false;
+          void this._runPeriodicUpdate(layerId, entry);
+        };
+        doc.addEventListener('visibilitychange', listener);
+        entry.pageResume = { doc, listener };
+      }
     } else if (updateInterval === 0) {
       const every = entry.module.statsRefreshInterval || 1000;
       entry.intervalId = setInterval(() => {
@@ -549,6 +574,20 @@ export class LayerLifecycle {
         this._statusTickAt = now;
         this._publishActivity({ type: 'status' });
       }, every);
+    }
+  }
+
+  /** Stop a layer's update loop and its page-visibility catch-up. */
+  _clearUpdateLoop(entry) {
+    if (entry.intervalId) {
+      clearInterval(entry.intervalId);
+      entry.intervalId = null;
+    }
+    entry.updateDue = false;
+    if (entry.pageResume) {
+      const { doc, listener } = entry.pageResume;
+      doc.removeEventListener?.('visibilitychange', listener);
+      entry.pageResume = null;
     }
   }
 
@@ -774,10 +813,7 @@ export class LayerLifecycle {
         entry.enabled = compensated || !cleanupConfirmed;
         entry.lifecycleUncertain = !compensated && !cleanupConfirmed;
         settleLifecycle();
-        if (!entry.enabled && entry.intervalId) {
-          clearInterval(entry.intervalId);
-          entry.intervalId = null;
-        }
+        if (!entry.enabled) this._clearUpdateLoop(entry);
         this._publishActivity({ type: 'status' });
         if (!compensated) {
           recordVisibilityFailure(
@@ -835,10 +871,7 @@ export class LayerLifecycle {
         return false;
       }
       if (signal?.aborted) return finishCancelledDisable('disable');
-      if (entry.intervalId) {
-        clearInterval(entry.intervalId);
-        entry.intervalId = null;
-      }
+      this._clearUpdateLoop(entry);
       entry.enabled = false;
       entry.lifecycleUncertain = false;
       if (!settleLifecycle() || signal?.aborted)
@@ -847,10 +880,7 @@ export class LayerLifecycle {
       // Enable
       let abortCleanup = null;
       const cancelEnable = () => {
-        if (entry.intervalId) {
-          clearInterval(entry.intervalId);
-          entry.intervalId = null;
-        }
+        this._clearUpdateLoop(entry);
         // Disable immediately so modules with their own AbortController (Radio)
         // cancel pending update work at the same turn boundary. A second
         // disable after the current lifecycle await settles closes the race
@@ -878,10 +908,7 @@ export class LayerLifecycle {
         // aborting the caller's signal. Release that signal's listener now so
         // a later abort cannot revoke a successful retry.
         signal?.removeEventListener('abort', cancelEnable);
-        if (entry.intervalId) {
-          clearInterval(entry.intervalId);
-          entry.intervalId = null;
-        }
+        this._clearUpdateLoop(entry);
         await abortCleanup;
         let cleanupConfirmed = false;
         try {
@@ -920,10 +947,7 @@ export class LayerLifecycle {
         return false;
       };
       const finishFailedEnable = async (phase, error) => {
-        if (entry.intervalId) {
-          clearInterval(entry.intervalId);
-          entry.intervalId = null;
-        }
+        this._clearUpdateLoop(entry);
         let cleanupConfirmed = false;
         try {
           cleanupConfirmed =
@@ -1031,10 +1055,7 @@ export class LayerLifecycle {
 
       // Always clear any stale interval before assigning a new one, so we never
       // orphan a running timer and end up double-polling.
-      if (entry.intervalId) {
-        clearInterval(entry.intervalId);
-        entry.intervalId = null;
-      }
+      this._clearUpdateLoop(entry);
 
       // Manager-owned periodic refresh work has one normalized loading/error
       // contract. Camera-driven layers may keep updateInterval=0 and opt into
@@ -2165,10 +2186,7 @@ export class LayerLifecycle {
         this._publishActivity({ type: 'status' });
         return false;
       }
-      if (entry.intervalId) {
-        clearInterval(entry.intervalId);
-        entry.intervalId = null;
-      }
+      this._clearUpdateLoop(entry);
       entry.enabled = false;
     }
     if (typeof entry.module.destroy === 'function') {
