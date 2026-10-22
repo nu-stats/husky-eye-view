@@ -234,11 +234,11 @@ test('SPSS is found in its standard places, newest version first, with its Pytho
   );
 });
 
-test('an SPSS session folder holds the data and the syntax; a bad line is refused', (t) => {
+test('an SPSS session folder holds the data and the syntax; a bad line is refused', async (t) => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'hev-spss-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const env = { HEV_ANALYSIS_DIR: root };
-  const run = prepareSpssSession(
+  const run = await prepareSpssSession(
     { geography: 'state', commands: ['DESCRIPTIVES VARIABLES=segregation_bw'] },
     { env },
   );
@@ -253,13 +253,13 @@ test('an SPSS session folder holds the data and the syntax; a bad line is refuse
   assert.match(syntax, /DESCRIPTIVES VARIABLES=segregation_bw\./);
   // States: two-letter codes, so the string widths come from the data.
   assert.match(syntax, /\n {4}state A2\n/);
-  const open = prepareSpssSession(
+  const open = await prepareSpssSession(
     { geography: 'state', interactive: true },
     { env },
   );
   assert.equal(open.ok, true);
   assert.equal(open.session.doName, 'open.sps');
-  const refused = prepareSpssSession(
+  const refused = await prepareSpssSession(
     { geography: 'state', commands: ["HOST COMMAND=['calc']"] },
     { env },
   );

@@ -58,7 +58,7 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  const prepared = prepareSession({
+  const prepared = await prepareSession({
     geography: options.geography,
     state: options.state,
     commands: options.commands,

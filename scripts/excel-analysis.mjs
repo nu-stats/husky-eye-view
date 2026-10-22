@@ -51,7 +51,7 @@ async function main() {
       console.log(`${v.name.padEnd(26)} ${v.label}`);
     return;
   }
-  const prepared = prepareExcelSession({
+  const prepared = await prepareExcelSession({
     geography: options.geography,
     state: options.state,
     commands: options.lines,

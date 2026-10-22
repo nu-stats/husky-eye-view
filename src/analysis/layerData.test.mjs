@@ -87,9 +87,9 @@ function fixture(t) {
   return root;
 }
 
-test('a layer gives every field, named like the Area Reports measures where it is one', (t) => {
+test('a layer gives every field, named like the Area Reports measures where it is one', async (t) => {
   const publicDir = fixture(t);
-  const { areas } = readLayerAreas({
+  const { areas } = await readLayerAreas({
     baseUrl: 'context/tracts-test/',
     publicDir,
   });
@@ -117,16 +117,16 @@ test('a layer gives every field, named like the Area Reports measures where it i
   assert.equal(rows[0][5], -70.6);
 });
 
-test('one state, the map view, and a limit for large layers', (t) => {
+test('one state, the map view, and a limit for large layers', async (t) => {
   const publicDir = fixture(t);
-  const ma = readLayerAreas({
+  const ma = await readLayerAreas({
     baseUrl: 'context/tracts-test/',
     publicDir,
     state: '25',
   });
   assert.equal(ma.areas.length, 2);
   assert.equal(ma.stateApplied, true);
-  const view = readLayerAreas({
+  const view = await readLayerAreas({
     baseUrl: 'context/tracts-test/',
     publicDir,
     view: { west: -71.5, south: 41.5, east: -70.5, north: 42.5 },
@@ -139,15 +139,16 @@ test('one state, the map view, and a limit for large layers', (t) => {
   assert.equal(layerFolder('context/missing/', publicDir), null);
   assert.ok(MAX_CHUNKS_WITHOUT_LIMIT >= 100);
   assert.equal(
-    sampleLayerVariables({ baseUrl: 'context/tracts-test/', publicDir }).length,
+    (await sampleLayerVariables({ baseUrl: 'context/tracts-test/', publicDir }))
+      .length,
     7,
   );
 });
 
-test('a Stata session can analyze one layer: all of its fields, in the chosen state', (t) => {
+test('a Stata session can analyze one layer: all of its fields, in the chosen state', async (t) => {
   const publicDir = fixture(t);
   const env = { HEV_ANALYSIS_DIR: path.join(publicDir, 'sessions') };
-  const run = prepareSession(
+  const run = await prepareSession(
     {
       baseUrl: 'context/tracts-test/',
       layerName: 'Test Tracts',
@@ -170,7 +171,7 @@ test('a Stata session can analyze one layer: all of its fields, in the chosen st
     'utf8',
   );
   assert.match(doFile, /stringcols\(1 2 5\)/);
-  const unknown = prepareSession(
+  const unknown = await prepareSession(
     { baseUrl: 'context/tracts-test/', commands: ['summarize nothing_here'] },
     { env, publicDir },
   );

@@ -8,7 +8,8 @@
  * be chosen, results go back to the map, and brushing and Moran's I work. A
  * file without them is analyzed as it is.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { STATES } from '../../src/reports/areaReport.js';
 import {
@@ -263,10 +264,10 @@ export async function storeUpload(
 }
 
 /** A stored upload by id, never outside the uploads folder. */
-export function readStoredUpload(id, env = process.env) {
+export async function readStoredUpload(id, env = process.env) {
   if (!/^[\w.-]+$/.test(String(id || ''))) return null;
   const file = path.join(uploadsRoot(env), id, 'table.json');
-  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
+  return existsSync(file) ? JSON.parse(await readFile(file, 'utf8')) : null;
 }
 
 /**
@@ -275,11 +276,11 @@ export function readStoredUpload(id, env = process.env) {
  * with `withGeometry`, its outline. Returns {ok, problems, name, variables,
  * rows, areas, census, notes, stateApplied}.
  */
-export function uploadRows(
+export async function uploadRows(
   { uploadId, state = null, view = null, withGeometry = false },
   { env = process.env, publicDir } = {},
 ) {
-  const table = readStoredUpload(uploadId, env);
+  const table = await readStoredUpload(uploadId, env);
   if (!table)
     return {
       ok: false,
@@ -321,7 +322,7 @@ export function uploadRows(
     };
   const byGeoid = new Map();
   for (const s of states)
-    for (const area of readAreas({
+    for (const area of await readAreas({
       geography,
       state: s,
       view,

@@ -60,7 +60,7 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  const prepared = prepareRSession({
+  const prepared = await prepareRSession({
     geography: options.geography,
     state: options.state,
     commands: options.lines,

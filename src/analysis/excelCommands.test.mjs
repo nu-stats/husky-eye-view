@@ -254,10 +254,10 @@ test('your own file: GEOIDs found (lost leading zeros too), joined to the map, a
     stored.variables.map((v) => v.name),
     ['geoid', 'county_fips', 'uninsured', 'clinic_name'],
   );
-  const ma = uploadRows({ uploadId: stored.id, state: '25' }, { env });
+  const ma = await uploadRows({ uploadId: stored.id, state: '25' }, { env });
   assert.equal(ma.rows.length, 3);
   assert.ok(ma.variables.some((v) => v.name === 'lon'));
-  const everywhere = uploadRows({ uploadId: stored.id }, { env });
+  const everywhere = await uploadRows({ uploadId: stored.id }, { env });
   assert.equal(everywhere.rows.length, 4);
   assert.match(everywhere.notes.join(' '), /1 of 5 rows/);
   // An Excel workbook works the same.
@@ -280,7 +280,7 @@ test('your own file: GEOIDs found (lost leading zeros too), joined to the map, a
   assert.equal(workbook.geography, 'tract');
   assert.equal(workbook.sheet, 'Rates');
   // Excel Analysis on the upload: the workbook, the log and the map file.
-  const session = prepareExcelSession(
+  const session = await prepareExcelSession(
     {
       uploadId: stored.id,
       state: 'MA',
@@ -322,7 +322,7 @@ test('your own file: GEOIDs found (lost leading zeros too), joined to the map, a
     { env },
   );
   assert.equal(plain.geography, null);
-  const plainRun = prepareExcelSession(
+  const plainRun = await prepareExcelSession(
     { uploadId: plain.id, commands: ['REGRESSION score ON hours'] },
     { env },
   );
@@ -333,7 +333,7 @@ test('your own file: GEOIDs found (lost leading zeros too), joined to the map, a
 test('every Stata, R and SPSS session also saves data.xlsx', async (t) => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'hev-xlsx-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  const run = prepareSession(
+  const run = await prepareSession(
     { geography: 'state', commands: ['summarize segregation_bw'] },
     { env: { HEV_ANALYSIS_DIR: root } },
   );

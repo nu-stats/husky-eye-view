@@ -169,11 +169,11 @@ test('R is found in its standard places, newest version first, with RStudio', ()
   );
 });
 
-test('an R session folder holds the data, the script and, to open it, an RStudio project', (t) => {
+test('an R session folder holds the data, the script and, to open it, an RStudio project', async (t) => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'hev-r-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const env = { HEV_ANALYSIS_DIR: root };
-  const run = prepareRSession(
+  const run = await prepareRSession(
     { geography: 'state', commands: ['summary(d$segregation_bw)'] },
     { env },
   );
@@ -183,7 +183,7 @@ test('an R session folder holds the data, the script and, to open it, an RStudio
     readFileSync(path.join(run.session.folder, 'analysis.R'), 'utf8'),
     /summary\(d\$segregation_bw\)/,
   );
-  const open = prepareRSession(
+  const open = await prepareRSession(
     { geography: 'state', interactive: true },
     { env },
   );
@@ -196,7 +196,7 @@ test('an R session folder holds the data, the script and, to open it, an RStudio
     readFileSync(path.join(open.session.folder, 'session.Rproj'), 'utf8'),
     /Version: 1\.0/,
   );
-  const refused = prepareRSession(
+  const refused = await prepareRSession(
     { geography: 'state', commands: ['system("calc")'] },
     { env },
   );

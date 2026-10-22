@@ -7,12 +7,14 @@
  * own (sanitized) names. Presentation text (summary, source_note) is left
  * out.
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { REPORT_MEASURES } from '../../src/reports/reportMeasures.js';
 import { STATES } from '../../src/reports/areaReport.js';
 import { variableName } from '../../src/analysis/stataCommands.js';
+import { chunkCache } from './chunkCache.js';
 import { geometryCentroid } from './stataSession.js';
 
 const PUBLIC_DIR = path.resolve(
@@ -72,7 +74,7 @@ const inBox = (lon, lat, box) =>
  * Read a layer's areas. Returns {areas, problems, stateApplied}; areas carry
  * their properties, centroid and (on request) geometry.
  */
-export function readLayerAreas({
+export async function readLayerAreas({
   baseUrl,
   publicDir,
   state = null,
@@ -82,9 +84,7 @@ export function readLayerAreas({
   const folder = layerFolder(baseUrl, publicDir);
   if (!folder)
     return { areas: [], problems: [`No layer data at “${baseUrl}”.`] };
-  const index = JSON.parse(
-    readFileSync(path.join(folder, 'index.json'), 'utf8'),
-  );
+  const index = await chunkCache.json(path.join(folder, 'index.json'));
   const abbr = state ? STATES[state]?.[0] : null;
   const byState = state
     ? index.filter((entry) => chunkInState(entry.id, state, abbr))
@@ -103,15 +103,12 @@ export function readLayerAreas({
         'This layer is too large to use everywhere at once: choose a state or the map view.',
       ],
     };
+  const files = await chunkCache.manyFeatures(
+    chunks.map((entry) => path.join(folder, `${entry.id}.geojsonl`)),
+  );
   const areas = [];
-  for (const entry of chunks) {
-    const text = readFileSync(
-      path.join(folder, `${entry.id}.geojsonl`),
-      'utf8',
-    );
-    for (const line of text.split(/\r?\n/)) {
-      if (!line.trim()) continue;
-      const feature = JSON.parse(line);
+  for (const features of files) {
+    for (const feature of features) {
       const p = feature.properties || {};
       if (stateApplied && p.geoid && !String(p.geoid).startsWith(state))
         continue;
@@ -213,15 +210,17 @@ export function layerRows(variables, areas) {
 }
 
 /** The variables of a layer, from a few of its files (for the panel's list). */
-export function sampleLayerVariables({ baseUrl, publicDir = PUBLIC_DIR }) {
+export async function sampleLayerVariables({
+  baseUrl,
+  publicDir = PUBLIC_DIR,
+}) {
   const folder = layerFolder(baseUrl, publicDir);
   if (!folder) return [];
-  const index = JSON.parse(
-    readFileSync(path.join(folder, 'index.json'), 'utf8'),
-  );
+  const index = await chunkCache.json(path.join(folder, 'index.json'));
   const areas = [];
   for (const entry of index.slice(0, 3)) {
-    const text = readFileSync(
+    // Only the first lines are used: read, not kept in the cache.
+    const text = await readFile(
       path.join(folder, `${entry.id}.geojsonl`),
       'utf8',
     );

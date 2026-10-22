@@ -37,6 +37,7 @@ import {
 import { buildZip } from '../../src/curated/curatedFiles.js';
 import { buildWorkbook } from '../../src/analysis/excelWorkbook.js';
 import { dataSheets } from '../../src/analysis/excelCommands.js';
+import { chunkCache } from './chunkCache.js';
 import { writeShapefile } from './shapefile.js';
 import { layerRows, layerVariables, readLayerAreas } from './layerData.js';
 import { uploadRows } from './userTable.js';
@@ -215,7 +216,7 @@ const boxesOverlap = (a, [w, s, e, n]) =>
  * Tracts need a state or a view box; a view box keeps only areas whose
  * centroid is inside it.
  */
-export function readAreas({
+export async function readAreas({
   geography,
   state = null,
   view = null,
@@ -223,18 +224,18 @@ export function readAreas({
   withGeometry = false,
 }) {
   const base = path.join(publicDir, REPORT_GEOGRAPHIES[geography].baseUrl);
-  const index = JSON.parse(readFileSync(path.join(base, 'index.json'), 'utf8'));
+  const index = await chunkCache.json(path.join(base, 'index.json'));
   const chunks = index.filter(
     (entry) =>
       (!state || geography === 'state' || String(entry.id).startsWith(state)) &&
       (!view || !entry.bbox || boxesOverlap(view, entry.bbox)),
   );
+  const files = await chunkCache.manyFeatures(
+    chunks.map((entry) => path.join(base, `${entry.id}.geojsonl`)),
+  );
   const areas = [];
-  for (const entry of chunks) {
-    const text = readFileSync(path.join(base, `${entry.id}.geojsonl`), 'utf8');
-    for (const line of text.split(/\r?\n/)) {
-      if (!line.trim()) continue;
-      const feature = JSON.parse(line);
+  for (const features of files) {
+    for (const feature of features) {
       const p = feature.properties || {};
       const geoid = String(p.geoid || '');
       if (
@@ -329,7 +330,7 @@ export function prepareSession(request = {}, options = {}) {
 }
 
 /** The same for any engine (Stata here, R in rSession.js, SPSS in spssSession.js). */
-export function prepareAnalysisSession(
+export async function prepareAnalysisSession(
   request = {},
   { engine = STATA_ENGINE, env = process.env, publicDir, now } = {},
 ) {
@@ -375,7 +376,7 @@ export function prepareAnalysisSession(
   let variables;
   if (uploadMode) {
     if (problems.length) return { ok: false, problems };
-    uploadRead = uploadRows(
+    uploadRead = await uploadRows(
       { uploadId: request.uploadId, state, view },
       { env, publicDir: dataDir },
     );
@@ -390,7 +391,7 @@ export function prepareAnalysisSession(
     variables = uploadRead.variables;
   } else if (layerMode) {
     if (problems.length) return { ok: false, problems };
-    layerRead = readLayerAreas({
+    layerRead = await readLayerAreas({
       baseUrl: request.baseUrl,
       publicDir: dataDir,
       state,
@@ -447,7 +448,7 @@ export function prepareAnalysisSession(
       };
     const read =
       needsShapes && uploadRead.census
-        ? uploadRows(
+        ? await uploadRows(
             { uploadId: request.uploadId, state, view, withGeometry: true },
             { env, publicDir: dataDir },
           )
@@ -462,7 +463,7 @@ export function prepareAnalysisSession(
     saveShapes = !census && layerRead.areas.length <= MAX_SESSION_SHAPES;
     const read =
       needsShapes || saveShapes
-        ? readLayerAreas({
+        ? await readLayerAreas({
             baseUrl: request.baseUrl,
             publicDir: dataDir,
             state,
@@ -477,7 +478,7 @@ export function prepareAnalysisSession(
       geometry: a.geometry,
     }));
   } else {
-    areas = readAreas({
+    areas = await readAreas({
       geography,
       state,
       view,

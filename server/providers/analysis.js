@@ -149,7 +149,7 @@ export function analysisProxy({
           const uploadId = url.searchParams.get('uploadId');
           let list;
           if (uploadId) {
-            const read = uploadRows({ uploadId }, { env });
+            const read = await uploadRows({ uploadId }, { env });
             if (!read.ok)
               return sendJson(res, 200, {
                 variables: [],
@@ -158,7 +158,7 @@ export function analysisProxy({
             list = read.variables;
           } else
             list = baseUrl
-              ? sampleLayerVariables({ baseUrl })
+              ? await sampleLayerVariables({ baseUrl })
               : analysisVariables(
                   url.searchParams.get('geography') || 'county',
                 );
@@ -222,7 +222,7 @@ export function analysisProxy({
           // The data alone (data.csv, and shapes for non-census layers), for
           // the table and brushing: no program runs, none need be installed.
           const request = await readBody(req);
-          const prepared = prepare(
+          const prepared = await prepare(
             {
               geography: request.geography,
               baseUrl: request.baseUrl,
@@ -256,7 +256,7 @@ export function analysisProxy({
           return sendJson(
             res,
             200,
-            moranForRequest(
+            await moranForRequest(
               {
                 geography: request.geography,
                 baseUrl: request.baseUrl,
@@ -283,7 +283,7 @@ export function analysisProxy({
           busy = true;
           try {
             const interactive = route === 'open';
-            const prepared = prepare(
+            const prepared = await prepare(
               {
                 geography: request.geography,
                 baseUrl: request.baseUrl,

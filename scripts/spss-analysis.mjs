@@ -60,7 +60,7 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  const prepared = prepareSpssSession({
+  const prepared = await prepareSpssSession({
     geography: options.geography,
     state: options.state,
     commands: options.lines,

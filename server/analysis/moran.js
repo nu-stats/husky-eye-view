@@ -208,7 +208,7 @@ function erfc(x) {
  * Moran's I for a request like the analysis box's (layer or measures, state,
  * view) and one numeric variable.
  */
-export function moranForRequest(
+export async function moranForRequest(
   request = {},
   { publicDir, env = process.env } = {},
 ) {
@@ -229,7 +229,7 @@ export function moranForRequest(
   let geometries;
   if (request.uploadId) {
     // Your own file: its rows joined to the census outlines by GEOID.
-    const read = uploadRows(
+    const read = await uploadRows(
       { uploadId: request.uploadId, state, view, withGeometry: true },
       { env, publicDir: dataDir },
     );
@@ -245,7 +245,7 @@ export function moranForRequest(
     rows = read.rows;
     geometries = read.areas.map((a) => a.geometry);
   } else if (request.baseUrl) {
-    const read = readLayerAreas({
+    const read = await readLayerAreas({
       baseUrl: request.baseUrl,
       publicDir: dataDir,
       state,
@@ -266,7 +266,7 @@ export function moranForRequest(
         problems: ['Tracts need a state or the map view.'],
       };
     variables = analysisVariables(geography);
-    const areas = readAreas({
+    const areas = await readAreas({
       geography,
       state,
       view,
