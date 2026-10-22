@@ -1,0 +1,42 @@
+# Owner: check the authors below before minting a DOI (docs/adoption/README.md).
+cff-version: 1.2.0
+message: >-
+  If you use Husky Eye View in research or teaching, please cite it as below,
+  and cite the data sources behind the layers you used (docs/METHODS.md and
+  DATA_SOURCES.md).
+title: "Husky Eye View: neighborhood research on a 3D globe"
+abstract: >-
+  Husky Eye View puts a century of U.S. neighborhood data (life expectancy,
+  1930s redlining, segregation, census measures, internet access, air quality
+  and green space, historical enumeration districts) on a photorealistic 3D
+  globe, beside live feeds. Users can map their own files, join them to
+  tracts or counties, run Stata, R, SPSS and Excel on any layer, and export
+  merged data with the do-file and R script that reproduce it.
+type: software
+authors:
+  - family-names: Stowell
+    given-names: J.
+    email: j.stowell@northeastern.edu
+    affiliation: Northeastern University
+repository-code: "https://github.com/nu-stats/husky-eye-view"
+license: MIT
+version: 0.2.5
+date-released: "2026-10-07"
+keywords:
+  - neighborhoods
+  - census tracts
+  - redlining
+  - segregation
+  - life expectancy
+  - spatial analysis
+  - reproducibility
+  - 3D globe
+references:
+  - type: software
+    title: "God's Eye View"
+    authors:
+      - family-names: Sidhu
+        given-names: Bilawal
+    repository-code: "https://github.com/bilawalsidhu/gods-eye-view"
+    license: MIT
+    notes: Husky Eye View is a fork of God's Eye View.

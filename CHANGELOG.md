@@ -1,5 +1,12 @@
 # Changelog
 
+- Adoption kit (docs/adoption/): a CITATION.cff to cite Husky Eye View, a
+  methods note (docs/METHODS.md: data, processing, analysis tools,
+  limitations), three teaching labs (redlining and health, your own data,
+  segregation over time), a usability-test protocol, a demo kit with a
+  five-minute script and an abstract template, and an assessment of a
+  no-setup web version.
+
 - Efficiency pass (2026-10-22), from a whole-app review:
   - Layers stop refreshing while the browser tab is hidden and catch up
     once when you come back; the HUD camera readout pauses too.
