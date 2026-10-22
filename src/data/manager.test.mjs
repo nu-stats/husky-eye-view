@@ -569,21 +569,22 @@ test('setEnabled is idempotent and serializes with toggle', async () => {
 });
 
 test('polled layers skip refreshes in a hidden tab and catch up once when shown', async () => {
-  const originalDocument = globalThis.document;
   const listeners = new Set();
-  const fakeDocument = {
-    visibilityState: 'visible',
-    addEventListener(type, fn) { if (type === 'visibilitychange') listeners.add(fn); },
-    removeEventListener(type, fn) { if (type === 'visibilitychange') listeners.delete(fn); },
+  let state = 'visible';
+  const pageVisibility = {
+    isHidden: () => state === 'hidden',
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
   };
-  const setVisibility = (state) => {
-    fakeDocument.visibilityState = state;
+  const setVisibility = (next) => {
+    state = next;
     for (const fn of [...listeners]) fn();
   };
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  globalThis.document = fakeDocument;
-  try {
-    const mgr = new DataLayerManager({});
+  {
+    const mgr = new DataLayerManager({}, { pageVisibility });
     const layer = makeSlowLayer('flights', { updateInterval: 40 });
     mgr.register(layer.module);
     await mgr.setEnabled('flights', true);
@@ -613,9 +614,6 @@ test('polled layers skip refreshes in a hidden tab and catch up once when shown'
     assert.equal(listeners.size, 1);
     await mgr.destroyLayer('flights');
     assert.equal(listeners.size, 0, 'destroy removes the catch-up listener');
-  } finally {
-    if (originalDocument === undefined) delete globalThis.document;
-    else globalThis.document = originalDocument;
   }
 });
 

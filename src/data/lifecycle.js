@@ -57,10 +57,6 @@ function cancelPendingLayerRestore(entry, origin, reason) {
   }
 }
 
-function isPageHidden() {
-  return globalThis.document?.visibilityState === 'hidden';
-}
-
 function refreshFailureFromStats(stats, label) {
   const specific = stats?.error || stats?.lastError;
   if (specific)
@@ -76,8 +72,20 @@ function refreshFailureFromStats(stats, label) {
  * for real-time data overlays on the CesiumJS globe.
  */
 export class LayerLifecycle {
-  constructor(viewer, { allowQaRegistration = false } = {}) {
+  /**
+   * @param {object} viewer
+   * @param {object} [options]
+   * @param {boolean} [options.allowQaRegistration]
+   * @param {{isHidden(): boolean, subscribe(callback: Function): Function}|null} [options.pageVisibility]
+   *   Whether the page is hidden, and a visibilitychange subscription. With
+   *   it, polled refreshes pause in a hidden page; without it they always run.
+   */
+  constructor(
+    viewer,
+    { allowQaRegistration = false, pageVisibility = null } = {},
+  ) {
     this.viewer = viewer;
+    this._pageVisibility = pageVisibility;
     this._activityListeners = new Set();
     this.layers = new Map(); // id → { module, enabled, initialized, intervalId, lifecycleState, lifecycleUncertain }
     this._listeners = new Set();
@@ -545,23 +553,21 @@ export class LayerLifecycle {
       // A hidden tab shows nobody the result, so polled feeds (flights,
       // quakes, weather...) skip their refresh while hidden and catch up
       // with one refresh when the page is shown again.
+      const page = this._pageVisibility;
+      const pageHidden = () => page?.isHidden?.() === true;
       entry.intervalId = setInterval(() => {
-        if (isPageHidden()) {
+        if (pageHidden()) {
           entry.updateDue = true;
           return;
         }
         void this._runPeriodicUpdate(layerId, entry);
       }, refreshInterval);
-      const doc = globalThis.document;
-      if (typeof doc?.addEventListener === 'function') {
-        const listener = () => {
-          if (isPageHidden() || !entry.updateDue || !entry.intervalId) return;
+      if (typeof page?.subscribe === 'function')
+        entry.pageResume = page.subscribe(() => {
+          if (pageHidden() || !entry.updateDue || !entry.intervalId) return;
           entry.updateDue = false;
           void this._runPeriodicUpdate(layerId, entry);
-        };
-        doc.addEventListener('visibilitychange', listener);
-        entry.pageResume = { doc, listener };
-      }
+        });
     } else if (updateInterval === 0) {
       const every = entry.module.statsRefreshInterval || 1000;
       entry.intervalId = setInterval(() => {
@@ -584,11 +590,8 @@ export class LayerLifecycle {
       entry.intervalId = null;
     }
     entry.updateDue = false;
-    if (entry.pageResume) {
-      const { doc, listener } = entry.pageResume;
-      doc.removeEventListener?.('visibilitychange', listener);
-      entry.pageResume = null;
-    }
+    if (typeof entry.pageResume === 'function') entry.pageResume();
+    entry.pageResume = null;
   }
 
   toggle(layerId, { origin = 'programmatic', notificationToken = null } = {}) {
