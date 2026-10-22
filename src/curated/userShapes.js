@@ -14,10 +14,28 @@ const base = () => {
   }
 };
 
+/**
+ * Files kept after use, like the area layers' parsed-chunk cache: least
+ * recently used first out, so a long session of flights over many counties
+ * does not keep every outline it ever drew. The state file is read first by
+ * every flight, so it stays.
+ */
+export const USER_SHAPES_CACHE_LIMIT = 90;
 const cache = new Map();
 
+/** Test seams: the cached file paths (oldest first); forget them all. */
+export const _userShapesCachedPathsForTest = () => [...cache.keys()];
+export function _resetUserShapesForTest() {
+  cache.clear();
+}
+
 async function lines(path, fetchImpl) {
-  if (cache.has(path)) return cache.get(path);
+  if (cache.has(path)) {
+    const hit = cache.get(path);
+    cache.delete(path);
+    cache.set(path, hit); // refresh LRU position
+    return hit;
+  }
   const promise = (async () => {
     const response = await fetchImpl(`${base()}${path}`);
     if (!response.ok) return [];
@@ -27,6 +45,8 @@ async function lines(path, fetchImpl) {
       .map((line) => JSON.parse(line));
   })().catch(() => []);
   cache.set(path, promise);
+  while (cache.size > USER_SHAPES_CACHE_LIMIT)
+    cache.delete(cache.keys().next().value);
   return promise;
 }
 
