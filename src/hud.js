@@ -208,7 +208,7 @@ export class IntelHUD {
   _startTimers() {
     // Camera-derived data — 4 updates/second (250ms)
     this._updateInterval = setInterval(() => {
-      if (!this._visible) return;
+      if (!this._visible || document.hidden) return;
       this._updateCameraData();
     }, 250);
 
