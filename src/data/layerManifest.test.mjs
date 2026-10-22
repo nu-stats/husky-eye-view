@@ -52,6 +52,31 @@ test('flags are used only where they mean something', () => {
   assert.ok(groups.indexOf(RESEARCH_GROUP) < groups.indexOf('Live Feeds'));
 });
 
+test('the keyless smoke and night-lights layers sit with air and green space, off by default', () => {
+  const ids = LAYER_MANIFEST.map((entry) => entry.id);
+  const parks = ids.indexOf('local-parks');
+  assert.deepEqual(ids.slice(parks + 1, parks + 3), [
+    'hms-smoke',
+    'gibs-nightlights',
+  ]);
+  for (const [id, token, label, vintage] of [
+    ['hms-smoke', 'hs', 'Wildfire Smoke (NOAA HMS)', 'daily'],
+    ['gibs-nightlights', 'nl', 'Night Lights (NASA Black Marble)', '2016'],
+  ]) {
+    const entry = layerManifestEntry(id);
+    assert.equal(entry.token, token);
+    assert.match(entry.token, /^[a-z0-9]{1,2}$/);
+    assert.equal(entry.group, 'Air & Green Space');
+    assert.equal(entry.label, label);
+    assert.equal(entry.vintage, vintage);
+    assert.equal(entry.disposition, 'enabled-only');
+    assert.ok(entry.aliases.length >= 3, id);
+    for (const flag of ['live', 'extra', 'off', 'optionOwner', 'cardNoun'])
+      assert.equal(entry[flag], undefined, `${id}.${flag}`);
+    assert.ok(Object.isFrozen(entry) && Object.isFrozen(entry.aliases));
+  }
+});
+
 test('every research group heading carries a plain-language note', async () => {
   const { LAYER_GROUP_NOTES } = await import('./layerManifest.js');
   const groups = new Set(LAYER_MANIFEST.map((entry) => entry.group));

@@ -39,7 +39,7 @@ test('catalogs construct distinct layers and classification from their supplied 
     signal: b.signal,
     surface: fixtureSurface(b.signal),
   });
-  assert.equal(first.layers.length, 83);
+  assert.equal(first.layers.length, 85);
   assert.notEqual(first.weatherClock, second.weatherClock);
   await first.weatherClock.setTarget('2026-09-21T12:00:00.000Z');
   assert.match(
@@ -53,6 +53,8 @@ test('catalogs construct distinct layers and classification from their supplied 
       '2026-09-21T12:00:00.000Z',
     );
   assert.ok(first.get('fire-perimeters'));
+  assert.ok(first.get('hms-smoke'));
+  assert.ok(first.get('gibs-nightlights'));
   assert.ok(first.get('transit'));
   const order = first.layers.map(({ id }) => id);
   assert.deepEqual(

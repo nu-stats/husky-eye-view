@@ -167,6 +167,20 @@ export const DATA_CREDITS = [
       ' · Incident information: ' +
       '<a href="https://inciweb.wildfire.gov/" target="_blank" rel="noopener">InciWeb</a>',
   },
+  {
+    key: 'noaa-hms-smoke',
+    html:
+      'Wildfire smoke: ' +
+      '<a href="https://www.ospo.noaa.gov/products/land/hms.html" target="_blank" rel="noopener">NOAA Hazard Mapping System (HMS)</a>' +
+      ' smoke analysis, NOAA NESDIS (U.S. public domain)',
+  },
+  {
+    key: 'nasa-black-marble',
+    html:
+      'Night lights: NASA Black Marble (VIIRS, 2016), NASA Earth Observatory / Suomi NPP. ' +
+      "We acknowledge the use of imagery provided by services from NASA's Global Imagery Browse Services (GIBS), " +
+      "part of NASA's Earth Science Data and Information System (ESDIS).",
+  },
   OSM_CREDIT,
   OPENMAPTILES_CREDIT,
   {

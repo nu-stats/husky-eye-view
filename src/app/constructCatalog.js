@@ -25,6 +25,8 @@ import { createApplicationAwareness } from './layers/militaryAwareness.js';
 import { createApplicationFirms } from './layers/firms.js';
 import { createApplicationEarthquakes } from './layers/earthquakes.js';
 import { createApplicationFirePerimeters } from './layers/perimeters.js';
+import { createApplicationHmsSmoke } from './layers/hmsSmoke.js';
+import { createApplicationGibsNightlights } from './layers/gibsNightlights.js';
 import { createApplicationCables } from './layers/submarineCables.js';
 import { createApplicationMigrationFlows } from './layers/migrationFlows.js';
 import { createInfrastructureLayers } from '../data/infrastructure.js';
@@ -176,6 +178,9 @@ export function createApplicationCatalog({
         createCyclonesLayer({ feed: sources.cyclones }),
         ...createInfrastructureLayers(localGeoJsonServices),
         createApplicationMigrationFlows(),
+        // Air & Green Space: keyless NOAA smoke and NASA night lights, US only.
+        createApplicationHmsSmoke(),
+        createApplicationGibsNightlights(),
         createSplatCapturesLayer(),
         createApplicationCables({ source: sources.cables }),
         createApplicationFirms({

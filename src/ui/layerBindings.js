@@ -127,6 +127,8 @@ export class LayerBindings {
       'weather-satellite',
       'weather-lightning',
       'weather-cyclones',
+      // Not weather, but draped imagery that follows the map stack the same way.
+      'gibs-nightlights',
     ]) {
       const layer = this._dataManager?.layers?.get(id)?.module;
       if (typeof layer?.attachShellServices !== 'function') continue;

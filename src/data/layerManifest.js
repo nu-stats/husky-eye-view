@@ -59,7 +59,7 @@ export const LAYER_GROUP_NOTES = Object.freeze({
   [INTERNET_GROUP]:
     'Counties 1998–2024; the tract layers sharpen from counties to tracts as you zoom in. NTIA (states) and ASU (counties) in five-year blocks for comparison.',
   [ENVIRONMENT_GROUP]:
-    'Counties from far out, tracts as you zoom in; large parks first, every park closer in.',
+    "Counties from far out, tracts as you zoom in; large parks first, every park closer in. Wildfire smoke is NOAA's latest daily analysis and night lights NASA's 2016 composite, both US only.",
   [RESEARCH_DATA_GROUP]: 'Each needs a key from the project owner.',
   'Data Analysis':
     'Compare cities, rank areas, and run statistics on any layer.',
@@ -427,6 +427,36 @@ export const LAYER_MANIFEST = Object.freeze(
       group: ENVIRONMENT_GROUP,
       vintage: '2025',
       aliases: ['parks', 'park outlines'],
+    },
+    // Keyless, from the Sheldondouthat/satwq-reality-os fork of God's Eye
+    // View (2026-10); both US only. Smoke shows NOAA's analysis date itself.
+    {
+      id: 'hms-smoke',
+      token: 'hs',
+      group: ENVIRONMENT_GROUP,
+      label: 'Wildfire Smoke (NOAA HMS)',
+      vintage: 'daily',
+      aliases: [
+        'wildfire smoke',
+        'smoke',
+        'smoke plumes',
+        'hms smoke',
+        'noaa smoke',
+      ],
+    },
+    {
+      id: 'gibs-nightlights',
+      token: 'nl',
+      group: ENVIRONMENT_GROUP,
+      label: 'Night Lights (NASA Black Marble)',
+      vintage: '2016',
+      aliases: [
+        'night lights',
+        'nighttime lights',
+        'black marble',
+        'city lights',
+        'lights at night',
+      ],
     },
 
     // ---- Restricted Research Data (key-locked) -----------------------------

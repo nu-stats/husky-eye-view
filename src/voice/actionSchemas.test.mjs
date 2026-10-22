@@ -133,8 +133,9 @@ test('all legacy action arguments are byte-identical after removing the delibera
   // God's Eye View's weather and fire releases (merged 2026-10-13) add one
   // tool, three analyst layers, five weather layers and Fire Perimeters;
   // without them, every other argument is exactly Husky Eye View's before
-  // the merge. Recent Imagery (2026-10-18) and Migration & Refugee Flows
-  // (2026-10-21) are two more layers.
+  // the merge. Recent Imagery (2026-10-18) is one more layer; Migration &
+  // Refugee Flows, Wildfire Smoke and Night Lights (2026-10-21, the last two
+  // from the Sheldondouthat fork) three more.
   const WEATHER_LAYERS = [
     'wind',
     'weather-radar',
@@ -144,6 +145,8 @@ test('all legacy action arguments are byte-identical after removing the delibera
     'fire-perimeters',
     'recent-imagery',
     'local-migration-flows',
+    'hms-smoke',
+    'gibs-nightlights',
   ];
   const legacy = structuredClone(GEV_ACTION_SCHEMAS).filter(
     (tool) => tool.name !== 'next_satellite_pass',
