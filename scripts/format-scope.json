@@ -1011,5 +1011,7 @@
   "src/ui/myFileTables.test.mjs",
   "src/layers/migrationFlows/migrationFlows.test.mjs",
   "scripts/build-migration-flows.mjs",
-  "scripts/lib/xlsx-lite.mjs"
+  "scripts/lib/xlsx-lite.mjs",
+  "src/ui/menuVisibility.js",
+  "src/ui/menuVisibility.test.mjs"
 ]

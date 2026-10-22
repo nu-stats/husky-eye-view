@@ -22,6 +22,7 @@ import { LocalSelectionCard } from './localSelectionCard.js';
 import { MapLabelControls } from './mapLabelControls.js';
 import { setLocalLabelSettings } from '../data/localLabelSettings.js';
 import { bindClearLayersControl } from './layers.js';
+import { bindMenuCustomizer } from './menuVisibility.js';
 import { bindCameraOrientationControls } from './cameraOrientationControls.js';
 import { createMapSourceControls } from './mapSource.js';
 import { STYLES } from './effects.js';
@@ -746,6 +747,7 @@ export class StyleManager extends ShellFacade {
     this._initShareButton();
     this._initCameraOrientationControls();
     this._initClearSelectedLayersButton();
+    this._initMenuCustomizer();
     this._initHUDToggle();
     this._initModels3dToggle();
     this._applyGlobalPostDefaults();
@@ -1566,6 +1568,14 @@ export class StyleManager extends ShellFacade {
     );
   }
 
+  /** Wire the top-center tune button: which menus are on screen. */
+  _initMenuCustomizer() {
+    this._menuCustomizer?.destroy();
+    this._menuCustomizer = bindMenuCustomizer({
+      button: document.getElementById('menu-customize'),
+    });
+  }
+
   /** Wire Google Maps-style tilt and north-up camera actions. */
   _initCameraOrientationControls() {
     this._cameraOrientationControls?.destroy();
@@ -1691,6 +1701,7 @@ export class StyleManager extends ShellFacade {
     this._mapSourceControls?.destroy();
     this._cameraOrientationControls?.destroy();
     this._clearLayersControl?.destroy();
+    this._menuCustomizer?.destroy();
     this._cctvControls?.destroy();
     this._radioControls?.destroy();
     this._bostonScanner?.destroy();
