@@ -1,5 +1,28 @@
 # Changelog
 
+- Efficiency pass (2026-10-22), from a whole-app review:
+  - Layers stop refreshing while the browser tab is hidden and catch up
+    once when you come back; the HUD camera readout pauses too.
+  - Less needless drawing: the Time Lens redraws its second map only when
+    the camera moves (and no longer leaks a map on a quick double open or a
+    close while opening); weather no longer redraws every frame while a
+    frame loads; the wind animation counts toward the frame-rate cap;
+    Wildfire Smoke skips its hourly redraw when nothing changed.
+  - Memory: area layers let go of their data when turned off, the Curated
+    Flights outline cache is bounded, Merge & Export's worker stops on close
+    when no file is loaded, and the migration layer's click handler exists
+    only while it is on.
+  - Stata, R, SPSS and Excel runs read map data in the background through
+    one shared cache, so the rest of the app no longer waits on them.
+  - Smaller download: the My files readers and Recent Imagery load on first
+    use; layer test hooks, Nepal styling (Nepal stays off but kept) and the
+    unused mgrs library no longer ship. Main bundle 2,649 → 2,554 KB, CSS
+    253 → 242 KB.
+  - Safety: Curated Flights and Merge & Export refuse a zip that would
+    unpack to more than 256 MiB.
+  - Pinokio no longer rebuilds when only tests or notes changed.
+- Night Lights is cut to the US border instead of rectangles.
+
 - New layers, US only (2026-10-21):
   - **Migration & Refugee Flows** (People & Economy, after foreign-born):
     arcs between the US and each country for immigrants living in the US
