@@ -116,7 +116,25 @@ export class TimeLens {
   async open(layerId = this.layerId) {
     if (!TIME_LENS_LAYERS.some(([id]) => id === layerId))
       layerId = TIME_LENS_LAYERS[0][0];
+    // A second open while the first is still building (a double click, voice
+    // plus a click) waits for it instead of building a second view.
+    if (this.opening) {
+      await this.opening.promise;
+      if (this.lens && layerId !== this.layerId) await this.setLayer(layerId);
+      return;
+    }
     if (this.lens) return this.setLayer(layerId);
+    const opening = { cancelled: false };
+    this.opening = opening;
+    opening.promise = this.build(layerId, opening);
+    try {
+      await opening.promise;
+    } finally {
+      if (this.opening === opening) this.opening = null;
+    }
+  }
+
+  async build(layerId, opening) {
     this.layerId = layerId;
     const manager = this.readDataManager?.();
     const restore = {
@@ -126,6 +144,14 @@ export class TimeLens {
     await manager?.setEnabled?.(TIME_LENS_BASE_LAYER, true, {
       origin: 'time-lens',
     });
+    if (opening.cancelled) {
+      // Closed before anything was built: only HOLC needs putting back.
+      if (!restore.holc)
+        manager?.setEnabled?.(TIME_LENS_BASE_LAYER, false, {
+          origin: 'time-lens',
+        });
+      return;
+    }
     const lens = (this.lens = {
       restore,
       x: window.innerWidth / 2,
@@ -141,7 +167,9 @@ export class TimeLens {
     this.buildViewer(lens);
     this.setShape(this.shape);
     await this.addBaseMap(lens);
+    if (this.lens !== lens) return;
     await this.setLayer(layerId);
+    if (this.lens !== lens) return;
     this.sync(lens);
     this.showToast(
       lens.shape === 'swipe'
@@ -189,6 +217,10 @@ export class TimeLens {
   }
 
   close() {
+    if (this.opening) {
+      this.opening.cancelled = true;
+      this.opening = null;
+    }
     const lens = this.lens;
     if (!lens) return;
     this.lens = null;
@@ -457,15 +489,21 @@ export class TimeLens {
     if (main && main.show && !main.isDestroyed?.()) {
       try {
         const resource = main.resource?.clone?.() || main.resource;
-        lens.tileset = await Cesium.Cesium3DTileset.fromUrl(resource, {
+        const tileset = await Cesium.Cesium3DTileset.fromUrl(resource, {
           showCreditsOnScreen: false,
         });
-        if (this.lens !== lens) return;
-        scene.primitives.add(lens.tileset);
+        if (this.lens !== lens || lens.viewer2.isDestroyed()) {
+          // Closed while it loaded: nothing else will ever destroy it.
+          tileset.destroy();
+          return;
+        }
+        lens.tileset = tileset;
+        scene.primitives.add(tileset);
         scene.globe.show = false;
         return;
       } catch (error) {
         console.warn('[time-lens] 3D tiles unavailable, using imagery:', error);
+        if (this.lens !== lens) return;
       }
     }
     scene.globe.show = true;
@@ -493,6 +531,7 @@ export class TimeLens {
       if (!lens.restore.today.has(layerId))
         lens.restore.today.set(layerId, true);
       await manager.setEnabled(layerId, false, { origin: 'time-lens' });
+      if (this.lens !== lens) return;
     }
     lens.active?.disable?.();
     if (!lens.layers) {
@@ -504,26 +543,67 @@ export class TimeLens {
     }
     lens.active = lens.layers.find((layer) => layer.id === layerId) || null;
     await lens.active?.enable?.(lens.viewer2);
+    // Closed while it was enabling: close() already destroyed the layers and
+    // the second view, so there is nothing left to draw.
+    if (this.lens !== lens) return;
     lens.viewer2.scene.requestRender();
   }
 
-  /** Follow the main camera every frame the main view draws. */
+  /**
+   * Follow the main camera whenever the main view draws. The main view can
+   * draw 30 times a second with the camera still (flights, wind), so the
+   * second view is only told to draw when the camera actually changed. Tiles
+   * still loading need no help: Cesium redraws a request-render scene itself
+   * when a tile request or decode finishes. Moving, resizing or reshaping the
+   * lens only changes its CSS clip, so it needs no redraw either.
+   */
   sync(lens) {
+    if (this.lens !== lens || lens.viewer2.isDestroyed()) return;
+    const last = {
+      position: new Cesium.Cartesian3(),
+      direction: new Cesium.Cartesian3(),
+      up: new Cesium.Cartesian3(),
+      fov: undefined,
+      near: undefined,
+      far: undefined,
+      copied: false,
+    };
     const copy = () => {
       if (this.lens !== lens || lens.viewer2.isDestroyed()) return;
       const from = this.viewer.camera;
+      const position = from.positionWC;
+      const direction = from.directionWC;
+      const up = from.upWC;
+      const frustum = from.frustum;
+      if (
+        last.copied &&
+        Cesium.Cartesian3.equals(position, last.position) &&
+        Cesium.Cartesian3.equals(direction, last.direction) &&
+        Cesium.Cartesian3.equals(up, last.up) &&
+        frustum?.fov === last.fov &&
+        frustum?.near === last.near &&
+        frustum?.far === last.far
+      )
+        return;
+      Cesium.Cartesian3.clone(position, last.position);
+      Cesium.Cartesian3.clone(direction, last.direction);
+      Cesium.Cartesian3.clone(up, last.up);
+      last.fov = frustum?.fov;
+      last.near = frustum?.near;
+      last.far = frustum?.far;
+      last.copied = true;
       const to = lens.viewer2.camera;
       to.setView({
-        destination: from.positionWC.clone(),
+        destination: Cesium.Cartesian3.clone(position),
         orientation: {
-          direction: from.directionWC.clone(),
-          up: from.upWC.clone(),
+          direction: Cesium.Cartesian3.clone(direction),
+          up: Cesium.Cartesian3.clone(up),
         },
       });
-      if (from.frustum?.fov && to.frustum) {
-        to.frustum.fov = from.frustum.fov;
-        to.frustum.near = from.frustum.near;
-        to.frustum.far = from.frustum.far;
+      if (frustum?.fov && to.frustum) {
+        to.frustum.fov = frustum.fov;
+        to.frustum.near = frustum.near;
+        to.frustum.far = frustum.far;
       }
       lens.viewer2.scene.requestRender();
     };
