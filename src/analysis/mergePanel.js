@@ -114,18 +114,15 @@ export class MergePanel {
     this.removers = [];
     this.requests = new Map();
     this.nextId = 0;
-    this.worker = (
+    this.createWorker =
       createWorker ||
       (() =>
         new Worker(new URL('./mergeWorker.js', import.meta.url), {
           type: 'module',
-        }))
-    )();
-    this.worker.onmessage = ({ data }) => this.onWorker(data);
-    this.ready = this.call('init', {
-      baseUrl: document.baseURI,
-      appName: this.dataName,
-    });
+        }));
+    this.worker = null;
+    this.ready = null;
+    this.startWorker();
     this.build();
     // `detail.file`: a file handed over (My files ▸ Analyze) becomes Your file.
     const onOpen = (event) => {
@@ -141,12 +138,47 @@ export class MergePanel {
 
   // ---------- the worker ----------
 
-  call(op, args = {}, transfer = []) {
+  /**
+   * The worker, made on first use (again after close() let it go); resolves
+   * once it has its session.
+   */
+  startWorker() {
+    if (!this.worker) {
+      this.worker = this.createWorker();
+      this.worker.onmessage = ({ data }) => this.onWorker(data);
+      this.ready = this.post('init', {
+        baseUrl: document.baseURI,
+        appName: this.dataName,
+      });
+    }
+    return this.ready;
+  }
+
+  /**
+   * Let the worker go when nothing in it is the user's: no file loaded and no
+   * step running. Its session (the catalog, census areas read for a merge)
+   * otherwise stays in memory for the rest of the visit.
+   */
+  stopWorkerIfIdle() {
+    if (!this.worker || this.file || this.second || this.busy) return false;
+    if (this.requests.size) return false;
+    this.worker.terminate();
+    this.worker = null;
+    this.ready = null;
+    return true;
+  }
+
+  post(op, args = {}, transfer = []) {
     const id = (this.nextId += 1);
     return new Promise((resolve, reject) => {
       this.requests.set(id, { resolve, reject });
       this.worker.postMessage({ id, op, args }, transfer);
     });
+  }
+
+  async call(op, args = {}, transfer = []) {
+    await this.startWorker();
+    return this.post(op, args, transfer);
   }
 
   onWorker({ id, ok, result, error, progress }) {
@@ -168,7 +200,7 @@ export class MergePanel {
     this.busy = true;
     this.sync();
     try {
-      await this.ready;
+      await this.startWorker();
       return await task();
     } catch (error) {
       return this.fail(error.message);
@@ -552,6 +584,8 @@ export class MergePanel {
   close() {
     this.root.classList.remove('visible');
     this.root.hidden = true;
+    // With a file loaded the worker holds the user's work, so it stays.
+    this.stopWorkerIfIdle();
   }
 
   status() {
@@ -1094,7 +1128,6 @@ export class MergePanel {
     }
     let added = [];
     if (measures.length) {
-      await this.ready;
       const ids = await this.call('findItems', { phrases: measures });
       if (!ids.length)
         return this.fail(
@@ -1121,7 +1154,8 @@ export class MergePanel {
   destroy() {
     this.overlay?.clear();
     this.mapView?.clear();
-    this.worker.terminate();
+    this.worker?.terminate();
+    this.worker = null;
     for (const reject of [...this.requests.values()].map((r) => r.reject))
       reject(new Error('Closed.'));
     for (const remove of this.removers.splice(0)) remove();
