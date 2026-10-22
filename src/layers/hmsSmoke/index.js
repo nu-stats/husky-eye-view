@@ -75,6 +75,20 @@ function ringPositions(ring) {
     : null;
 }
 
+/** Same day, same polygon total and same per-density counts: same plumes. */
+function snapshotKey(snapshot) {
+  const counts = { light: 0, moderate: 0, heavy: 0 };
+  for (const polygon of snapshot?.polygons ?? [])
+    if (polygon.density in counts) counts[polygon.density]++;
+  return [
+    snapshot?.date ?? '',
+    snapshot?.total ?? '',
+    counts.light,
+    counts.moderate,
+    counts.heavy,
+  ].join('|');
+}
+
 /** Own one NOAA HMS smoke display and its refresh lifecycle. */
 export function createHmsSmokeLayer({
   source,
@@ -87,6 +101,8 @@ export function createHmsSmokeLayer({
   let _viewer = null;
   let _request = null;
   let _primitives = [];
+  // snapshotKey() of what the primitives show; null when nothing is drawn.
+  let _drawnKey = null;
   let _snapshot = null;
   let _counts = { light: 0, moderate: 0, heavy: 0 };
   let _lastUpdate = null;
@@ -138,11 +154,14 @@ export function createHmsSmokeLayer({
     }
     const had = _primitives.length > 0;
     _primitives = [];
+    _drawnKey = null;
     if (had) requestRender('hms-smoke');
   }
 
-  function draw(polygons) {
+  function draw(snapshot) {
+    const { polygons } = snapshot;
     clearPrimitives();
+    _drawnKey = snapshotKey(snapshot);
     const counts = { light: 0, moderate: 0, heavy: 0 };
     for (const density of SMOKE_DENSITIES) {
       const style = SMOKE_DENSITY_STYLE[density];
@@ -206,7 +225,7 @@ export function createHmsSmokeLayer({
 
     enable() {
       _enabled = true;
-      if (_snapshot && !_primitives.length) draw(_snapshot.polygons);
+      if (_snapshot && !_primitives.length) draw(_snapshot);
     },
 
     disable() {
@@ -233,7 +252,10 @@ export function createHmsSmokeLayer({
         if (request.signal.aborted || _request !== request || !_enabled)
           return false;
         _snapshot = snapshot;
-        draw(snapshot.polygons);
+        // The hourly refresh mostly returns the day already drawn; rebuilding
+        // every volume (and pumping renders until they are ready) would
+        // change nothing on screen.
+        if (snapshotKey(snapshot) !== _drawnKey) draw(snapshot);
         _lastUpdate = snapshot.fetchedAt || Date.now();
         _lastError = null;
         return true;

@@ -28,7 +28,6 @@ export function createHmsSmokeSource({
         signal?.throwIfAborted();
         const response = await fetchImpl(apiUrl, {
           signal: controller.signal,
-          cache: 'no-store',
           redirect: 'error',
         });
         if (!response.ok) {

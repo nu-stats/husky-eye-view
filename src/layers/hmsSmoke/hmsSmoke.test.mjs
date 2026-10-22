@@ -225,7 +225,11 @@ test('source returns the checked snapshot and throws on 503 / malformed', async 
   });
   const snap = await ok.getSnapshot();
   assert.equal(requested.url, '/api/hms-smoke');
-  assert.equal(requested.options.cache, 'no-store');
+  assert.equal(
+    requested.options.cache,
+    undefined,
+    'the default HTTP cache applies',
+  );
   assert.equal(snap.date, '20261020');
   assert.equal(snap.polygons.length, 3);
 
@@ -332,9 +336,12 @@ test('layer shape, lifecycle, and soft failure', async () => {
   assert.match(controls.info, /Oct 20, 2026.*US only/);
   assert.match(controls.infoTitle, /lower 48, Alaska, Hawaii, Puerto Rico/);
 
-  // A refresh replaces the batches rather than adding to them.
+  // An unchanged refresh keeps the drawn batches and asks for no renders.
+  const drawn = [...h.primitives];
+  const rendersBefore = h.renders.length;
   assert.equal(await h.layer.update(h.viewer), true);
-  assert.equal(h.primitives.length, 3);
+  assert.deepEqual(h.primitives, drawn, 'same day and counts: no redraw');
+  assert.equal(h.renders.length, rendersBefore);
 
   h.layer.disable(h.viewer);
   assert.equal(h.primitives.length, 0);
@@ -351,6 +358,37 @@ test('layer shape, lifecycle, and soft failure', async () => {
   assert.equal(await failing.layer.update(failing.viewer), true);
   assert.match(failing.layer.getStats().error, /hms down/);
   assert.equal(failing.primitives.length, 0);
+});
+
+test('smoke redraws when the day or the counts change, and after a disable', async () => {
+  let snapshot = SNAPSHOT;
+  const h = harness({ getSnapshot: async () => snapshot });
+  assert.equal(await h.layer.update(h.viewer), true);
+  const first = [...h.primitives];
+  assert.equal(first.length, 3);
+
+  snapshot = { ...SNAPSHOT, date: '20261021' };
+  assert.equal(await h.layer.update(h.viewer), true);
+  assert.equal(h.primitives.length, 3, 'a new day replaces the batches');
+  assert.ok(h.primitives.every((primitive) => !first.includes(primitive)));
+
+  const second = [...h.primitives];
+  snapshot = {
+    ...snapshot,
+    polygons: snapshot.polygons.filter(({ density }) => density !== 'heavy'),
+  };
+  assert.equal(await h.layer.update(h.viewer), true);
+  assert.equal(h.primitives.length, 2, 'changed counts redraw');
+  assert.ok(h.primitives.every((primitive) => !second.includes(primitive)));
+  assert.equal(h.layer.getDiagnostics().counts.heavy, 0);
+
+  h.layer.disable(h.viewer);
+  h.layer.enable(h.viewer);
+  assert.equal(h.primitives.length, 2, 'enable redraws the kept snapshot');
+  const restored = [...h.primitives];
+  assert.equal(await h.layer.update(h.viewer), true);
+  assert.deepEqual(h.primitives, restored, 'and the next refresh keeps it');
+  h.layer.destroy(h.viewer);
 });
 
 test('layer requires a snapshot source and rejects double init', () => {
