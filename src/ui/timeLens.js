@@ -1,24 +1,53 @@
 /**
- * Time Lens: the 1930s HOLC redlining map everywhere, with a movable circular
- * window onto a layer of today (tract poverty, income, segregation…), like
- * looking into another time from inside this one.
+ * Time Lens: one layer everywhere (by default the 1930s HOLC redlining map),
+ * with a movable circular window onto another (by default tract poverty
+ * today), like looking into another time from inside this one. Both layers
+ * are the user's choice, from TIME_LENS_CATALOG, in the bar's two pickers;
+ * picking the other side's layer swaps the two.
  *
- * How: the main view draws HOLC. A second, input-less Cesium view is stacked
- * just above the main canvas, follows the main camera every frame, draws the
- * same base map plus the chosen layer of today, and is clipped to a circle
- * with CSS (clip-path also limits where it takes pointer events). Inside the
+ * How: the main view draws the outside layer. A second, input-less Cesium
+ * view is stacked just above the main canvas, follows the main camera, draws
+ * the same base map plus the inside layer, and is clipped to a circle with
+ * CSS (clip-path also limits where it takes pointer events). Inside the
  * circle: drag to move it, scroll to resize it, click an area for its card.
  *
- * SWIPE shows the two times across the whole window instead: 1930s HOLC left
- * of a full-height divider, the layer of today right of it (the shared
- * before/after divider, src/ui/imagerySplit.js). The map moves as usual under
- * it, and a click on the today side opens that layer's card.
+ * SWIPE shows the two layers across the whole window instead: the outside
+ * layer left of a full-height divider, the inside layer right of it (the
+ * shared before/after divider, src/ui/imagerySplit.js). The map moves as
+ * usual under it, and a click on the right side opens that layer's card.
  */
 import * as Cesium from 'cesium';
 import { createImagerySplit } from './imagerySplit.js';
 
 export const TIME_LENS_OPEN_EVENT = 'gev:time-lens-open';
+/** The default outside layer (left of the swipe): the 1930s HOLC map. */
 export const TIME_LENS_BASE_LAYER = 'local-holc-redlining';
+/** Earlier layers, offered on both sides with the layers of today. */
+export const TIME_LENS_EARLIER_LAYERS = Object.freeze([
+  ['local-holc-redlining', 'HOLC redlining (1930s)', '1900–1940'],
+  [
+    'local-enumeration-districts-1900',
+    'Enumeration districts (1900)',
+    '1900–1940',
+  ],
+  [
+    'local-enumeration-districts-1910',
+    'Enumeration districts (1910)',
+    '1900–1940',
+  ],
+  [
+    'local-enumeration-districts-1920',
+    'Enumeration districts (1920)',
+    '1900–1940',
+  ],
+  [
+    'local-enumeration-districts-1930',
+    'Enumeration districts (1930)',
+    '1900–1940',
+  ],
+  ['local-segregation-2000', 'Segregation by city (2000)', '2000–2015'],
+  ['local-segregation-2010', 'Segregation by city (2010)', '2000–2015'],
+]);
 /** Layers of today offered inside the lens (first = default). */
 export const TIME_LENS_LAYERS = Object.freeze([
   ['local-acs-poverty', 'Poverty (2020–24)'],
@@ -63,9 +92,44 @@ export function clampLensRadius(r, width, height) {
   return Math.min(max, Math.max(MIN_LENS_RADIUS, r));
 }
 
+/**
+ * Every layer either side can show, grouped by period for the pickers:
+ * `[id, label, period]`, oldest first.
+ */
+export const TIME_LENS_CATALOG = Object.freeze([
+  ...TIME_LENS_EARLIER_LAYERS,
+  ...TIME_LENS_LAYERS.map(([id, label]) =>
+    Object.freeze([
+      id,
+      label,
+      id === 'local-life-expectancy' ? '2000–2015' : '2020–24',
+    ]),
+  ).sort((a, b) => (a[2] === b[2] ? 0 : a[2] < b[2] ? -1 : 1)),
+]);
+
+/** Whether a layer id can be shown on either side of the lens. */
+export function isTimeLensLayer(layerId) {
+  return TIME_LENS_CATALOG.some(([id]) => id === layerId);
+}
+
 /** The label of a lens layer id (or the id itself). */
 export function timeLensLabel(layerId) {
-  return TIME_LENS_LAYERS.find(([id]) => id === layerId)?.[1] || layerId;
+  return TIME_LENS_CATALOG.find(([id]) => id === layerId)?.[1] || layerId;
+}
+
+/**
+ * The two layers after choosing `layerId` for one side: picking the layer the
+ * other side shows swaps them, so the two sides never show the same layer.
+ * @param {{base: string, inside: string}} current
+ * @param {'base'|'inside'} side
+ * @param {string} layerId
+ * @returns {{base: string, inside: string}}
+ */
+export function chooseTimeLensSide(current, side, layerId) {
+  const other = side === 'base' ? 'inside' : 'base';
+  const next = { ...current, [side]: layerId };
+  if (current[other] === layerId) next[other] = current[side];
+  return next;
 }
 
 const element = (tag, props = {}, children = []) => {
@@ -97,6 +161,8 @@ export class TimeLens {
   }) {
     Object.assign(this, { viewer, readDataManager, showToast, createLayers });
     this.layerId = TIME_LENS_LAYERS[0][0];
+    // The outside layer (left of the swipe), shown by the main view.
+    this.baseId = TIME_LENS_BASE_LAYER;
     // The last shape chosen this session (the next lens opens with it).
     this.shape = 'circle';
     this.lens = null;
@@ -107,7 +173,9 @@ export class TimeLens {
         if (this.lens) this.setShape(shape);
         else this.shape = shape;
       }
-      return this.open(event?.detail?.layerId);
+      return this.open(event?.detail?.layerId, {
+        baseId: event?.detail?.baseId,
+      });
     };
     window.addEventListener(TIME_LENS_OPEN_EVENT, onOpen);
     this.removers.push(() =>
@@ -119,18 +187,31 @@ export class TimeLens {
     return Boolean(this.lens);
   }
 
-  /** Open the lens (or switch its layer when it is already open). */
-  async open(layerId = this.layerId) {
-    if (!TIME_LENS_LAYERS.some(([id]) => id === layerId))
-      layerId = TIME_LENS_LAYERS[0][0];
+  /**
+   * Open the lens (or switch its layers when it is already open).
+   * @param {string} [layerId] The inside layer (right of the swipe).
+   * @param {{baseId?: string}} [options] The outside layer (left).
+   */
+  async open(layerId = this.layerId, { baseId } = {}) {
+    if (!isTimeLensLayer(layerId)) layerId = TIME_LENS_LAYERS[0][0];
     // A second open while the first is still building (a double click, voice
     // plus a click) waits for it instead of building a second view.
     if (this.opening) {
       await this.opening.promise;
+      if (this.lens && isTimeLensLayer(baseId)) await this.setBase(baseId);
       if (this.lens && layerId !== this.layerId) await this.setLayer(layerId);
       return;
     }
-    if (this.lens) return this.setLayer(layerId);
+    if (this.lens) {
+      if (isTimeLensLayer(baseId)) await this.setBase(baseId);
+      return this.setLayer(layerId);
+    }
+    if (isTimeLensLayer(baseId)) this.baseId = baseId;
+    if (this.baseId === layerId)
+      this.baseId =
+        layerId === TIME_LENS_BASE_LAYER
+          ? TIME_LENS_LAYERS[0][0]
+          : TIME_LENS_BASE_LAYER;
     const opening = { cancelled: false };
     this.opening = opening;
     opening.promise = this.build(layerId, opening);
@@ -143,20 +224,21 @@ export class TimeLens {
 
   async build(layerId, opening) {
     this.layerId = layerId;
+    const baseId = this.baseId;
     const manager = this.readDataManager?.();
     const restore = {
-      holc: Boolean(manager?.isEnabled?.(TIME_LENS_BASE_LAYER)),
+      // Outside layers the lens switched on, by whether they were on before.
+      base: new Map([[baseId, Boolean(manager?.isEnabled?.(baseId))]]),
+      // Inside layers the lens switched off in the main view (to put back).
       today: new Map(),
     };
-    await manager?.setEnabled?.(TIME_LENS_BASE_LAYER, true, {
+    await manager?.setEnabled?.(baseId, true, {
       origin: 'time-lens',
     });
     if (opening.cancelled) {
-      // Closed before anything was built: only HOLC needs putting back.
-      if (!restore.holc)
-        manager?.setEnabled?.(TIME_LENS_BASE_LAYER, false, {
-          origin: 'time-lens',
-        });
+      // Closed before anything was built: only the outside layer needs
+      // putting back.
+      this.restoreBase(restore, manager);
       return;
     }
     const lens = (this.lens = {
@@ -178,11 +260,70 @@ export class TimeLens {
     await this.setLayer(layerId);
     if (this.lens !== lens) return;
     this.sync(lens);
+    const outside = timeLensLabel(this.baseId);
+    const inside = timeLensLabel(this.layerId);
     this.showToast(
       lens.shape === 'swipe'
-        ? 'Time Lens: the 1930s HOLC map left of the divider, today right of it. Drag the divider.'
-        : 'Time Lens: the 1930s HOLC map outside, today inside. Drag to move, scroll to resize, or choose SWIPE.',
+        ? `Time Lens: ${outside} left of the divider, ${inside} right of it. Drag the divider, or pick other layers in the bar.`
+        : `Time Lens: ${outside} outside, ${inside} inside. Drag to move, scroll to resize, pick other layers in the bar, or choose SWIPE.`,
     );
+  }
+
+  /** Put the outside layers back as they were before the lens. */
+  restoreBase(restore, manager = this.readDataManager?.()) {
+    for (const [id, wasOn] of restore.base)
+      if (!wasOn) manager?.setEnabled?.(id, false, { origin: 'time-lens' });
+  }
+
+  /** Name both sides in the ring, the divider and the pickers. */
+  refreshLabels(lens = this.lens) {
+    if (!lens) return;
+    const outside = timeLensLabel(this.baseId);
+    const inside = timeLensLabel(this.layerId);
+    lens.select.value = this.layerId;
+    if (lens.baseSelect) lens.baseSelect.value = this.baseId;
+    lens.todayLabel.textContent = inside.toUpperCase();
+    if (lens.thenLabel) lens.thenLabel.textContent = outside.toUpperCase();
+    const line = document.getElementById?.('time-lens-split-line');
+    const before = line?.querySelector?.('.before');
+    const after = line?.querySelector?.('.after');
+    if (before) before.textContent = outside.toUpperCase();
+    if (after) after.textContent = inside.toUpperCase();
+  }
+
+  /**
+   * Show `baseId` outside the lens (left of the swipe), in the main view.
+   * Choosing the inside layer swaps the two sides.
+   */
+  async setBase(baseId) {
+    const lens = this.lens;
+    if (!lens || !isTimeLensLayer(baseId) || baseId === this.baseId) {
+      this.refreshLabels(lens);
+      return;
+    }
+    const next = chooseTimeLensSide(
+      { base: this.baseId, inside: this.layerId },
+      'base',
+      baseId,
+    );
+    const previous = this.baseId;
+    const manager = this.readDataManager?.();
+    this.baseId = next.base;
+    if (!lens.restore.base.has(next.base))
+      lens.restore.base.set(
+        next.base,
+        Boolean(manager?.isEnabled?.(next.base)) ||
+          lens.restore.today.get(next.base) === true,
+      );
+    // The old outside layer goes off unless it was on before the lens (or it
+    // is about to move inside, where setLayer switches it off anyway).
+    if (lens.restore.base.get(previous) === false)
+      await manager?.setEnabled?.(previous, false, { origin: 'time-lens' });
+    if (this.lens !== lens) return;
+    await manager?.setEnabled?.(next.base, true, { origin: 'time-lens' });
+    if (this.lens !== lens) return;
+    if (next.inside !== this.layerId) await this.setLayer(next.inside);
+    else this.refreshLabels(lens);
   }
 
   /** Switch the lens between the movable circle and the full-window swipe. */
@@ -196,6 +337,10 @@ export class TimeLens {
     for (const [name, button] of Object.entries(lens.shapeButtons))
       button.setAttribute('aria-pressed', String(name === shape));
     lens.hint.textContent = SHAPE_HINTS[shape];
+    if (lens.outsideKey)
+      lens.outsideKey.textContent = swipe ? 'Left:' : 'Outside:';
+    if (lens.insideKey)
+      lens.insideKey.textContent = swipe ? 'Right:' : 'Inside:';
     lens.root.classList.toggle('time-lens--swipe', swipe);
     lens.ring.hidden = swipe;
     if (swipe && !lens.split) {
@@ -205,11 +350,12 @@ export class TimeLens {
         id: 'time-lens-split-line',
         handleClass: 'time-lens-split-handle',
         cssProperty: '--time-lens-split',
-        beforeLabel: '1930s HOLC',
-        afterLabel: `TODAY · ${timeLensLabel(this.layerId)}`,
-        ariaLabel: 'Time Lens divider: 1930s HOLC left, today right',
+        beforeLabel: timeLensLabel(this.baseId).toUpperCase(),
+        afterLabel: timeLensLabel(this.layerId).toUpperCase(),
+        ariaLabel:
+          'Time Lens divider: the outside layer left, the inside layer right',
         formatValueText: (before, after) =>
-          `1930s HOLC ${before} percent, today ${after} percent`,
+          `${timeLensLabel(this.baseId)} ${before} percent, ${timeLensLabel(this.layerId)} ${after} percent`,
         onChange: (value) => {
           lens.splitValue = value;
           this.layout(lens);
@@ -245,10 +391,7 @@ export class TimeLens {
     lens.root.remove();
     lens.bar.remove();
     const manager = this.readDataManager?.();
-    if (!lens.restore.holc)
-      manager?.setEnabled?.(TIME_LENS_BASE_LAYER, false, {
-        origin: 'time-lens',
-      });
+    this.restoreBase(lens.restore, manager);
     for (const [id, on] of lens.restore.today)
       if (on) manager?.setEnabled?.(id, true, { origin: 'time-lens' });
   }
@@ -265,22 +408,37 @@ export class TimeLens {
     lens.canvasHost = element('div', { className: 'time-lens-view' });
     lens.ring = element('div', { className: 'time-lens-ring' }, [
       (lens.todayLabel = element('span', { className: 'time-lens-today' })),
-      element('span', {
-        className: 'time-lens-then',
-        textContent: '1930s HOLC',
-      }),
+      (lens.thenLabel = element('span', { className: 'time-lens-then' })),
     ]);
     lens.root.append(lens.canvasHost);
     // The ring sits outside the clipped view so it can draw past its edge.
     document.body.append(lens.root, lens.ring);
     lens.removers.push(() => lens.ring.remove());
 
-    lens.select = element('select', {
-      className: 'time-lens-select',
-      ariaLabel: 'Layer of today inside the lens',
-    });
-    for (const [id, label] of TIME_LENS_LAYERS)
-      lens.select.append(element('option', { value: id, textContent: label }));
+    // One picker per side, every comparable layer grouped by period.
+    const picker = (ariaLabel) => {
+      const select = element('select', {
+        className: 'time-lens-select',
+        ariaLabel,
+      });
+      const groups = new Map();
+      for (const [id, label, period] of TIME_LENS_CATALOG) {
+        if (!groups.has(period)) {
+          const group = element('optgroup', { label: period });
+          groups.set(period, group);
+          select.append(group);
+        }
+        groups
+          .get(period)
+          .append(element('option', { value: id, textContent: label }));
+      }
+      return select;
+    };
+    lens.baseSelect = picker('Outside the lens, left of the divider');
+    lens.baseSelect.addEventListener('change', () =>
+      this.setBase(lens.baseSelect.value),
+    );
+    lens.select = picker('Inside the lens, right of the divider');
     lens.select.addEventListener('change', () =>
       this.setLayer(lens.select.value),
     );
@@ -305,8 +463,8 @@ export class TimeLens {
           textContent: shape === 'swipe' ? 'SWIPE' : 'CIRCLE',
           title:
             shape === 'swipe'
-              ? 'Divide the whole window: 1930s HOLC left, today right'
-              : 'A movable circle onto today',
+              ? 'Divide the whole window: the outside layer left, the inside layer right'
+              : 'A movable circle onto the inside layer',
         });
         button.addEventListener('click', () => this.setShape(shape));
         lens.shapeButtons[shape] = button;
@@ -319,10 +477,9 @@ export class TimeLens {
         className: 'curated-kicker',
         textContent: 'TIME LENS',
       }),
-      element('span', {
-        className: 'time-lens-key',
-        textContent: '1930s HOLC · Today:',
-      }),
+      (lens.outsideKey = element('span', { className: 'time-lens-key' })),
+      lens.baseSelect,
+      (lens.insideKey = element('span', { className: 'time-lens-key' })),
       lens.select,
       shapes,
       lens.hint,
@@ -525,15 +682,14 @@ export class TimeLens {
   async setLayer(layerId) {
     const lens = this.lens;
     if (!lens) return;
+    // The outside layer chosen for the inside: the two sides swap.
+    if (layerId === this.baseId && layerId !== this.layerId)
+      return this.setBase(this.layerId);
     this.layerId = layerId;
-    lens.select.value = layerId;
-    lens.todayLabel.textContent = `TODAY · ${timeLensLabel(layerId)}`;
-    const after = document
-      .getElementById('time-lens-split-line')
-      ?.querySelector('.after');
-    if (after) after.textContent = lens.todayLabel.textContent;
+    this.refreshLabels(lens);
     const manager = this.readDataManager?.();
-    // Outside the lens only HOLC shows: switch the chosen layer off there.
+    // Outside the lens only the outside layer shows: switch the chosen layer
+    // off there.
     if (manager?.isEnabled?.(layerId)) {
       if (!lens.restore.today.has(layerId))
         lens.restore.today.set(layerId, true);

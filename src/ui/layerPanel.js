@@ -86,9 +86,9 @@ const TIME_LENS_ROW = Object.freeze({
   mode: 'time-lens',
   icon: '◎',
   label: 'Time Lens (1930s ↔ today)',
-  meta: 'HOLC map with a movable window onto a layer of today',
+  meta: 'Compare two layers through a movable window or a swipe (HOLC and today first)',
   title:
-    'Time Lens: the 1930s HOLC map, with today seen through a movable lens',
+    'Time Lens: pick two layers, such as the 1930s HOLC map and a layer of today, and compare them through a movable lens or a swipe',
   event: 'gev:time-lens-open',
 });
 

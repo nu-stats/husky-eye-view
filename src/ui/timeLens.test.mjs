@@ -3,10 +3,13 @@ import assert from 'node:assert/strict';
 import {
   MIN_LENS_RADIUS,
   TIME_LENS_BASE_LAYER,
+  TIME_LENS_CATALOG,
   TIME_LENS_LAYERS,
   TIME_LENS_SHAPES,
   TimeLens,
+  chooseTimeLensSide,
   clampLensRadius,
+  isTimeLensLayer,
   lensClipPath,
   swipeClipPath,
   timeLensLabel,
@@ -277,4 +280,84 @@ test('a 3D tileset that finishes loading after close is destroyed', async () => 
     Cesium.Cesium3DTileset.fromUrl = original;
     delete globalThis.window.__godsEyeView;
   }
+});
+
+// ---------- choosing both layers ----------
+
+test('either side can show every comparable layer, grouped by period, oldest first', () => {
+  const ids = TIME_LENS_CATALOG.map(([id]) => id);
+  assert.equal(new Set(ids).size, ids.length, 'no layer twice');
+  for (const id of ids) assert.ok(REGISTERED_LAYER_IDS.includes(id), id);
+  assert.ok(ids.includes(TIME_LENS_BASE_LAYER));
+  for (const [id] of TIME_LENS_LAYERS) assert.ok(ids.includes(id), id);
+  assert.ok(ids.includes('local-enumeration-districts-1930'));
+  assert.ok(ids.includes('local-segregation-2000'));
+  const periods = TIME_LENS_CATALOG.map(([, , period]) => period);
+  assert.deepEqual([...new Set(periods)], ['1900–1940', '2000–2015', '2020–24']);
+  assert.deepEqual(periods, [...periods].sort(), 'grouped, oldest first');
+  assert.equal(timeLensLabel('local-holc-redlining'), 'HOLC redlining (1930s)');
+  assert.equal(isTimeLensLayer('local-segregation-2010'), true);
+  assert.equal(isTimeLensLayer('flights'), false);
+});
+
+test('picking the other side\'s layer swaps the two sides', () => {
+  const now = { base: 'local-holc-redlining', inside: 'local-acs-poverty' };
+  assert.deepEqual(chooseTimeLensSide(now, 'base', 'local-segregation-2000'), {
+    base: 'local-segregation-2000',
+    inside: 'local-acs-poverty',
+  });
+  assert.deepEqual(chooseTimeLensSide(now, 'base', 'local-acs-poverty'), {
+    base: 'local-acs-poverty',
+    inside: 'local-holc-redlining',
+  });
+  assert.deepEqual(chooseTimeLensSide(now, 'inside', 'local-holc-redlining'), {
+    base: 'local-acs-poverty',
+    inside: 'local-holc-redlining',
+  });
+});
+
+test('the outside layer is the user\'s choice, and closing puts every layer back', async () => {
+  const timeLens = new TestLens({
+    createLayers: () =>
+      TIME_LENS_CATALOG.map(([id]) => ({
+        id,
+        enable: async () => {},
+        disable() {},
+        destroy() {},
+      })),
+  });
+  const { manager } = timeLens;
+  // On before the lens: kept on afterwards.
+  await manager.setEnabled('local-acs-income', true);
+  await timeLens.open('local-acs-poverty');
+  assert.equal(manager.isEnabled(TIME_LENS_BASE_LAYER), true, 'HOLC outside first');
+
+  await timeLens.setBase('local-segregation-2000');
+  assert.equal(timeLens.baseId, 'local-segregation-2000');
+  assert.equal(manager.isEnabled('local-segregation-2000'), true);
+  assert.equal(manager.isEnabled(TIME_LENS_BASE_LAYER), false, 'the old outside layer goes off');
+
+  // Inside: a layer that was on in the main view goes off there while inside.
+  await timeLens.setLayer('local-acs-income');
+  assert.equal(manager.isEnabled('local-acs-income'), false);
+
+  // Picking the outside layer for the inside swaps the sides.
+  await timeLens.setLayer('local-segregation-2000');
+  assert.equal(timeLens.layerId, 'local-segregation-2000');
+  assert.equal(timeLens.baseId, 'local-acs-income');
+  assert.equal(manager.isEnabled('local-acs-income'), true, 'now outside');
+  assert.equal(manager.isEnabled('local-segregation-2000'), false, 'now inside');
+
+  // A detail on the open event sets both sides of an open lens.
+  await timeLens.open('local-acs-poverty', { baseId: TIME_LENS_BASE_LAYER });
+  assert.equal(timeLens.baseId, TIME_LENS_BASE_LAYER);
+  assert.equal(timeLens.layerId, 'local-acs-poverty');
+
+  timeLens.close();
+  await flush();
+  assert.equal(manager.isEnabled(TIME_LENS_BASE_LAYER), false);
+  assert.equal(manager.isEnabled('local-segregation-2000'), false);
+  assert.equal(manager.isEnabled('local-acs-poverty'), false);
+  assert.equal(manager.isEnabled('local-acs-income'), true, 'on before, on after');
+  timeLens.destroy();
 });

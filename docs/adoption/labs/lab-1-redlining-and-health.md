@@ -19,9 +19,12 @@ today in health and income? You will look first, then measure.
    **HOLC Redlining (1930s)**. Click two graded areas, one A or B and one D,
    and read their cards.
 3. In the same group, open **Time Lens (1930s ↔ today)**. Choose **SWIPE** in
-   the Time Lens bar, then pick **Median household income (2020–24)**. Drag the
-   divider slowly across the city.
-4. Switch the lens layer to **Life expectancy (2010–15)** and sweep again.
+   the Time Lens bar. Keep **HOLC redlining (1930s)** in the **Left** picker and
+   choose **Median household income (2020–24)** in the **Right** picker. Drag
+   the divider slowly across the city.
+4. Switch the **Right** picker to **Life expectancy (2010–15)** and sweep again.
+   Either picker can show any of the comparable layers (for example,
+   enumeration districts of 1930 against segregation in 2000).
 
 **Write down:** three places where the 1930s grade and today's map seem to
 line up, and one place where they do not.

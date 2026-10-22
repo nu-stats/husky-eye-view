@@ -1,5 +1,12 @@
 # Changelog
 
+- Time Lens: choose both layers. The bar has two pickers, Outside / Inside
+  (Left / Right in SWIPE), each offering every comparable layer by period:
+  1900–1940 (HOLC redlining, enumeration districts 1900–1930), 2000–2015
+  (segregation 2000 and 2010, life expectancy) and 2020–24 (census, air,
+  parks, segregation). Picking the other side's layer swaps the two; closing
+  the lens puts every layer back as it was. HOLC and poverty stay the default.
+
 - Adoption kit (docs/adoption/): a CITATION.cff to cite Husky Eye View, a
   methods note (docs/METHODS.md: data, processing, analysis tools,
   limitations), three teaching labs (redlining and health, your own data,
