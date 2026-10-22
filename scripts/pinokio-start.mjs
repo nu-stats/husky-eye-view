@@ -77,6 +77,33 @@ const BUILD_INPUTS = [
 ];
 
 /**
+ * Folders under src/ that only tests read: the browser bundle never reaches
+ * them (scripts/check-import-directions.mjs refuses a runtime import of
+ * src/testSupport or src/tooling, and nothing outside tests names the
+ * fixture folders).
+ */
+const TEST_ONLY_DIRS = [
+  'src/analysis/fixtures',
+  'src/data/fixtures',
+  'src/testSupport',
+  'src/tooling',
+];
+
+/**
+ * Whether a path (relative, forward slashes) can change the bundle. Tests,
+ * test-only folders and Markdown notes cannot (no module imports a .md file;
+ * a layer's testing.js is imported by its index.js, so it stays in), so
+ * touching them does not force a rebuild.
+ */
+export function isBuildInput(relative) {
+  const file = relative.replace(/\\/g, '/');
+  if (/\.test\.mjs$/.test(file) || /\.md$/i.test(file)) return false;
+  return !TEST_ONLY_DIRS.some(
+    (dir) => file === dir || file.startsWith(`${dir}/`),
+  );
+}
+
+/**
  * A fingerprint of the bundle's inputs: path, size and modification time of
  * every file (a git pull or Update rewrites what changed). Keys are not in
  * it — the build carries placeholders the server fills in as it sends the
@@ -85,6 +112,7 @@ const BUILD_INPUTS = [
 export function buildFingerprint(root = ROOT) {
   const hash = createHash('sha256');
   const visit = (relative) => {
+    if (!isBuildInput(relative)) return;
     const full = path.join(root, relative);
     let stat;
     try {
@@ -97,7 +125,6 @@ export function buildFingerprint(root = ROOT) {
         visit(path.join(relative, name));
       return;
     }
-    if (/\.test\.mjs$/.test(relative)) return;
     hash.update(
       `${relative.replace(/\\/g, '/')}:${stat.size}:${Math.floor(stat.mtimeMs)}\n`,
     );

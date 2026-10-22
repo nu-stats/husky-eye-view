@@ -12,7 +12,10 @@ import {
   fillRuntimeKeys,
 } from '../../build/runtime-serving.js';
 import { keySetupEndpoint } from '../../server/standalone/key-setup.js';
-import { buildFingerprint } from '../../scripts/pinokio-start.mjs';
+import {
+  buildFingerprint,
+  isBuildInput,
+} from '../../scripts/pinokio-start.mjs';
 
 function fixture(t) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'hev-serving-'));
@@ -156,4 +159,41 @@ test('the build fingerprint follows the sources and ignores tests', (t) => {
   assert.equal(buildFingerprint(root), base);
   writeFileSync(path.join(root, 'src', 'main.js'), 'ab');
   assert.notEqual(buildFingerprint(root), base);
+});
+
+test('the build fingerprint skips test fixtures and notes, keeps what the bundle uses', (t) => {
+  const root = fixture(t);
+  for (const dir of [
+    'src/analysis/fixtures',
+    'src/data/fixtures',
+    'src/data/local_data/dams',
+    'src/layers/cctv',
+    'src/testSupport',
+    'src/tooling',
+  ])
+    mkdirSync(path.join(root, dir), { recursive: true });
+  writeFileSync(path.join(root, 'src', 'main.js'), 'a');
+  const base = buildFingerprint(root);
+  for (const file of [
+    'src/analysis/fixtures/haven-v8.dta',
+    'src/data/fixtures/sample.csv',
+    'src/data/local_data/dams/README.md',
+    'src/testSupport/readStylesheet.mjs',
+    'src/tooling/fixtureRoot.mjs',
+    'src/NOTES.md',
+  ]) {
+    writeFileSync(path.join(root, file), 'x');
+    assert.equal(buildFingerprint(root), base, file);
+  }
+  for (const file of [
+    'src/data/local_data/dams/dams.geojson',
+    'src/layers/cctv/testing.js',
+  ]) {
+    const before = buildFingerprint(root);
+    writeFileSync(path.join(root, file), 'x');
+    assert.notEqual(buildFingerprint(root), before, file);
+  }
+  assert.equal(isBuildInput('src\\data\\fixtures\\a.pbf'), false);
+  assert.equal(isBuildInput('src/data/fixturesExtra.js'), true);
+  assert.equal(isBuildInput('package.json'), true);
 });
