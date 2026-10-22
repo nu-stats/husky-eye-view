@@ -1,5 +1,6 @@
 import * as Cesium from 'cesium';
 import { NO_IMAGERY_HOST } from '../../maps/imageryHost.js';
+import { maskImageryProvider } from './tileMask.js';
 
 /**
  * Build a keyless WMTS/XYZ-style tile-imagery layer on
@@ -15,6 +16,8 @@ import { NO_IMAGERY_HOST } from '../../maps/imageryHost.js';
  *     moves when the map changes;
  *   - the layer manager runs the first update after enable, so enable only
  *     attaches a static template; stats use `lastUpdate`;
+ *   - `outline` (an async loader of projected rings, src/layers/imageryTile/
+ *     tileMask.js) cuts every tile to a border, loaded once on first use;
  *   - the row can carry a caveat (`info`).
  *
  * The snapshot source owns the exact URL template; the layer only rebuilds
@@ -37,6 +40,7 @@ export function createImageryTileLayer({
   opacity = 0.85,
   updateInterval,
   boxes = null,
+  outline = null,
   info = null,
   infoTitle = '',
   countLabel = null,
@@ -81,6 +85,8 @@ export function createImageryTileLayer({
   let _frames = 0;
   let _lastUpdate = null;
   let _lastError = null;
+  /** Outline rings, loaded on the first attach (when `outline` is given). */
+  let _outlineRings = null;
 
   const host = () =>
     _imageryHost?.() ?? {
@@ -123,6 +129,10 @@ export function createImageryTileLayer({
         credit: tileCredit,
         ...(rectangle ? { rectangle } : {}),
       });
+      if (outline) {
+        _outlineRings ??= Promise.resolve().then(outline);
+        maskImageryProvider(provider, _outlineRings);
+      }
       const imageryLayer = new cesium.ImageryLayer(provider, {
         alpha: opacity,
         ...(rectangle ? { rectangle } : {}),

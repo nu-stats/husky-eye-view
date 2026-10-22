@@ -12,7 +12,7 @@
     uxhimanshuk/ground-view fork of God's Eye View.
   - **Wildfire Smoke (NOAA HMS)** and **Night Lights (NASA Black Marble,
     2016)** in Air & Green Space, keyless, both kept to the US (smoke
-    filtered on the server, night-light tiles fetched only over the US).
+    filtered on the server, night lights fetched only over the US and cut to its border).
     Adapted from the Sheldondouthat fork.
 - More US traffic cameras (from God's Eye View #645, #644, #1085, #605):
   King County and Washington State (WSDOT) on by default; NYC DOT and
