@@ -32,6 +32,7 @@ import { createApplicationMigrationFlows } from './layers/migrationFlows.js';
 import { createInfrastructureLayers } from '../data/infrastructure.js';
 import { createSplatCapturesLayer } from '../data/splatCaptures.js';
 import { localGeoJsonServices } from './localGeojsonServices.js';
+import * as render from '../renderGovernor.js';
 // The Nepal flood (Bhote Koshi) event and locator layers are off for now
 // (2026-10-06); their modules stay in src/data. Restoring them means adding
 // them back here, in layerManifest.js and in scenes/recipes.js.
@@ -159,7 +160,7 @@ export function createApplicationCatalog({
           vessels,
           installations,
         }),
-        createWindLayer({ feed: sources.wind, clock: weatherClock }),
+        createWindLayer({ feed: sources.wind, clock: weatherClock, render }),
         createWeatherLayer({
           feed: sources.weather,
           id: 'weather-radar',

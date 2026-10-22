@@ -38,6 +38,7 @@ export function createWindLayer({
   cesium = Cesium,
   container,
   createRendering = createWindRendering,
+  render = null,
 } = {}) {
   if (typeof feed?.getSnapshot !== 'function')
     throw new TypeError('Wind requires a snapshot source');
@@ -102,6 +103,7 @@ export function createWindLayer({
             kind: 'globe',
           },
         onStatusChange: notify,
+        render,
       });
       rendering.attach();
       rendering.setOptions?.({ overlay, paused });

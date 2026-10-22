@@ -55,6 +55,7 @@ const AMBIENT_OWNERS = new Set([
   'traffic',
   'transit',
   'military-awareness',
+  'wind',
 ]);
 const AMBIENT_FRAME_RATE = 30;
 let _fullFrameRate = 60;

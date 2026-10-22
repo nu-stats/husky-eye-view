@@ -55,6 +55,7 @@ export function createWindRendering({
   eventTarget = globalThis.window,
   createGpuRendering = createWindGpuRendering,
   onStatusChange,
+  render = null,
 } = {}) {
   let canvas = null;
   let context = null;
@@ -87,6 +88,10 @@ export function createWindRendering({
   let reportedGpuReady = null;
   let gpuNarrow = false;
   let flowTime = 0;
+  // GPU flow animates the Cesium scene, so it holds the render governor as
+  // an ambient owner ('wind') while it runs: diagnostics see it, and the
+  // governor's 30 fps ambient cap applies instead of a private 30 Hz pump.
+  let holdingRender = false;
   const relief = createWindRelief({ cesium, getViewer });
   const signature = Array(8).fill(null);
   const wind = { u: 0, v: 0 };
@@ -113,9 +118,19 @@ export function createWindRendering({
     return viewer && !viewer.isDestroyed?.() ? viewer : null;
   };
 
+  function syncRenderHold() {
+    const animating =
+      running && field && canvas && gpuActive && gpuVisible && !hidden();
+    const want = Boolean(animating && !still());
+    if (want === holdingRender) return;
+    holdingRender = want;
+    if (want) render?.holdContinuousRender?.('wind');
+    else render?.releaseContinuousRender?.('wind');
+  }
   function cancel() {
     if (frame !== null) globalThis.cancelAnimationFrame(frame);
     frame = null;
+    syncRenderHold();
   }
   function schedule() {
     if (
@@ -128,6 +143,7 @@ export function createWindRendering({
       frame === null
     )
       frame = globalThis.requestAnimationFrame(draw);
+    syncRenderHold();
   }
   function clearPixels() {
     context?.clearRect(0, 0, cssWidth, cssHeight);
@@ -481,6 +497,7 @@ export function createWindRendering({
         viewer.scene.requestRender();
         schedule();
       }
+      syncRenderHold();
       return;
     }
     if (still() && viewer) paint(viewer, 0, true);
@@ -638,10 +655,10 @@ export function createWindRendering({
 
   function draw(time) {
     frame = null;
-    if (!running || !field || hidden() || still()) return;
+    if (!running || !field || hidden() || still()) return syncRenderHold();
     if (gpuActive && !gpuVisible) {
       lastTime = null;
-      return;
+      return syncRenderHold();
     }
     const viewer = viewerReady();
     if (!viewer) return;
@@ -766,6 +783,7 @@ export function createWindRendering({
       removeImagery();
       imageryError = null;
       clearPixels();
+      syncRenderHold();
     },
     destroy() {
       this.stop();
