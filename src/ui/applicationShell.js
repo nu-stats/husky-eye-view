@@ -1641,7 +1641,9 @@ export class StyleManager extends ShellFacade {
       this._hudLayoutSelect.value = 'tactical';
     }
     this._setHudVariant('tactical');
-    this.hud.setMode('on');
+    // Husky Eye View starts without the HUD overlay (GLOBAL_POST_DEFAULTS);
+    // DISPLAY ▸ HUD, a share link with hv=1 or a military style turn it on.
+    this.hud.setMode('off');
     this._updateHudButtonState();
 
     this._lifetime.listen(this._cockpitDisplayToggleBtn, 'click', () => {
