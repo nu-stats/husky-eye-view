@@ -15,11 +15,12 @@
       <section id="my-files" class="my-files" aria-label="My files">
         <div class="my-files-head">
           <span class="my-files-title">MY FILES</span>
-          <button class="data-toggle-btn my-files-add" id="geo-import-button" type="button" title="Show your own map file on the globe, or drop it onto the globe. It is read in this browser only and is gone when the page reloads.">ADD A FILE</button>
+          <button class="data-toggle-btn my-files-add" id="geo-import-button" type="button" aria-label="Add a map file" title="Add your own map file, or drop it onto the globe: GeoJSON, KML, KMZ, GPX, a zipped shapefile, or a CSV/Excel table with latitude and longitude. It stays in this browser and is gone when the page reloads.">+ ADD</button>
         </div>
         <input type="file" id="geo-import-input" multiple hidden aria-label="Choose map files: GeoJSON, KML, KMZ, GPX, a zipped shapefile, or a CSV or Excel table with latitude and longitude" />
         <ul class="geo-import-list" id="geo-import-list" aria-label="My files on the map"></ul>
-        <p class="my-files-hint geo-import-hint" id="geo-import-hint" aria-live="polite">GeoJSON, KML, KMZ, GPX, zipped shapefile, or CSV/Excel with latitude and longitude. Stays in this browser; gone on reload.</p>
+        <!-- Empty (and hidden) until there is something to say: "Added 2 files." -->
+        <p class="my-files-hint geo-import-hint" id="geo-import-hint" aria-live="polite"></p>
       </section>
       <div id="data-toggles" class="data-toggle-list"></div>
     </div>

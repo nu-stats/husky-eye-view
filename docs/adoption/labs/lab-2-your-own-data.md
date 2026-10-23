@@ -17,7 +17,7 @@ community health centers in your state).
 
 ## Part 1: See it (10 min)
 
-1. Open **DATA LAYERS**. At the top, under **MY FILES**, press **ADD A FILE**
+1. Open **DATA LAYERS**. At the top, under **MY FILES**, press **+ ADD**
    (or drag the file onto the globe). The map flies to it.
 2. Switch on a context layer, for example **People & Economy (Census) ▸
    Poverty (tracts)**. Use the row's eye button to show and hide your file.
