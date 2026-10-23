@@ -518,3 +518,65 @@
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
+
+/* Calm screen (src/ui/calmChrome.js): the menus fade while you work, the
+   title shrinks to its badge, and POWER UP moves into the tune popover. */
+/* The fade animates unless the system asks for reduced motion
+   (`hev-calm-animate`, set by calmChrome.js). */
+body.hev-calm-animate #left-panel-stack,
+body.hev-calm-animate #right-context-rail,
+body.hev-calm-animate #command-dock,
+body.hev-calm-animate #top-center-actions {
+  transition: opacity 350ms ease;
+}
+body.hev-chrome-faded #left-panel-stack,
+body.hev-chrome-faded #right-context-rail,
+body.hev-chrome-faded #command-dock,
+body.hev-chrome-faded #top-center-actions {
+  opacity: 0.14;
+}
+body.hev-calm #key-setup-chip {
+  display: none !important;
+}
+body.hev-title-compact #title-bar {
+  padding: 8px 10px;
+  pointer-events: auto;
+}
+body.hev-title-compact #title-bar h1 > span:not(.title-logo),
+body.hev-title-compact #title-bar .subtitle {
+  display: none;
+}
+body.hev-title-compact #title-bar .title-logo {
+  width: 40px;
+}
+/* Hovering the badge shows the full name again. */
+body.hev-title-compact #title-bar:hover h1 > span:not(.title-logo) {
+  display: inline;
+}
+body.hev-title-compact #title-bar:hover .subtitle {
+  display: block;
+}
+body.hev-title-compact #title-bar:hover .title-logo {
+  width: 52px;
+}
+.menu-customize-calm {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+}
+.menu-customize-keys {
+  width: 100%;
+  min-height: 30px;
+  margin-top: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: #11161b;
+  color: var(--text-secondary);
+  font: 600 10px var(--font-mono);
+  letter-spacing: 1.2px;
+  cursor: pointer;
+}
+.menu-customize-keys:hover,
+.menu-customize-keys:focus-visible {
+  color: var(--text-primary);
+  border-color: rgba(200, 16, 46, 0.8);
+}

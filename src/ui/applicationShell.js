@@ -23,6 +23,7 @@ import { MapLabelControls } from './mapLabelControls.js';
 import { setLocalLabelSettings } from '../data/localLabelSettings.js';
 import { bindClearLayersControl } from './layers.js';
 import { bindMenuCustomizer } from './menuVisibility.js';
+import { bindCalmChrome } from './calmChrome.js';
 import { bindCameraOrientationControls } from './cameraOrientationControls.js';
 import { createMapSourceControls } from './mapSource.js';
 import { STYLES } from './effects.js';
@@ -1578,8 +1579,13 @@ export class StyleManager extends ShellFacade {
   /** Wire the top-center tune button: which menus are on screen. */
   _initMenuCustomizer() {
     this._menuCustomizer?.destroy();
+    this._calmChrome?.destroy();
+    // The calm screen: menus fade and the title shrinks while you work.
+    this._calmChrome = bindCalmChrome({ viewer: this.viewer });
     this._menuCustomizer = bindMenuCustomizer({
       button: document.getElementById('menu-customize'),
+      calm: this._calmChrome,
+      openKeys: () => document.getElementById('key-setup-chip')?.click(),
     });
   }
 
@@ -1709,6 +1715,7 @@ export class StyleManager extends ShellFacade {
     this._cameraOrientationControls?.destroy();
     this._clearLayersControl?.destroy();
     this._menuCustomizer?.destroy();
+    this._calmChrome?.destroy();
     this._cctvControls?.destroy();
     this._radioControls?.destroy();
     this._bostonScanner?.destroy();

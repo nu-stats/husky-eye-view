@@ -6,6 +6,7 @@ import {
   MENU_ITEMS,
   MENU_VISIBILITY_KEY,
   MENU_WORKSPACES,
+  DEFAULT_WORKSPACE,
   applyHiddenMenus,
   matchingWorkspace,
   normalizeHiddenMenus,
@@ -96,7 +97,9 @@ test('workspaces set every menu at once and are recognized back', () => {
 
 test('the choice round-trips through storage and survives broken storage', () => {
   const storage = memoryStorage();
-  assert.deepEqual(readHiddenMenus(storage), []);
+  // Nothing stored yet: the Research workspace (DEFAULT_WORKSPACE).
+  assert.deepEqual(readHiddenMenus(storage), workspaceHiddenMenus('research'));
+  assert.equal(DEFAULT_WORKSPACE, 'research');
   assert.equal(writeHiddenMenus(['cctv-panel', 'bogus'], storage), true);
   assert.equal(
     storage.data.get(MENU_VISIBILITY_KEY),

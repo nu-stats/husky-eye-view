@@ -1013,5 +1013,7 @@
   "scripts/build-migration-flows.mjs",
   "scripts/lib/xlsx-lite.mjs",
   "src/ui/menuVisibility.js",
-  "src/ui/menuVisibility.test.mjs"
+  "src/ui/menuVisibility.test.mjs",
+  "src/ui/calmChrome.js",
+  "src/ui/calmChrome.test.mjs"
 ]

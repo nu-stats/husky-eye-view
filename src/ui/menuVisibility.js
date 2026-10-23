@@ -99,11 +99,18 @@ function resolveStorage(injected) {
   }
 }
 
-/** The stored hidden menus (none when nothing is stored or storage fails). */
+/** The workspace a browser starts with before anyone chooses menus. */
+export const DEFAULT_WORKSPACE = 'research';
+
+/**
+ * The stored hidden menus: the default workspace's when nothing is stored,
+ * none when storage fails (every menu stays reachable).
+ */
 export function readHiddenMenus(storage) {
   try {
     const raw = resolveStorage(storage)?.getItem?.(MENU_VISIBILITY_KEY);
-    return raw ? normalizeHiddenMenus(JSON.parse(raw)?.hidden) : [];
+    if (raw == null) return workspaceHiddenMenus(DEFAULT_WORKSPACE);
+    return normalizeHiddenMenus(JSON.parse(raw)?.hidden);
   } catch {
     return [];
   }
@@ -162,22 +169,54 @@ const node = (documentRef, tag, props = {}, children = []) => {
  * @param {HTMLElement|null} options.button The top-center tune button.
  * @param {Document} [options.documentRef]
  * @param {Storage|null} [options.storage] Injected for tests.
+ * @param {{isEnabled: Function, setEnabled: Function}} [options.calm] The
+ *   calm screen (src/ui/calmChrome.js): its switch joins the popover.
+ * @param {() => void} [options.openKeys] Opens POWER UP (keys), which leaves
+ *   the corner while the screen is calm.
  * @returns {{destroy: Function, setHidden: Function, getHidden: Function}}
  */
 export function bindMenuCustomizer({
   button,
   documentRef = globalThis.document,
   storage,
+  calm = null,
+  openKeys = null,
 } = {}) {
   let hidden = readHiddenMenus(storage);
+  let sync = () => {};
+  function setHidden(next) {
+    hidden = normalizeHiddenMenus(next);
+    applyHiddenMenus(hidden, documentRef);
+    writeHiddenMenus(hidden, storage);
+    sync();
+  }
   applyHiddenMenus(hidden, documentRef);
+  // A hidden menu that something opens (a first-run tile opening Context, a
+  // Cameras layer opening CCTV) comes back on screen and stays.
+  const reveal =
+    typeof globalThis.MutationObserver === 'function'
+      ? new globalThis.MutationObserver((records) => {
+          for (const { target } of records) {
+            if (
+              hidden.includes(target.id) &&
+              !target.classList.contains('collapsed')
+            )
+              setHidden(hidden.filter((id) => id !== target.id));
+          }
+        })
+      : null;
+  for (const { id } of MENU_ITEMS) {
+    const element = documentRef?.getElementById?.(id);
+    if (element)
+      reveal?.observe(element, {
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+  }
   if (!button || !documentRef?.body) {
     return {
       destroy() {},
-      setHidden(next) {
-        hidden = normalizeHiddenMenus(next);
-        applyHiddenMenus(hidden, documentRef);
-      },
+      setHidden,
       getHidden: () => [...hidden],
     };
   }
@@ -237,6 +276,38 @@ export function bindMenuCustomizer({
       ]);
     }),
   );
+  const extras = [];
+  if (calm) {
+    const box = node(documentRef, 'input', { type: 'checkbox' });
+    box.checked = calm.isEnabled();
+    box.addEventListener('change', () => calm.setEnabled(box.checked));
+    extras.push(
+      node(
+        documentRef,
+        'label',
+        { className: 'menu-customize-item menu-customize-calm' },
+        [
+          box,
+          node(documentRef, 'span', {
+            textContent:
+              'Calm screen: fade the menus and shrink the title while I work',
+          }),
+        ],
+      ),
+    );
+  }
+  if (typeof openKeys === 'function') {
+    const keys = node(documentRef, 'button', {
+      type: 'button',
+      className: 'menu-customize-keys',
+      textContent: 'POWER UP · OPTIONAL KEYS',
+    });
+    keys.addEventListener('click', () => {
+      setOpen(false);
+      openKeys();
+    });
+    extras.push(keys);
+  }
   popover.append(
     node(documentRef, 'div', {
       className: 'menu-customize-kicker',
@@ -245,23 +316,17 @@ export function bindMenuCustomizer({
     workspaceRow,
     list,
     status,
+    ...extras,
   );
   documentRef.body.append(popover);
 
-  function sync() {
+  sync = () => {
     const workspace = matchingWorkspace(hidden);
     for (const [id, choice] of workspaceButtons)
       choice.setAttribute('aria-pressed', String(id === workspace));
     for (const [id, box] of switches) box.checked = !hidden.includes(id);
-    button.classList.toggle('menu-customize-custom', hidden.length > 0);
-  }
-
-  function setHidden(next) {
-    hidden = normalizeHiddenMenus(next);
-    applyHiddenMenus(hidden, documentRef);
-    writeHiddenMenus(hidden, storage);
-    sync();
-  }
+    button.classList.toggle('menu-customize-custom', workspace === 'custom');
+  };
 
   function setOpen(open) {
     popover.hidden = !open;
@@ -299,6 +364,7 @@ export function bindMenuCustomizer({
     setHidden,
     getHidden: () => [...hidden],
     destroy() {
+      reveal?.disconnect();
       button.removeEventListener('click', onButton);
       documentRef.removeEventListener('pointerdown', onDocumentDown, true);
       documentRef.removeEventListener('keydown', onKey, true);
