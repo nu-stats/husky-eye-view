@@ -381,7 +381,9 @@ export function initFirstRunExperience({
 
   if (
     !shouldShowFirstRun({
-      hasShareState: styleManager?.hasShareState,
+      // A hand-off from another app (QualCraft) opens its own panel.
+      hasShareState:
+        styleManager?.hasShareState || styleManager?.waitingForHandoff,
       storage,
       sessionStorageRef,
       location,

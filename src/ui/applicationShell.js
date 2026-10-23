@@ -33,6 +33,7 @@ import { aircraftTrackingTarget } from '../cockpitTracking.js';
 
 import { ShellFeedback } from './shellFeedback.js';
 import { TimeLens } from './timeLens.js';
+import { installQualcraftHandoff } from '../analysis/qualcraftHandoff.js';
 import {
   applyDataPanelPlacement,
   wantsDataPanelTop,
@@ -538,6 +539,12 @@ export class StyleManager extends ShellFacade {
             })[engine]?.(),
         })),
     );
+    // QualCraft ▸ Send to Husky Eye View opens this page at #from=qualcraft
+    // and hands its code counts to Merge & Export; the first-run launcher
+    // stays away meanwhile.
+    const handoff = installQualcraftHandoff();
+    this._removeQualcraftHandoff = handoff.stop;
+    this.waitingForHandoff = handoff.waiting;
     this.ensureAreaReports = lazyPanel(
       this,
       'gev:area-reports-open',
@@ -1727,6 +1734,7 @@ export class StyleManager extends ShellFacade {
     this._cockpitCoordinator.destroy();
     this._lazyPanelsDestroyed = true;
     for (const remove of this._lazyPanelRemovers || []) remove();
+    this._removeQualcraftHandoff?.();
     this.curatedFlights?.destroy();
     this.areaReports?.destroy();
     this.stataAnalysis?.destroy();
