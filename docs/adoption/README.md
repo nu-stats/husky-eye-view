@@ -18,9 +18,7 @@ what can be written or built in the repository; the rest needs a person.
 - **DOI.** Sign in to [Zenodo](https://zenodo.org) with GitHub, switch on the
   `nu-stats/husky-eye-view` repository under *GitHub*, then publish a GitHub
   release. Zenodo archives that release and mints a DOI. Add the DOI to
-  `CITATION.cff` (`doi:`) and to the README badge. Check the author names in
-  `CITATION.cff` first: they were filled in from the repository and need the
-  owner's confirmation.
+  `CITATION.cff` (`doi:`) and to the README badge. (Authors confirmed by the owner, 2026-10-22.)
 - **Usability sessions.** Recruit five people from the main audience (graduate
   students and instructors in the social sciences and public health). Check
   with Northeastern's IRB whether the sessions count as human-subjects
