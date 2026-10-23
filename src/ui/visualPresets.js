@@ -45,7 +45,10 @@ export const GLOBAL_POST_DEFAULTS = {
   bloom: { enabled: false, intensity: BLOOM_INTENSITY_DEFAULT },
   sharpen: { enabled: true, intensity: 49 },
   hudVariant: 'tactical',
-  hudVisible: true,
+  // Husky Eye View (2026-10-23): no HUD overlay on a first load (the summary
+  // line, coordinates, ALT and SUN elevation readouts inherited from God's Eye
+  // View). DISPLAY ▸ HUD and the military visual styles still turn it on.
+  hudVisible: false,
   // Detection is ON for EVERY style on a first run, Normal included (owner
   // directive 2026-08-22: "detect should also be on by default"). It is the
   // same preset object the military styles and Contacts already apply, so there
