@@ -18,6 +18,15 @@ authors:
     email: j.stowell@northeastern.edu
     affiliation: Northeastern University
 repository-code: "https://github.com/nu-stats/husky-eye-view"
+# The concept DOI always resolves to the latest version on Zenodo.
+doi: 10.5281/zenodo.23582397
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23582397
+    description: All versions (resolves to the latest)
+  - type: doi
+    value: 10.5281/zenodo.23582398
+    description: Version 0.2.6
 license: MIT
 version: 0.2.6
 date-released: "2026-10-22"

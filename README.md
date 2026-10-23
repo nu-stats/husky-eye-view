@@ -2,7 +2,7 @@
 
 # 🌐 Husky Eye View---Derived from God's Eye View
 
-[![CI](https://github.com/nu-stats/husky-eye-view/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nu-stats/husky-eye-view/actions/workflows/ci.yml)
+[![CI](https://github.com/nu-stats/husky-eye-view/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nu-stats/husky-eye-view/actions/workflows/ci.yml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23582397.svg)](https://doi.org/10.5281/zenodo.23582397)
 
 _Husky Eye View is a fork of [God's Eye View](https://github.com/bilawalsidhu/gods-eye-view) by Bilawal Sidhu, maintained by Northeastern University researchers at [nu-stats/husky-eye-view](https://github.com/nu-stats/husky-eye-view)._
 
