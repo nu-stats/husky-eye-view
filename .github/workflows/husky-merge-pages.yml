@@ -12,7 +12,6 @@ on:
       - scripts/husky-merge.mjs
       - src/**
       - public/context/**
-      - public/logo.svg
       - .github/workflows/husky-merge-pages.yml
   workflow_dispatch:
 

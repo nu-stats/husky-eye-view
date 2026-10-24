@@ -78,9 +78,9 @@ a {
 }
 #title-bar .title-logo {
   display: block;
-  width: 48px;
-  aspect-ratio: 775 / 520;
-  filter: drop-shadow(0 0 12px rgba(200, 16, 46, 0.5));
+  width: 36px;
+  aspect-ratio: 1;
+  filter: drop-shadow(0 0 10px rgba(200, 16, 46, 0.35));
 }
 #title-bar .title-logo img {
   display: block;
@@ -88,7 +88,7 @@ a {
   height: 100%;
 }
 #title-bar .title-accent {
-  /* Northeastern grey, matching the logo. */
+  /* The logo's grey. */
   color: #a2aaad;
   font-weight: 300;
 }

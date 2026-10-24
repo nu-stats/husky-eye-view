@@ -41,7 +41,7 @@ export const CONTEXT_FOLDERS = Object.freeze([
 const STATIC = Object.freeze({
   'index.html': 'husky-merge/index.html',
   'husky-merge.css': 'husky-merge/husky-merge.css',
-  'logo.svg': 'public/logo.svg',
+  'logo.svg': 'husky-merge/logo.svg',
   'src/ui/styles/curated.css': 'src/ui/styles/curated.css',
 });
 
