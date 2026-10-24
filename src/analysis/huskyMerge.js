@@ -8,6 +8,7 @@
  */
 import { FlatMap } from './flatMap.js';
 import { MergePanel } from './mergePanel.js';
+import { installCraftHandoff } from './qualcraftHandoff.js';
 
 /** An app file (Census outlines and data); a page sent for a missing file is missing. */
 async function readContext(path) {
@@ -50,5 +51,30 @@ export function startHuskyMerge({
     showToast: toastHost ? toaster(toastHost) : () => {},
   });
   panel.open();
-  return { map, panel };
+  // MapCraft ▸ Add census measures in MergeCraft opens this page at
+  // #from=mapcraft with a GEOID table as Your file; a button then sends the
+  // merged table back to MapCraft, which joins it to the layer.
+  const toast = toastHost ? toaster(toastHost) : () => {};
+  const handoff = installCraftHandoff({
+    accept: ['mapcraft'],
+    ready: 'mergecraft:ready',
+    onReceived: () => {
+      const back = document.createElement('button');
+      back.type = 'button';
+      back.className = 'hm-send-back';
+      back.textContent = 'Send the merged table back to MapCraft';
+      back.addEventListener('click', async () => {
+        if (!panel.file) return toast('Choose your file first.');
+        try {
+          const file = await panel.call('csv');
+          const sent = handoff.reply({ type: 'mergecraft:table', version: 1, fileName: file.fileName, csv: new TextDecoder().decode(file.bytes) });
+          toast(sent ? 'Sent to MapCraft: add it there from the banner, then join it by GEOID.' : 'MapCraft is no longer open. Download the table instead.');
+        } catch (e) {
+          toast(e?.message || String(e));
+        }
+      });
+      panelHost?.prepend(back);
+    },
+  });
+  return { map, panel, handoff };
 }

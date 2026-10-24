@@ -143,3 +143,37 @@ test('stop() removes the listener', () => {
   send(TABLE);
   assert.deepEqual(opened, []);
 });
+
+test('MapCraft can send a layer for My files and a table for Merge & Export', async () => {
+  const { installCraftHandoff } = await import('./qualcraftHandoff.js');
+  const layers = [];
+  const tables = [];
+  const win = fakeWindow('#from=mapcraft');
+  const h = installCraftHandoff({ accept: ['qualcraft', 'mapcraft'], win, openFile: (f) => tables.push(f), openLayer: (f) => layers.push(f) });
+  assert.equal(h.waiting, true);
+  assert.deepEqual(win.opener.posted[0], [{ type: 'hev:ready', version: 1 }, '*']);
+  const geojson = { type: 'FeatureCollection', features: [] };
+  win.dispatchEvent(Object.assign(new Event('message'), { source: win.opener, origin: 'http://127.0.0.1:4320', data: { type: 'mapcraft:layer', version: 1, fileName: 'Sites', geojson } }));
+  assert.equal(layers.length, 1);
+  assert.equal(layers[0].name, 'Sites.geojson');
+  assert.equal(await layers[0].text(), JSON.stringify(geojson));
+  assert.equal(tables.length, 0);
+  // Replies go only to the origin that sent something.
+  assert.equal(h.reply({ type: 'mergecraft:table', version: 1, csv: 'GEOID\n' }), true);
+  assert.deepEqual(win.opener.posted[1], [{ type: 'mergecraft:table', version: 1, csv: 'GEOID\n' }, 'http://127.0.0.1:4320']);
+});
+
+test('the Craft hand-off ignores other apps, other origins and other windows', async () => {
+  const { installCraftHandoff } = await import('./qualcraftHandoff.js');
+  assert.equal(installCraftHandoff({ accept: ['mapcraft'], win: fakeWindow('#from=other') }).waiting, false);
+  const got = [];
+  const win = fakeWindow('#from=mapcraft');
+  installCraftHandoff({ accept: ['mapcraft'], ready: 'mergecraft:ready', win, openFile: (f) => got.push(f) });
+  assert.deepEqual(win.opener.posted[0], [{ type: 'mergecraft:ready', version: 1 }, '*']);
+  win.dispatchEvent(Object.assign(new Event('message'), { source: win.opener, origin: 'https://example.com', data: { type: 'mapcraft:table', version: 1, csv: 'x' } }));
+  win.dispatchEvent(Object.assign(new Event('message'), { source: {}, origin: 'http://127.0.0.1:4320', data: { type: 'mapcraft:table', version: 1, csv: 'x' } }));
+  win.dispatchEvent(Object.assign(new Event('message'), { source: win.opener, origin: 'http://127.0.0.1:4320', data: { type: 'qualcraft:table', version: 1, csv: 'x' } }));
+  assert.equal(got.length, 0);
+  win.dispatchEvent(Object.assign(new Event('message'), { source: win.opener, origin: 'http://localhost:4320', data: { type: 'mapcraft:table', version: 1, fileName: 'tracts', csv: 'GEOID\n' } }));
+  assert.equal(got[0].name, 'tracts.csv');
+});

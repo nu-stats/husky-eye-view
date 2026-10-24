@@ -34,7 +34,7 @@ import { aircraftTrackingTarget } from '../cockpitTracking.js';
 
 import { ShellFeedback } from './shellFeedback.js';
 import { TimeLens } from './timeLens.js';
-import { installQualcraftHandoff } from '../analysis/qualcraftHandoff.js';
+import { installCraftHandoff } from '../analysis/qualcraftHandoff.js';
 import {
   applyDataPanelPlacement,
   wantsDataPanelTop,
@@ -543,7 +543,15 @@ export class StyleManager extends ShellFacade {
     // QualCraft ▸ Send to Husky Eye View opens this page at #from=qualcraft
     // and hands its code counts to Merge & Export; the first-run launcher
     // stays away meanwhile.
-    const handoff = installQualcraftHandoff();
+    // MapCraft ▸ Show in Husky Eye View sends a layer for My files the same way.
+    const handoff = installCraftHandoff({
+      accept: ['qualcraft', 'mapcraft'],
+      openLayer: (file) => {
+        // My files may not be ready yet: queue the file and announce it.
+        (window.__gevMyFilesQueue ??= []).push(file);
+        window.dispatchEvent(new CustomEvent('gev:my-files-add'));
+      },
+    });
     this._removeQualcraftHandoff = handoff.stop;
     this.waitingForHandoff = handoff.waiting;
     this.ensureAreaReports = lazyPanel(

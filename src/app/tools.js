@@ -69,6 +69,16 @@ export function createApplicationTools({
     onAnalyze: analyzeMyFile,
   });
   defer(() => geoFileImport?.destroy());
+  // Layers handed over by another Craft app (MapCraft ▸ Show in Husky Eye
+  // View) wait in a queue until My files is ready, then load like a chosen file.
+  const takeQueuedFiles = () => {
+    const queue = window.__gevMyFilesQueue;
+    if (!geoFileImport || !queue?.length) return;
+    void geoFileImport.importFiles(queue.splice(0));
+  };
+  window.addEventListener('gev:my-files-add', takeQueuedFiles);
+  defer(() => window.removeEventListener('gev:my-files-add', takeQueuedFiles));
+  takeQueuedFiles();
   // DATA ▸ Recent Imagery: the box tool claims the pointer like Draw and the
   // panel lives on the right rail, so both belong to the application
   // lifetime. The tileset lets the layer drape while the globe is hidden.

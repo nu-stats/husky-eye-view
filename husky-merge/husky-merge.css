@@ -271,3 +271,15 @@ a {
     letter-spacing: 5px;
   }
 }
+
+/* MapCraft hand-off: send the merged table back to MapCraft. */
+.hm-send-back {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #23577f;
+  background: #23577f;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}

@@ -77,3 +77,68 @@ export function installQualcraftHandoff({
   opener.postMessage({ type: 'hev:ready', version: 1 }, '*');
   return { waiting: true, stop };
 }
+
+/**
+ * The Craft hand-off (MapCraft docs/handoff.md, protocol version 1) for any
+ * of the Craft apps: when this page was opened at `#from=<app>` by one of
+ * `accept`, answer with `ready` and take one message from that opener:
+ * `<app>:table` (a CSV, opened with `openFile`) or `<app>:layer` (GeoJSON,
+ * opened with `openLayer`). Only from the opener, only from a loopback
+ * address. `reply(message)` sends one message back to the opener's origin
+ * once it has sent something (MergeCraft's "Send back to MapCraft").
+ * @param {object} options
+ * @param {string[]} options.accept Apps whose messages are taken.
+ * @param {string} [options.ready] This app's ready message type.
+ * @param {Window} [options.win]
+ * @param {(file: File) => void} [options.openFile]
+ * @param {(file: File) => void} [options.openLayer]
+ * @param {(from: string) => void} [options.onReceived]
+ */
+export function installCraftHandoff({
+  accept,
+  ready = 'hev:ready',
+  win = globalThis,
+  openFile = (file) =>
+    win.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: { file } })),
+  openLayer = () => {},
+  onReceived = () => {},
+}) {
+  const hash = String(win.location?.hash || '').replace(/^#/, '');
+  const from = new URLSearchParams(hash).get('from');
+  const idle = { waiting: false, from: null, stop: () => {}, reply: () => false };
+  if (!from || !accept.includes(from)) return idle;
+  const { pathname, search } = win.location;
+  win.history?.replaceState?.(null, '', `${pathname}${search}`);
+  const opener = win.opener;
+  if (!opener) return idle;
+
+  let replyOrigin = null;
+  const stop = () => win.removeEventListener('message', onMessage);
+  const onMessage = (event) => {
+    if (event.source !== opener || !isLoopbackOrigin(event.origin)) return;
+    const data = event.data;
+    if (data?.version !== 1) return;
+    if (data.type === `${from}:table` && typeof data.csv === 'string') {
+      openFile(new File([data.csv], csvName(data.fileName), { type: 'text/csv' }));
+    } else if (data.type === `${from}:layer` && data.geojson) {
+      const text = typeof data.geojson === 'string' ? data.geojson : JSON.stringify(data.geojson);
+      const base = String(data.fileName || data.name || `${from}-layer`).split(/[\/]/).pop().trim();
+      openLayer(new File([text], /\.(geo)?json$/i.test(base) ? base : `${base}.geojson`, { type: 'application/geo+json' }));
+    } else return;
+    replyOrigin = event.origin;
+    stop();
+    onReceived(from);
+  };
+  win.addEventListener('message', onMessage);
+  opener.postMessage({ type: ready, version: 1 }, '*');
+  return {
+    waiting: true,
+    from,
+    stop,
+    reply(message) {
+      if (!replyOrigin || opener.closed) return false;
+      opener.postMessage(message, replyOrigin);
+      return true;
+    },
+  };
+}
