@@ -19,7 +19,7 @@ process Pinokio starts). The pieces split cleanly:
 
 ## Options
 
-1. **Point first-time visitors to Husky Merge (available now).** It is on the
+1. **Point first-time visitors to MergeCraft (available now).** It is on the
    web at https://nu-stats.github.io/husky-eye-view/husky-merge/ with no setup:
    your file joined to tracts or counties, a map, and the merged file with its
    do-file and R script. It is the "first win" of step 1 without the globe.

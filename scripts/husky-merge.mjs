@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Husky Merge, the stand-alone Merge & Export app (husky-merge/index.html),
+ * MergeCraft, the stand-alone Merge & Export app (husky-merge/index.html),
  * served or built from this repository's own files — no bundler and no npm
  * packages: the page loads its modules as they are.
  *
  *   node scripts/husky-merge.mjs serve [--host 127.0.0.1] [--port 4300]
  *   node scripts/husky-merge.mjs build [--out dist-husky-merge]
  *
- * `serve` prints "[Husky Merge] Ready at http://…/" once listening (the
+ * `serve` prints "[MergeCraft] Ready at http://…/" once listening (the
  * Pinokio launcher waits for it). `build` writes the same files as a static
  * site (about 200 MB, most of it Census outlines) for any web host.
  *
@@ -144,7 +144,7 @@ function serve({ host, port }) {
   });
   server.listen(port, host, () => {
     const { port: actual } = server.address();
-    console.log(`[Husky Merge] Ready at http://${host}:${actual}/`);
+    console.log(`[MergeCraft] Ready at http://${host}:${actual}/`);
   });
 }
 
@@ -168,7 +168,7 @@ async function build({ out }) {
   // GitHub Pages: serve files as they are (no Jekyll).
   await writeFile(path.join(dest, '.nojekyll'), '');
   console.log(
-    `[Husky Merge] Built ${count} files into ${path.relative(ROOT, dest)}/`,
+    `[MergeCraft] Built ${count} files into ${path.relative(ROOT, dest)}/`,
   );
 }
 

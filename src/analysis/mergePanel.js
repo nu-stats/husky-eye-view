@@ -78,7 +78,7 @@ function show(node, on) {
 
 export class MergePanel {
   /**
-   * In Husky Eye View the panel floats over the globe (`viewer`). Husky Merge
+   * In Husky Eye View the panel floats over the globe (`viewer`). MergeCraft
    * (the stand-alone app) puts it in `container`, draws on a 2D `mapView`
    * (`show(map, {column, label})`, `fit(box)`, `clear()`), and has no
    * analysis boxes and no close button.
@@ -1033,7 +1033,7 @@ export class MergePanel {
     if (fly) await this.flyTo(map.records);
   }
 
-  /** Husky Merge: the same preview on its 2D map. */
+  /** MergeCraft: the same preview on its 2D map. */
   async drawFlat({ fly = false } = {}) {
     if (!this.file) return;
     this.mapView.clear();

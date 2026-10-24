@@ -37,7 +37,7 @@ do-file. Stop there.
 
 - What it is: neighborhood research on a 3D globe, with your data and your
   statistics package.
-- Try it now in a browser: Husky Merge,
+- Try it now in a browser: MergeCraft,
   https://nu-stats.github.io/husky-eye-view/husky-merge/
 - Install the full app: in Pinokio, download from
   https://github.com/nu-stats/husky-eye-view and press Install.

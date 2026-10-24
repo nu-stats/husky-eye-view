@@ -6,7 +6,7 @@ what can be written or built in the repository; the rest needs a person.
 | # | Step | Where it stands |
 | --- | --- | --- |
 | 1 | One main user and one main moment: a researcher's own data on the map in under five minutes | **In the app.** The first-run card leads with YOUR DATA, MAPPED (Merge & Export) and THEN AND NOW (the Time Lens swipe); Data Layers has MY FILES, whose Analyze button hands a file to Merge & Export. |
-| 2 | A first try with no setup | **Assessed:** [hosted-demo.md](hosted-demo.md). Husky Merge already runs on the web with no setup; the full app needs a server for its live feeds and statistics. |
+| 2 | A first try with no setup | **Assessed:** [hosted-demo.md](hosted-demo.md). MergeCraft already runs on the web with no setup; the full app needs a server for its live feeds and statistics. |
 | 3 | Research in front | **In the app.** The tune button (MENUS ON SCREEN) hides menus a session does not need, with Research, Teach, Live world and Everything workspaces. |
 | 4 | Citable and trustworthy | **Done:** [CITATION.cff](../../CITATION.cff), [METHODS.md](../METHODS.md) and a Zenodo DOI, [10.5281/zenodo.23582397](https://doi.org/10.5281/zenodo.23582397) (all versions). |
 | 5 | Teaching | **Written:** three labs in [labs/](labs/). |

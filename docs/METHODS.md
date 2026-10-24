@@ -55,7 +55,7 @@ from the project owner; their terms of use apply to anything made from them.
 
 ## 3. Analysis tools
 
-- **Merge & Export** (and the stand-alone Husky Merge) adds the map's data to
+- **Merge & Export** (and the stand-alone MergeCraft) adds the map's data to
   the user's file. Rows join by GEOID (state, county, place, tract or block
   group, detected automatically) or by location: each point is placed in its
   state, county and 2020 census tract by point-in-polygon against Census

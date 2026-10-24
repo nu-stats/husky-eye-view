@@ -75,7 +75,7 @@ export const MAX_MAP_POLYGONS = 1500;
 export const MAX_MAP_POINTS = 50_000;
 
 export class MergeSession {
-  /** `appName` signs the scripts, steps and data titles (Husky Merge sets its own). */
+  /** `appName` signs the scripts, steps and data titles (MergeCraft sets its own). */
   constructor({ readContext, appName = 'Husky Eye View' }) {
     this.appName = appName;
     this.library = contextLibrary(readContext);

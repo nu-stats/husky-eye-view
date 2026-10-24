@@ -1033,7 +1033,7 @@ export function tableWithUpload(table, dataset, options) {
 
 /** Five quantile class breaks for coloring the upload on the map. */
 /**
- * Your data's colors on any map (the globe's overlay and Husky Merge's 2D
+ * Your data's colors on any map (the globe's overlay and MergeCraft's 2D
  * map): one hue, light to dark — gold, so it reads over the red/blue
  * research layers — and the color of points.
  */

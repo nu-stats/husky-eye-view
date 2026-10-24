@@ -1,5 +1,5 @@
 /**
- * Husky Merge: Husky Eye View's Merge & Export as an app of its own (the
+ * MergeCraft: Husky Eye View's Merge & Export as an app of its own (the
  * page is husky-merge/index.html, served by scripts/husky-merge.mjs). The
  * same panel, worker and engine — convert a file, or merge it with census
  * data and download it with the do-file, R script, steps and codebook that
@@ -44,7 +44,7 @@ export function startHuskyMerge({
     mapView: map,
     title: 'CONVERT & MERGE',
     kicker: 'DATA',
-    dataName: 'Husky Merge',
+    dataName: 'MergeCraft',
     closable: false,
     analysis: false,
     showToast: toastHost ? toaster(toastHost) : () => {},

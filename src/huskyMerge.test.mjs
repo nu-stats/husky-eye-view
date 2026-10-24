@@ -12,7 +12,7 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-test('Husky Merge loads its modules unbundled: no bare imports, the worker included', () => {
+test('MergeCraft loads its modules unbundled: no bare imports, the worker included', () => {
   const graph = moduleGraph();
   for (const rel of [
     'src/analysis/huskyMerge.js',
@@ -27,7 +27,7 @@ test('Husky Merge loads its modules unbundled: no bare imports, the worker inclu
   assert.ok(!graph.some((rel) => /userOverlay|cesium/i.test(rel)));
 });
 
-test('Husky Merge publishes every data folder the engine reads', () => {
+test('MergeCraft publishes every data folder the engine reads', () => {
   const used = new Set();
   for (const rel of moduleGraph())
     for (const m of readFileSync(path.join(ROOT, rel), 'utf8').matchAll(
@@ -47,7 +47,7 @@ test('Husky Merge publishes every data folder the engine reads', () => {
     assert.ok(CONTEXT_FOLDERS.includes(`enumeration-districts-${year}`));
 });
 
-test('Husky Merge serves only the app: the page, its modules and the data', () => {
+test('MergeCraft serves only the app: the page, its modules and the data', () => {
   const files = siteFiles();
   assert.equal(
     resolveRequest('/', files),

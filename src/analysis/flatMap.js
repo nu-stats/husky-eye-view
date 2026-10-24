@@ -1,5 +1,5 @@
 /**
- * Husky Merge's map: a light 2D map of the United States on a canvas (Web
+ * MergeCraft's map: a light 2D map of the United States on a canvas (Web
  * Mercator), with the states — and county lines once zoomed in — as the base
  * and your file on top: its areas shaded by a column in Husky Eye View's gold
  * ramp, or a dot per area or point. No map tiles are fetched; the outlines

@@ -1,6 +1,6 @@
-name: Husky Merge on GitHub Pages
+name: MergeCraft on GitHub Pages
 
-# Publishes Husky Merge (husky-merge/index.html, the stand-alone Merge &
+# Publishes MergeCraft (husky-merge/index.html, the stand-alone Merge &
 # Export app) as a static site at <pages>/husky-merge/. It needs no npm
 # packages: scripts/husky-merge.mjs copies the page, the modules it imports
 # and the Census data folders the engine reads.
@@ -25,11 +25,11 @@ concurrency:
 
 jobs:
   build:
-    name: Build Husky Merge
+    name: Build MergeCraft
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Check out what Husky Merge uses
+      - name: Check out what MergeCraft uses
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
@@ -53,13 +53,13 @@ jobs:
         with:
           node-version: 24.14.0
 
-      - name: Test Husky Merge's file list
+      - name: Test MergeCraft's file list
         run: node --test src/huskyMerge.test.mjs src/analysis/flatMap.test.mjs
 
       - name: Build the static site
         run: |
           node scripts/husky-merge.mjs build --out dist-pages/husky-merge
-          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=husky-merge/"><title>Husky Merge</title><a href="husky-merge/">Husky Merge</a>\n' > dist-pages/index.html
+          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=husky-merge/"><title>MergeCraft</title><a href="husky-merge/">MergeCraft</a>\n' > dist-pages/index.html
 
       - name: Configure Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
