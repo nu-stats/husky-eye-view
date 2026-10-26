@@ -756,3 +756,30 @@ test('Husky Eye View: Analyze hands the row file on, and is absent without a han
   assert.equal(action(rows(plain.els)[0], 'analyze'), undefined);
   assert.equal(plain.tool.analyze(plain.tool.list()[0].id), false);
 });
+
+test('a MapCraft scene sent again replaces the earlier one; other files stay', async () => {
+  const revoked = [];
+  const t = setup({
+    load: async (f) => ({
+      dataSource: { show: true, name: f.name },
+      name: f.name,
+      format: 'geojson',
+      entityCount: 2,
+      revoke: () => revoked.push(f.name),
+      ...(f.sceneKey ? { sceneKey: f.sceneKey } : {}),
+    }),
+  });
+  await t.tool.importFiles([
+    file('Tracts 3D.geojson', { sceneKey: 'mapcraft3d:Tracts' }),
+    file('other.geojson'),
+  ]);
+  await t.tool.importFiles([
+    file('Tracts 3D again.geojson', { sceneKey: 'mapcraft3d:Tracts' }),
+  ]);
+  assert.deepEqual(
+    t.tool.list().map((f) => f.name),
+    ['other.geojson', 'Tracts 3D again.geojson'],
+  );
+  assert.deepEqual(revoked, ['Tracts 3D.geojson']);
+  assert.equal(t.removed.length, 1);
+});

@@ -98,13 +98,19 @@ export function installQualcraftHandoff({
  * opened with `openLayer`). Only from the opener, only from a loopback
  * address. `reply(message)` sends one message back to the opener's origin
  * once it has sent something (MergeCraft's "Send back to MapCraft").
+ * `<app>:scene` (MapCraft ▸ Show in 3D) is a layer whose file carries its
+ * heights and colors; it opens with `openLayer` like a layer.
+ * With `keepListening`, later messages from the same opener are taken too,
+ * each answered with `<this app>:received`, so the sender can send again to
+ * the open window (a second window.open by name would not reload it).
  * @param {object} options
  * @param {string[]} options.accept Apps whose messages are taken.
  * @param {string} [options.ready] This app's ready message type.
  * @param {Window} [options.win]
  * @param {(file: File) => void} [options.openFile]
  * @param {(file: File) => void} [options.openLayer]
- * @param {(from: string) => void} [options.onReceived]
+ * @param {(from: string, kind: 'table'|'layer'|'scene', name: string) => void} [options.onReceived]
+ * @param {boolean} [options.keepListening]
  */
 export function installCraftHandoff({
   accept,
@@ -115,6 +121,7 @@ export function installCraftHandoff({
   openLayer = () => {},
   onReceived = () => {},
   fetchImpl = globalThis.fetch?.bind(globalThis),
+  keepListening = false,
 }) {
   const hash = handoffHash(win);
   const from = new URLSearchParams(hash).get('from');
@@ -151,11 +158,17 @@ export function installCraftHandoff({
     if (event.source !== opener || !isLoopbackOrigin(event.origin)) return;
     const data = event.data;
     if (data?.version !== 1) return;
+    let kind;
     if (data.type === `${from}:table` && typeof data.csv === 'string') {
+      kind = 'table';
       openFile(
         new File([data.csv], csvName(data.fileName), { type: 'text/csv' }),
       );
-    } else if (data.type === `${from}:layer` && data.geojson) {
+    } else if (
+      (data.type === `${from}:layer` || data.type === `${from}:scene`) &&
+      data.geojson
+    ) {
+      kind = data.type.endsWith(':scene') ? 'scene' : 'layer';
       const text =
         typeof data.geojson === 'string'
           ? data.geojson
@@ -173,8 +186,13 @@ export function installCraftHandoff({
       );
     } else return;
     replyOrigin = event.origin;
-    stop();
-    onReceived(from);
+    if (keepListening)
+      opener.postMessage(
+        { type: ready.replace(/:ready$/, ':received'), version: 1 },
+        event.origin,
+      );
+    else stop();
+    onReceived(from, kind, typeof data.name === 'string' ? data.name : '');
   };
   win.addEventListener('message', onMessage);
   opener.postMessage({ type: ready, version: 1 }, '*');

@@ -71,10 +71,49 @@ export function createApplicationTools({
   defer(() => geoFileImport?.destroy());
   // Layers handed over by another Craft app (MapCraft ▸ Show in Husky Eye
   // View) wait in a queue until My files is ready, then load like a chosen file.
+  // A hand-off can land while the globe is still starting up, whose camera
+  // moves then win over the file's own fly-to: fly to it once more when the
+  // globe's tiles are in (or after 10 s), unless the map was moved meanwhile.
+  let stopSettledFly = () => {};
+  const flyWhenSettled = (id) => {
+    stopSettledFly();
+    const canvas = viewer.scene?.canvas;
+    const since = Date.now();
+    let removeTiles = () => {};
+    let delay = 0;
+    const finish = (fly) => {
+      stopSettledFly = () => {};
+      clearTimeout(timer);
+      clearTimeout(delay);
+      removeTiles?.();
+      canvas?.removeEventListener('pointerdown', moved);
+      canvas?.removeEventListener('wheel', moved);
+      if (fly) geoFileImport.flyTo(id);
+    };
+    const moved = () => finish(false);
+    canvas?.addEventListener('pointerdown', moved, { passive: true });
+    canvas?.addEventListener('wheel', moved, { passive: true });
+    removeTiles = viewer.scene?.globe?.tileLoadProgressEvent?.addEventListener(
+      (pending) => {
+        clearTimeout(delay);
+        if (!pending)
+          delay = setTimeout(
+            () => finish(true),
+            Math.max(1000, 3000 - (Date.now() - since)),
+          );
+      },
+    );
+    const timer = setTimeout(() => finish(true), 10_000);
+    stopSettledFly = () => finish(false);
+  };
+  defer(() => stopSettledFly());
   const takeQueuedFiles = () => {
     const queue = window.__gevMyFilesQueue;
     if (!geoFileImport || !queue?.length) return;
-    void geoFileImport.importFiles(queue.splice(0));
+    void geoFileImport.importFiles(queue.splice(0)).then((outcomes) => {
+      const id = outcomes.find((outcome) => outcome.ok)?.id;
+      if (id) flyWhenSettled(id);
+    });
   };
   window.addEventListener('gev:my-files-add', takeQueuedFiles);
   defer(() => window.removeEventListener('gev:my-files-add', takeQueuedFiles));

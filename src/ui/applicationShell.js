@@ -543,17 +543,39 @@ export class StyleManager extends ShellFacade {
     // QualCraft ▸ Send to Husky Eye View opens this page at #from=qualcraft
     // and hands its code counts to Merge & Export; the first-run launcher
     // stays away meanwhile.
-    // MapCraft ▸ Show in Husky Eye View sends a layer for My files the same way.
+    // MapCraft ▸ Show in Husky Eye View sends a layer for My files the same way;
+    // Show in 3D sends a scene (heights and colors in the file), and a bar
+    // offers to send a picture of the view back for a MapCraft layout. The
+    // page keeps listening, so MapCraft can send again to this window.
     // StatCraft ▸ Show on map serves its file on this computer (#fetch=).
+    let sceneReturn = null;
     const handoff = installCraftHandoff({
       accept: ['qualcraft', 'mapcraft', 'statcraft'],
+      keepListening: true,
       openLayer: (file) => {
         // My files may not be ready yet: queue the file and announce it.
         (window.__gevMyFilesQueue ??= []).push(file);
         window.dispatchEvent(new CustomEvent('gev:my-files-add'));
       },
+      onReceived: (from, kind, name) => {
+        if (from !== 'mapcraft' || kind !== 'scene') return;
+        void import('./craftSceneReturn.js').then(
+          ({ createCraftSceneReturn }) => {
+            if (!sceneReturn || sceneReturn.destroyed)
+              sceneReturn = createCraftSceneReturn({
+                viewer,
+                reply: (message) => handoff.reply(message),
+                showToast: (message) => this._showToast(message),
+              });
+            sceneReturn.setTitle(name);
+          },
+        );
+      },
     });
-    this._removeQualcraftHandoff = handoff.stop;
+    this._removeQualcraftHandoff = () => {
+      handoff.stop();
+      sceneReturn?.destroy();
+    };
     this.waitingForHandoff = handoff.waiting;
     this.ensureAreaReports = lazyPanel(
       this,

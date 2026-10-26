@@ -3,6 +3,11 @@ import * as Cesium from 'cesium';
 import { createImportImageBudget } from './geoImportImages.js';
 import { createImportedPins } from './geoImportPins.js';
 import {
+  craftSceneDataSource,
+  craftSceneTitle,
+  isCraftScene,
+} from './craftScene.js';
+import {
   GEO_FILE_ACCEPT,
   GeoImportError,
   MAX_IMPORT_BYTES,
@@ -1308,7 +1313,8 @@ export async function loadGeoFile(
     pins?.destroy();
     urls.splice(0).forEach((url) => URL.revokeObjectURL(url));
   };
-  const name = importDisplayName(file.name);
+  let name = importDisplayName(file.name);
+  let sceneKey;
   let dataSource;
   let removed = 0;
   try {
@@ -1323,20 +1329,28 @@ export async function loadGeoFile(
       if (size.over) throw overLimitError(size);
       if (!size.positions)
         throw new GeoImportError(msg('That file has nothing to draw.'));
-      prepareGeoJson(geojson);
       bytes = null;
-      dataSource = await boundedImport(
-        Cesium.GeoJsonDataSource.load(geojson, {
-          clampToGround: true,
-          stroke,
-          fill: stroke.withAlpha(0.25),
-          strokeWidth: 3,
-          markerColor: stroke,
-          // No HTML description table is built from the file's properties.
-          describe: () => undefined,
-        }),
-        signal,
-      );
+      // MapCraft ▸ Show in 3D: heights and colors travel in the file.
+      if (format === 'geojson' && isCraftScene(geojson)) {
+        const title = craftSceneTitle(geojson);
+        if (title) name = importDisplayName(`${title} (3D)`);
+        sceneKey = `mapcraft3d:${title || name}`;
+        dataSource = craftSceneDataSource(geojson, { name, color });
+      } else {
+        prepareGeoJson(geojson);
+        dataSource = await boundedImport(
+          Cesium.GeoJsonDataSource.load(geojson, {
+            clampToGround: true,
+            stroke,
+            fill: stroke.withAlpha(0.25),
+            strokeWidth: 3,
+            markerColor: stroke,
+            // No HTML description table is built from the file's properties.
+            describe: () => undefined,
+          }),
+          signal,
+        );
+      }
     } else {
       let text;
       let entries;
@@ -1393,6 +1407,7 @@ export async function loadGeoFile(
     (e) =>
       e.billboard?.image?.getValue(now) ||
       e.point ||
+      e.cylinder ||
       e.rectangle ||
       e.polyline?.positions?.getValue(now)?.length >= 2 ||
       e.wall?.positions?.getValue(now)?.length >= 2 ||
@@ -1432,6 +1447,8 @@ export async function loadGeoFile(
     removed,
     revoke,
     mount: () => pins.mount(),
+    // The same MapCraft scene sent again replaces the earlier one in My files.
+    ...(sceneKey ? { sceneKey } : {}),
     refreshGround: (refreshSignal) =>
       settleGroundPins(
         dataSource,

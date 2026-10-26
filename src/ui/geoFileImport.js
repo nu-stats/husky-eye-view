@@ -357,6 +357,7 @@ export function initGeoFileImport({
         refreshGround: loaded.refreshGround,
         // The file as chosen, for Analyze.
         file,
+        sceneKey: loaded.sceneKey,
       };
       await viewer.dataSources.add(item.dataSource);
       if (destroyed) {
@@ -365,6 +366,10 @@ export function initGeoFileImport({
         break;
       }
       loaded.mount?.();
+      // A MapCraft scene sent again takes the earlier one's place.
+      if (item.sceneKey)
+        for (const old of imports.filter((i) => i.sceneKey === item.sceneKey))
+          remove(old.id);
       imports.push(item);
       renderList();
       render();

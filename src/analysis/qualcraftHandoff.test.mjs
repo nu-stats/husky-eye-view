@@ -215,3 +215,104 @@ test('a fetch= table opens as a CSV; other hosts and types are refused', async (
   const h2 = installCraftHandoff({ accept: ['statcraft'], win: odd, fetchImpl });
   assert.equal(await h2.done, false);
 });
+
+test('MapCraft can send a 3D scene, and again to the open window', async () => {
+  const { installCraftHandoff } = await import('./qualcraftHandoff.js');
+  const layers = [];
+  const received = [];
+  const win = fakeWindow('#from=mapcraft');
+  const h = installCraftHandoff({
+    accept: ['mapcraft'],
+    win,
+    keepListening: true,
+    openLayer: (f) => layers.push(f),
+    onReceived: (...args) => received.push(args),
+  });
+  const scene = {
+    type: 'FeatureCollection',
+    mapcraft3d: { version: 1 },
+    features: [],
+  };
+  const post = (data, origin = 'http://127.0.0.1:4320') =>
+    win.dispatchEvent(
+      Object.assign(new Event('message'), { source: win.opener, origin, data }),
+    );
+  post({
+    type: 'mapcraft:scene',
+    version: 1,
+    fileName: 'Areas 3D.geojson',
+    name: 'Areas',
+    geojson: scene,
+  });
+  assert.equal(layers[0].name, 'Areas 3D.geojson');
+  assert.equal(await layers[0].text(), JSON.stringify(scene));
+  assert.deepEqual(received[0], ['mapcraft', 'scene', 'Areas']);
+  // Each message is answered, to the sender's origin only.
+  assert.deepEqual(win.opener.posted[1], [
+    { type: 'hev:received', version: 1 },
+    'http://127.0.0.1:4320',
+  ]);
+  post({
+    type: 'mapcraft:layer',
+    version: 1,
+    fileName: 'Sites',
+    geojson: { type: 'FeatureCollection', features: [] },
+  });
+  assert.equal(layers.length, 2);
+  assert.deepEqual(received[1], ['mapcraft', 'layer', '']);
+  post(
+    { type: 'mapcraft:scene', version: 1, geojson: scene },
+    'https://example.com',
+  );
+  assert.equal(layers.length, 2);
+  assert.equal(h.reply({ type: 'hev:picture', version: 1 }), true);
+  h.stop();
+  post({ type: 'mapcraft:scene', version: 1, geojson: scene });
+  assert.equal(layers.length, 2);
+});
+
+test('without keepListening one message is taken and nothing is acknowledged', async () => {
+  const { installCraftHandoff } = await import('./qualcraftHandoff.js');
+  const layers = [];
+  const win = fakeWindow('#from=mapcraft');
+  installCraftHandoff({
+    accept: ['mapcraft'],
+    ready: 'mergecraft:ready',
+    win,
+    openLayer: (f) => layers.push(f),
+  });
+  for (let i = 0; i < 2; i++)
+    win.dispatchEvent(
+      Object.assign(new Event('message'), {
+        source: win.opener,
+        origin: 'http://127.0.0.1:4320',
+        data: { type: 'mapcraft:layer', version: 1, geojson: {} },
+      }),
+    );
+  assert.equal(layers.length, 1);
+  assert.equal(win.opener.posted.length, 1);
+});
+
+test('the picture sent back to MapCraft says what it is', async () => {
+  const { pictureMessage } = await import('../ui/craftSceneReturn.js');
+  const m = pictureMessage(
+    {
+      dataUrl: 'data:image/jpeg;base64,AAAA',
+      width: 1200,
+      height: 800,
+      name: 'view.jpg',
+    },
+    'Areas in 3D',
+    'Google · Cesium',
+  );
+  assert.deepEqual(m, {
+    type: 'hev:picture',
+    version: 1,
+    fileName: 'view.jpg',
+    image: 'data:image/jpeg;base64,AAAA',
+    width: 1200,
+    height: 800,
+    title: 'Areas in 3D',
+    credits: 'Google · Cesium',
+  });
+});

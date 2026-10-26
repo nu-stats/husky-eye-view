@@ -580,3 +580,49 @@ body.hev-title-compact #title-bar:hover .title-logo {
   color: var(--text-primary);
   border-color: rgba(200, 16, 46, 0.8);
 }
+
+/* MapCraft ▸ Show in 3D: send a picture of the view back (src/ui/craftSceneReturn.js). */
+.craft-scene-return {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 190;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  padding: 6px 8px 6px 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font: 600 11px var(--font-mono);
+  letter-spacing: 1px;
+  color: var(--text-primary);
+}
+.craft-scene-return > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.craft-scene-return button {
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.craft-scene-return button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.craft-scene-return .craft-scene-return-close {
+  border-color: transparent;
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  font-size: 16px;
+}

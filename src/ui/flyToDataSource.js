@@ -112,7 +112,8 @@ export function flyToDataSource(
   viewer.camera?.flyToBoundingSphere?.(sphere, {
     offset: new Cesium.HeadingPitchRange(
       viewer.camera.heading || 0,
-      -Math.PI / 2,
+      // A MapCraft 3D scene is seen at an angle, so its heights show.
+      dataSource?.craftScene3d ? -Math.PI / 5 : -Math.PI / 2,
       Math.max(800, rangeForBoundingSphere(viewer, sphere.radius)),
     ),
     duration,
