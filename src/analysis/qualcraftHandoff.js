@@ -16,6 +16,18 @@
 
 const OPEN_EVENT = 'gev:merge-export-open'; // mergePanel.js MERGE_OPEN_EVENT
 
+// The address as the page was opened: the share link rewrites the hash
+// with the view (after the first camera move), which can happen before
+// the app shell asks for a hand-off.
+const BOOT_HASH = String(globalThis.location?.hash || '');
+
+/** The hand-off part of `win`'s hash, or of the hash it was opened with. */
+function handoffHash(win) {
+  const now = String(win.location?.hash || '').replace(/^#/, '');
+  if (new URLSearchParams(now).get('from') || win !== globalThis) return now;
+  return BOOT_HASH.replace(/^#/, '');
+}
+
 /** Whether `origin` is a page on this computer (127.0.0.1, localhost, [::1], *.localhost). */
 export function isLoopbackOrigin(origin) {
   try {
@@ -102,13 +114,22 @@ export function installCraftHandoff({
     win.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: { file } })),
   openLayer = () => {},
   onReceived = () => {},
+  fetchImpl = globalThis.fetch?.bind(globalThis),
 }) {
-  const hash = String(win.location?.hash || '').replace(/^#/, '');
+  const hash = handoffHash(win);
   const from = new URLSearchParams(hash).get('from');
   const idle = { waiting: false, from: null, stop: () => {}, reply: () => false };
   if (!from || !accept.includes(from)) return idle;
   const { pathname, search } = win.location;
   win.history?.replaceState?.(null, '', `${pathname}${search}`);
+  // A desktop app (StatCraft) has no browser window to post from: it
+  // serves the file once on this computer and names it in `fetch=`.
+  const fetchUrl = new URLSearchParams(hash).get('fetch');
+  if (fetchUrl) {
+    if (!isLoopbackFetch(fetchUrl)) return idle;
+    const done = fetchHandoff({ from, url: fetchUrl, fetchImpl, openFile, openLayer, onReceived });
+    return { ...idle, waiting: true, from, done };
+  }
   const opener = win.opener;
   if (!opener) return idle;
 
@@ -141,4 +162,44 @@ export function installCraftHandoff({
       return true;
     },
   };
+}
+
+/** Whether `url` is an http address on this computer (fetch= hand-off). */
+export function isLoopbackFetch(url) {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === 'http:' && isLoopbackOrigin(new URL(url).origin);
+  } catch {
+    return false;
+  }
+}
+
+/** Largest file a fetch= hand-off takes (bytes). */
+const FETCH_LIMIT = 64 * 1024 * 1024;
+
+/**
+ * Fetch a file a desktop app is serving on this computer and open it: a
+ * .csv as a table (Merge & Export), a .geojson or .json as a layer (My
+ * files). Anything else, too large, or unreachable is left alone.
+ * @returns {Promise<boolean>} whether something was opened
+ */
+async function fetchHandoff({ from, url, fetchImpl, openFile, openLayer, onReceived }) {
+  if (!fetchImpl) return false;
+  try {
+    const res = await fetchImpl(url, { credentials: 'omit', cache: 'no-store' });
+    if (!res.ok) return false;
+    const text = await res.text();
+    if (text.length > FETCH_LIMIT) return false;
+    const base = decodeURIComponent(new URL(url).pathname.split('/').pop() || '').trim();
+    if (/\.csv$/i.test(base)) {
+      openFile(new File([text], csvName(base), { type: 'text/csv' }));
+    } else if (/\.(geo)?json$/i.test(base)) {
+      JSON.parse(text);
+      openLayer(new File([text], base, { type: 'application/geo+json' }));
+    } else return false;
+    onReceived(from);
+    return true;
+  } catch {
+    return false;
+  }
 }

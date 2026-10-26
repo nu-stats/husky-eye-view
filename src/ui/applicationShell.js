@@ -544,8 +544,9 @@ export class StyleManager extends ShellFacade {
     // and hands its code counts to Merge & Export; the first-run launcher
     // stays away meanwhile.
     // MapCraft ▸ Show in Husky Eye View sends a layer for My files the same way.
+    // StatCraft ▸ Show on map serves its file on this computer (#fetch=).
     const handoff = installCraftHandoff({
-      accept: ['qualcraft', 'mapcraft'],
+      accept: ['qualcraft', 'mapcraft', 'statcraft'],
       openLayer: (file) => {
         // My files may not be ready yet: queue the file and announce it.
         (window.__gevMyFilesQueue ??= []).push(file);

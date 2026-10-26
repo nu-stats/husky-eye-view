@@ -177,3 +177,41 @@ test('the Craft hand-off ignores other apps, other origins and other windows', a
   win.dispatchEvent(Object.assign(new Event('message'), { source: win.opener, origin: 'http://localhost:4320', data: { type: 'mapcraft:table', version: 1, fileName: 'tracts', csv: 'GEOID\n' } }));
   assert.equal(got[0].name, 'tracts.csv');
 });
+
+test('a desktop app hands a layer over by fetch= on this computer', async () => {
+  const { installCraftHandoff } = await import('./qualcraftHandoff.js');
+  const url = 'http://127.0.0.1:50123/abc123/points.geojson';
+  const win = fakeWindow(`#from=statcraft&fetch=${encodeURIComponent(url)}`, null);
+  const layers = [];
+  const asked = [];
+  const fetchImpl = async (u) => {
+    asked.push(u);
+    return { ok: true, text: async () => '{"type":"FeatureCollection","features":[]}' };
+  };
+  const h = installCraftHandoff({ accept: ['statcraft'], win, fetchImpl, openLayer: (f) => layers.push(f) });
+  assert.equal(h.waiting, true);
+  assert.equal(await h.done, true);
+  assert.deepEqual(asked, [url]);
+  assert.equal(layers.length, 1);
+  assert.equal(layers[0].name, 'points.geojson');
+  assert.deepEqual(win.replaced, ['/']);
+});
+
+test('a fetch= table opens as a CSV; other hosts and types are refused', async () => {
+  const { installCraftHandoff, isLoopbackFetch } = await import('./qualcraftHandoff.js');
+  const tables = [];
+  const fetchImpl = async () => ({ ok: true, text: async () => 'GEOID,n\n25025,3\n' });
+  const win = fakeWindow(`#from=statcraft&fetch=${encodeURIComponent('http://localhost:4000/t/counties.csv')}`, null);
+  const h = installCraftHandoff({ accept: ['statcraft'], win, fetchImpl, openFile: (f) => tables.push(f) });
+  assert.equal(await h.done, true);
+  assert.equal(tables[0].name, 'counties.csv');
+  assert.equal(isLoopbackFetch('https://example.com/x.csv'), false);
+  assert.equal(isLoopbackFetch('http://192.168.1.5/x.csv'), false);
+  assert.equal(isLoopbackFetch('file:///C:/x.csv'), false);
+  const far = fakeWindow(`#from=statcraft&fetch=${encodeURIComponent('https://example.com/x.csv')}`, null);
+  const refused = installCraftHandoff({ accept: ['statcraft'], win: far, fetchImpl });
+  assert.equal(refused.waiting, false);
+  const odd = fakeWindow(`#from=statcraft&fetch=${encodeURIComponent('http://127.0.0.1:9/run.exe')}`, null);
+  const h2 = installCraftHandoff({ accept: ['statcraft'], win: odd, fetchImpl });
+  assert.equal(await h2.done, false);
+});
