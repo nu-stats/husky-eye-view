@@ -118,7 +118,12 @@ export function installCraftHandoff({
 }) {
   const hash = handoffHash(win);
   const from = new URLSearchParams(hash).get('from');
-  const idle = { waiting: false, from: null, stop: () => {}, reply: () => false };
+  const idle = {
+    waiting: false,
+    from: null,
+    stop: () => {},
+    reply: () => false,
+  };
   if (!from || !accept.includes(from)) return idle;
   const { pathname, search } = win.location;
   win.history?.replaceState?.(null, '', `${pathname}${search}`);
@@ -127,7 +132,14 @@ export function installCraftHandoff({
   const fetchUrl = new URLSearchParams(hash).get('fetch');
   if (fetchUrl) {
     if (!isLoopbackFetch(fetchUrl)) return idle;
-    const done = fetchHandoff({ from, url: fetchUrl, fetchImpl, openFile, openLayer, onReceived });
+    const done = fetchHandoff({
+      from,
+      url: fetchUrl,
+      fetchImpl,
+      openFile,
+      openLayer,
+      onReceived,
+    });
     return { ...idle, waiting: true, from, done };
   }
   const opener = win.opener;
@@ -140,11 +152,25 @@ export function installCraftHandoff({
     const data = event.data;
     if (data?.version !== 1) return;
     if (data.type === `${from}:table` && typeof data.csv === 'string') {
-      openFile(new File([data.csv], csvName(data.fileName), { type: 'text/csv' }));
+      openFile(
+        new File([data.csv], csvName(data.fileName), { type: 'text/csv' }),
+      );
     } else if (data.type === `${from}:layer` && data.geojson) {
-      const text = typeof data.geojson === 'string' ? data.geojson : JSON.stringify(data.geojson);
-      const base = String(data.fileName || data.name || `${from}-layer`).split(/[\/]/).pop().trim();
-      openLayer(new File([text], /\.(geo)?json$/i.test(base) ? base : `${base}.geojson`, { type: 'application/geo+json' }));
+      const text =
+        typeof data.geojson === 'string'
+          ? data.geojson
+          : JSON.stringify(data.geojson);
+      const base = String(data.fileName || data.name || `${from}-layer`)
+        .split(/[\/]/)
+        .pop()
+        .trim();
+      openLayer(
+        new File(
+          [text],
+          /\.(geo)?json$/i.test(base) ? base : `${base}.geojson`,
+          { type: 'application/geo+json' },
+        ),
+      );
     } else return;
     replyOrigin = event.origin;
     stop();
@@ -183,14 +209,26 @@ const FETCH_LIMIT = 64 * 1024 * 1024;
  * files). Anything else, too large, or unreachable is left alone.
  * @returns {Promise<boolean>} whether something was opened
  */
-async function fetchHandoff({ from, url, fetchImpl, openFile, openLayer, onReceived }) {
+async function fetchHandoff({
+  from,
+  url,
+  fetchImpl,
+  openFile,
+  openLayer,
+  onReceived,
+}) {
   if (!fetchImpl) return false;
   try {
-    const res = await fetchImpl(url, { credentials: 'omit', cache: 'no-store' });
+    const res = await fetchImpl(url, {
+      credentials: 'omit',
+      cache: 'no-store',
+    });
     if (!res.ok) return false;
     const text = await res.text();
     if (text.length > FETCH_LIMIT) return false;
-    const base = decodeURIComponent(new URL(url).pathname.split('/').pop() || '').trim();
+    const base = decodeURIComponent(
+      new URL(url).pathname.split('/').pop() || '',
+    ).trim();
     if (/\.csv$/i.test(base)) {
       openFile(new File([text], csvName(base), { type: 'text/csv' }));
     } else if (/\.(geo)?json$/i.test(base)) {

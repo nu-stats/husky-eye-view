@@ -67,8 +67,17 @@ export function startHuskyMerge({
         if (!panel.file) return toast('Choose your file first.');
         try {
           const file = await panel.call('csv');
-          const sent = handoff.reply({ type: 'mergecraft:table', version: 1, fileName: file.fileName, csv: new TextDecoder().decode(file.bytes) });
-          toast(sent ? 'Sent to MapCraft: add it there from the banner, then join it by GEOID.' : 'MapCraft is no longer open. Download the table instead.');
+          const sent = handoff.reply({
+            type: 'mergecraft:table',
+            version: 1,
+            fileName: file.fileName,
+            csv: new TextDecoder().decode(file.bytes),
+          });
+          toast(
+            sent
+              ? 'Sent to MapCraft: add it there from the banner, then join it by GEOID.'
+              : 'MapCraft is no longer open. Download the table instead.',
+          );
         } catch (e) {
           toast(e?.message || String(e));
         }
