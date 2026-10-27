@@ -61,7 +61,14 @@ function element(
     getBoundingClientRect() {
       return this.rect;
     },
-    matches: (selector) => selector === '[data-panel-id]',
+    matches: (selector) =>
+      selector === '[data-panel-id]' ||
+      selector
+        .split(',')
+        .some(
+          (part) =>
+            part.trim().startsWith('.') && classes.has(part.trim().slice(1)),
+        ),
     contains(target) {
       return (
         target === this || this.children.some((child) => child.contains(target))
@@ -305,6 +312,75 @@ test('the rows either side of the dock stay level when one must rise', () => {
     left.stack.style.getPropertyValue('--bottom-rail-offset'),
     '60.8px',
   );
+});
+
+/** Count class and data-* writes on an element from now on (each one queues a mutation record). */
+function countAttributeWrites(node) {
+  const counter = { writes: [] };
+  const classList = node.classList;
+  node.classList = {
+    ...classList,
+    add: (...names) => (
+      counter.writes.push(['add', ...names]),
+      classList.add(...names)
+    ),
+    remove: (...names) => (
+      counter.writes.push(['remove', ...names]),
+      classList.remove(...names)
+    ),
+    toggle: (...args) => (
+      counter.writes.push(['toggle', ...args]),
+      classList.toggle(...args)
+    ),
+  };
+  node.dataset = new Proxy(node.dataset, {
+    set(target, key, value) {
+      counter.writes.push(['data', key, value]);
+      target[key] = value;
+      return true;
+    },
+  });
+  return counter;
+}
+
+test('a pass with nothing changed writes no class or data attribute, so its own observer stays quiet', () => {
+  // The stacks' MutationObservers answer every mutation record with another
+  // pass, and a class or data-* write queues one even when the value is
+  // unchanged: an unconditional write loops forever and keeps the world
+  // overlay redrawing an idle globe.
+  const right = bottomRow();
+  const left = bottomRow();
+  right.options.obstacles = [
+    element('key-setup-chip', { left: 1300, width: 226, top: 850, height: 36 }),
+  ];
+  left.options.partner = right.stack;
+  right.options.partner = left.stack;
+  layoutBottomPanelRow({ ...left.options, side: 'left' });
+  right.run();
+  layoutBottomPanelRow({ ...left.options, side: 'left' });
+  const leftWrites = countAttributeWrites(left.stack);
+  const rightWrites = countAttributeWrites(right.stack);
+  const styleWrites = left.stack.writes.length + right.stack.writes.length;
+  layoutBottomPanelRow({ ...left.options, side: 'left' });
+  right.run();
+  assert.deepEqual(leftWrites.writes, []);
+  assert.deepEqual(rightWrites.writes, []);
+  assert.equal(
+    left.stack.writes.length + right.stack.writes.length,
+    styleWrites,
+  );
+  assert.equal(right.stack.dataset.layoutMode, 'bottom');
+  assert.ok(right.stack.classList.contains('bottom-row'));
+
+  const phone = fixture('right', { mobile: true });
+  phone.stack.classList.add('bottom-row', 'layout-focus');
+  phone.run();
+  assert.equal(phone.stack.dataset.layoutMode, 'mobile');
+  assert.ok(!phone.stack.classList.contains('bottom-row'));
+  assert.ok(!phone.stack.classList.contains('layout-focus'));
+  const phoneWrites = countAttributeWrites(phone.stack);
+  phone.run();
+  assert.deepEqual(phoneWrites.writes, []);
 });
 
 test('with no room beside the dock the row moves to the corner, above what is beneath it', () => {

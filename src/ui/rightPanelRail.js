@@ -43,6 +43,15 @@ function removeIfSet(element, name) {
   if (element.style.getPropertyValue(name)) element.style.removeProperty(name);
 }
 
+// Class and data-* writes happen only on a change. Setting either to its
+// current value still queues a mutation record, and the stack's own
+// MutationObserver (panelLayoutController.js) answers every record with
+// another layout pass, which would write again: a loop that also kept the
+// world overlay redrawing an idle globe ten times a second.
+function setDataIfChanged(element, key, value) {
+  if (element.dataset[key] !== value) element.dataset[key] = value;
+}
+
 const ROW_PROPERTIES = [
   '--bottom-rail-offset',
   '--bottom-rail-left',
@@ -95,23 +104,27 @@ export function layoutBottomPanelRow({
     panel.removeAttribute('aria-hidden');
     removeIfSet(panel, `--${side}-panel-allocated-height`);
   }
-  stack.classList.remove('layout-exclusive', 'layout-focus', 'layout-tail');
+  if (stack.matches('.layout-exclusive, .layout-focus, .layout-tail'))
+    stack.classList.remove('layout-exclusive', 'layout-focus', 'layout-tail');
   removeIfSet(stack, `--${side}-stack-safe-top`);
   removeIfSet(stack, `--${side}-stack-safe-bottom`);
 
   const isMobile = windowRef.matchMedia('(max-width: 720px)').matches;
   if (isMobile) {
-    stack.classList.remove('bottom-row');
+    if (stack.classList.contains('bottom-row'))
+      stack.classList.remove('bottom-row');
     removeIfSet(stack, heightVar);
     for (const name of ROW_PROPERTIES) removeIfSet(stack, name);
     for (const panel of panels) {
       removeIfSet(panel, '--slot-left');
       removeIfSet(panel, '--popup-shift');
     }
-    stack.dataset.layoutMode = 'mobile';
+    if (stack.dataset.layoutMode !== 'mobile')
+      stack.dataset.layoutMode = 'mobile';
     return;
   }
-  stack.classList.add('bottom-row');
+  if (!stack.classList.contains('bottom-row'))
+    stack.classList.add('bottom-row');
 
   // Fixed launcher slots, in document order, for every panel on screen. Each
   // slot is as wide as its collapsed launcher, remembered while the panel is
@@ -204,7 +217,7 @@ export function layoutBottomPanelRow({
   // Power Up chip under the right-hand row on a narrower window), the other
   // rises with it.
   const ownOffset = placement.offset;
-  stack.dataset.ownOffset = ownOffset.toFixed(1);
+  setDataIfChanged(stack, 'ownOffset', ownOffset.toFixed(1));
   const partnerDocked =
     partner?.dataset?.layoutMode === 'bottom' &&
     partner.dataset.placement === 'docked' &&
@@ -216,7 +229,7 @@ export function layoutBottomPanelRow({
     ownOffset > (Number(partner.dataset.bottomOffset) || 0)
   ) {
     setIfChanged(partner, '--bottom-rail-offset', `${ownOffset.toFixed(1)}px`);
-    partner.dataset.bottomOffset = ownOffset.toFixed(1);
+    setDataIfChanged(partner, 'bottomOffset', ownOffset.toFixed(1));
   }
   const topReserve = Math.max(96, viewportHeight * BOTTOM_ROW_TOP_RESERVE);
   const maxHeight = Math.max(160, viewportHeight - offset - topReserve);
@@ -234,10 +247,10 @@ export function layoutBottomPanelRow({
   );
   setIfChanged(stack, '--bottom-rail-width', `${rowWidth}px`);
   setIfChanged(stack, heightVar, `${maxHeight.toFixed(1)}px`);
-  stack.dataset.layoutMode = 'bottom';
-  stack.dataset.placement = placement.mode;
-  stack.dataset.bottomOffset = offset.toFixed(1);
-  stack.dataset.availableHeight = maxHeight.toFixed(1);
+  setDataIfChanged(stack, 'layoutMode', 'bottom');
+  setDataIfChanged(stack, 'placement', placement.mode);
+  setDataIfChanged(stack, 'bottomOffset', offset.toFixed(1));
+  setDataIfChanged(stack, 'availableHeight', maxHeight.toFixed(1));
 
   // An open panel pops up over its own slot, nudged sideways only as far as
   // it takes to stay on screen and off the command dock.
