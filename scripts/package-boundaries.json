@@ -557,7 +557,15 @@
       "src/cockpitMath.js",
       "src/cockpitUtilityLayout.js",
       "src/cockpitVisionPolicy.js",
-      "src/ui/panelRailGeometry.js"
+      "src/ui/panelRailGeometry.js",
+      "src/ui/openCompressed.js",
+      "src/data/unpack/names.js",
+      "src/data/unpack/openArchive.js",
+      "src/data/unpack/unpack.js",
+      "src/data/unpack/bunzip.js",
+      "src/data/unpack/unxz.js",
+      "src/data/unpack/unzstd.js",
+      "src/data/unpack/crc32.js"
     ],
     "external": ["cesium"]
   },
@@ -566,7 +574,15 @@
     "modules": [
       "src/ui/scenes.js",
       "src/ui/sceneControls.js",
-      "src/ui/scenePresentation.js"
+      "src/ui/scenePresentation.js",
+      "src/ui/openCompressed.js",
+      "src/data/unpack/names.js",
+      "src/data/unpack/openArchive.js",
+      "src/data/unpack/unpack.js",
+      "src/data/unpack/bunzip.js",
+      "src/data/unpack/unxz.js",
+      "src/data/unpack/unzstd.js",
+      "src/data/unpack/crc32.js"
     ],
     "external": []
   },
@@ -749,7 +765,15 @@
       "src/ui/layerBindings.js",
       "src/ui/displayBindings.js",
       "src/ui/shellFacade.js",
-      "src/data/cameraArrival.js"
+      "src/data/cameraArrival.js",
+      "src/ui/openCompressed.js",
+      "src/data/unpack/names.js",
+      "src/data/unpack/openArchive.js",
+      "src/data/unpack/unpack.js",
+      "src/data/unpack/bunzip.js",
+      "src/data/unpack/unxz.js",
+      "src/data/unpack/unzstd.js",
+      "src/data/unpack/crc32.js"
     ],
     "external": ["cesium"]
   },
@@ -857,7 +881,15 @@
       "src/director/authoring.js",
       "src/scenes/sharing.js",
       "src/ui/sceneSharing.js",
-      "src/data/cameraArrival.js"
+      "src/data/cameraArrival.js",
+      "src/ui/openCompressed.js",
+      "src/data/unpack/names.js",
+      "src/data/unpack/openArchive.js",
+      "src/data/unpack/unpack.js",
+      "src/data/unpack/bunzip.js",
+      "src/data/unpack/unxz.js",
+      "src/data/unpack/unzstd.js",
+      "src/data/unpack/crc32.js"
     ],
     "external": ["cesium"]
   },
@@ -2236,7 +2268,15 @@
       "src/ui/flyToDataSource.js",
       "src/ui/geoFileImport.js",
       "src/ui/myFileTables.js",
-      "src/ui/unsavedWork.js"
+      "src/ui/unsavedWork.js",
+      "src/ui/openCompressed.js",
+      "src/data/unpack/names.js",
+      "src/data/unpack/openArchive.js",
+      "src/data/unpack/unpack.js",
+      "src/data/unpack/bunzip.js",
+      "src/data/unpack/unxz.js",
+      "src/data/unpack/unzstd.js",
+      "src/data/unpack/crc32.js"
     ],
     "external": [
       "hls.js",

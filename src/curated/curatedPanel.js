@@ -31,6 +31,7 @@ import {
   methodsFor,
   METHODS,
   LEVEL_PLURAL,
+  MAX_UPLOAD_BYTES,
   readUpload,
   tableWithUpload,
   userLayerValues,
@@ -42,9 +43,13 @@ import {
   ViewCapture,
   formatClipTime,
 } from '../ui/viewCapture.js';
+import { openPicked, withCompressed } from '../ui/openCompressed.js';
 
 export const OPEN_EVENT = 'gev:curated-flights-open';
 const FLIGHT_CLIP_MAX_SECONDS = 15 * 60;
+/** Your own data (compressed files are opened first). */
+const UPLOAD_ACCEPT =
+  '.csv,.tsv,.txt,.xlsx,.xlsm,.geojson,.json,.geojsonl,.zip';
 
 function element(tag, props = {}, children = []) {
   const node = document.createElement(tag);
@@ -401,7 +406,7 @@ export class CuratedFlightsPanel {
     this.fileInput = element('input', {
       type: 'file',
       className: 'curated-file',
-      accept: '.csv,.tsv,.txt,.xlsx,.xlsm,.geojson,.json,.geojsonl,.zip',
+      accept: withCompressed(UPLOAD_ACCEPT),
       ariaLabel: 'Add your own data',
     });
     this.fileInput.addEventListener('change', () => {
@@ -500,9 +505,21 @@ export class CuratedFlightsPanel {
     ]);
   }
 
-  async addUpload(file) {
-    this.uploadInfo.textContent = `Reading ${file.name}…`;
+  async addUpload(picked) {
+    this.uploadInfo.textContent = `Reading ${picked.name}…`;
     try {
+      // A compressed file (.csv.gz, a zip of CSVs) is opened first; a zipped
+      // shapefile stays whole.
+      const [file] = await openPicked(picked, {
+        accept: UPLOAD_ACCEPT,
+        maxBytes: MAX_UPLOAD_BYTES,
+      });
+      if (!file) {
+        this.uploadInfo.textContent = '';
+        this.fileInput.value = '';
+        return;
+      }
+      this.uploadInfo.textContent = `Reading ${file.name}…`;
       const bytes = new Uint8Array(await file.arrayBuffer());
       const dataset = await readUpload(file.name, bytes);
       this.overlay.clear();

@@ -12,6 +12,7 @@ import {
   GeoImportError,
   MAX_IMPORT_BYTES,
 } from '../data/geoFileLimits.js';
+import { openPicked, withCompressed } from './openCompressed.js';
 
 // The readers load with the first file, not at boot: God's Eye View's import
 // (~50 KB) and Husky Eye View's table and shapefile readers (~90 KB with the
@@ -22,8 +23,26 @@ const loadGeoFile = async (...args) =>
 const readUpload = async (...args) =>
   (await import('../curated/userData.js')).readUpload(...args);
 
-/** Every file My files takes. */
-export const MY_FILES_ACCEPT = `${GEO_FILE_ACCEPT},.zip,.csv,.tsv,.txt,.xlsx`;
+/** Every file My files takes, compressed ones too (.csv.gz, a zip of CSVs, .tar.xz). */
+export const MY_FILES_ACCEPT = withCompressed(
+  `${GEO_FILE_ACCEPT},.zip,.csv,.tsv,.txt,.xlsx`,
+);
+
+/**
+ * The files to load for one file put in My files: the file itself, or, for a
+ * compressed one, the files inside (several may be chosen). A zipped
+ * shapefile stays whole.
+ * @param {File} file
+ * @returns {Promise<File[]>}
+ */
+export function openMyFile(file, options = {}) {
+  return openPicked(file, {
+    accept: MY_FILES_ACCEPT,
+    multiple: true,
+    maxBytes: MAX_IMPORT_BYTES,
+    ...options,
+  });
+}
 
 /**
  * Which of Husky Eye View's own readers a file needs, by its name.

@@ -8,6 +8,7 @@ import {
   presentSceneProgress,
   presentSceneRuntime,
 } from './scenePresentation.js';
+import { isCompressedName, openPicked } from './openCompressed.js';
 
 export class SceneControls {
   constructor({ read, actions, subscribe, elements = sceneElements() }) {
@@ -48,8 +49,26 @@ export class SceneControls {
     this.listen(elements.stop, 'click', () => this.run('stop', 'Stopped'));
     this.listen(elements.import, 'click', () => elements.file?.click());
     this.listen(elements.file, 'change', async () => {
-      const file = elements.file?.files?.[0];
-      if (!file) return;
+      // Husky Eye View: a compressed scene (.json.gz, .gevbundle.json.zst, a
+      // zip holding one) is opened first; any other file goes straight on.
+      let file = elements.file?.files?.[0];
+      try {
+        if (isCompressedName(file?.name))
+          [file] = await openPicked(file, {
+            accept: '.json',
+            maxBytes: 50 * 1024 * 1024,
+          });
+      } catch (error) {
+        if (!this.destroyed) {
+          this.updateStatus(error.message);
+          elements.file.value = '';
+        }
+        return;
+      }
+      if (!file) {
+        if (!this.destroyed) elements.file.value = '';
+        return;
+      }
       await this.run(
         this.actions.reviewImport ? 'reviewImport' : 'import',
         file,

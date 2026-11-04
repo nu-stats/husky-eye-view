@@ -27,6 +27,7 @@ import {
 } from './excelCommands.js';
 import { LAYER_MANIFEST, layerManifestEntry } from '../data/layerManifest.js';
 import { translatePlainEnglish } from './plainEnglish.js';
+import { openPicked, withCompressed } from '../ui/openCompressed.js';
 import {
   AnalysisMap,
   legendRows,
@@ -201,6 +202,8 @@ const LINE_CHECKS = {
 const UPLOADS = new Map();
 /** The largest file the boxes accept (the server checks too). */
 const MAX_UPLOAD_FILE_BYTES = 30 * 1024 * 1024;
+/** Your own file for the Layer list (compressed ones are opened first). */
+const UPLOAD_ACCEPT = '.xlsx,.xlsm,.csv,.tsv,.txt';
 
 /** Kept for existing imports: the Stata panel's open event. */
 export const ANALYSIS_OPEN_EVENT = ANALYSIS_ENGINES.stata.event;
@@ -498,7 +501,7 @@ export class AnalysisPanel {
     });
     this.doInput = element('input', {
       type: 'file',
-      accept: this.engine.scriptAccept,
+      accept: withCompressed(this.engine.scriptAccept),
       ariaLabel: `Upload a ${this.engine.scriptLabel.toLowerCase()}`,
     });
     this.doName = element('span', { className: 'curated-hint' });
@@ -552,7 +555,7 @@ export class AnalysisPanel {
     // Your own Excel workbook or CSV, chosen from the Layer list.
     this.fileInput = element('input', {
       type: 'file',
-      accept: '.xlsx,.xlsm,.csv,.tsv,.txt',
+      accept: withCompressed(UPLOAD_ACCEPT),
       ariaLabel: 'Upload your own Excel workbook or CSV file',
       hidden: true,
     });
@@ -776,7 +779,18 @@ export class AnalysisPanel {
    * Upload your own Excel workbook or CSV (the file the picker chose, or one
    * given): the server keeps it for every box, and it becomes the Layer.
    */
-  async uploadFile(file = this.fileInput.files?.[0]) {
+  async uploadFile(picked = this.fileInput.files?.[0]) {
+    if (!picked) return { ok: false, problems: ['No file chosen.'] };
+    // A compressed file (.csv.gz, a zip of workbooks) is opened first.
+    let file;
+    try {
+      [file] = await openPicked(picked, {
+        accept: UPLOAD_ACCEPT,
+        maxBytes: MAX_UPLOAD_FILE_BYTES,
+      });
+    } catch (error) {
+      return this.fail([error.message]);
+    }
     if (!file) return { ok: false, problems: ['No file chosen.'] };
     if (file.size > MAX_UPLOAD_FILE_BYTES)
       return this.fail([
@@ -812,9 +826,19 @@ export class AnalysisPanel {
   }
 
   async readDoFile() {
-    const file = this.doInput.files?.[0];
     this.doFile = null;
     this.doName.textContent = '';
+    let file;
+    try {
+      [file] = await openPicked(this.doInput.files?.[0], {
+        accept: this.engine.scriptAccept,
+        maxBytes: this.engine.scriptBytes,
+      });
+    } catch (error) {
+      this.setStatus(error.message);
+      this.doInput.value = '';
+      return;
+    }
     if (!file) return;
     if (file.size > this.engine.scriptBytes) {
       this.setStatus(

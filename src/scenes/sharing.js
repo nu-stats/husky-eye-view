@@ -12,6 +12,7 @@ import {
 } from '../director/authoring.js';
 import { createSceneDialog, mountSceneSharing } from '../ui/sceneSharing.js';
 import { PACK_LIMITS } from '../director/packs/manifest.js';
+import { openAllPicked } from '../ui/openCompressed.js';
 
 function download(text, name) {
   const url = URL.createObjectURL(
@@ -334,8 +335,16 @@ export function createSceneSharing(director) {
     folder.setAttribute('webkitdirectory', '');
     dialog.button('Download asset bundle', () =>
       run(owner, async () => {
-        const selected = [...files.files, ...folder.files];
         const packs = project.scenes.flatMap((s) => s.dataPacks || []);
+        // Husky Eye View: a zip, .tar.gz or .gz of pack files is opened, and
+        // its files are matched by their paths inside it. A pack file that is
+        // itself compressed (its name is a pack's) stays as it is.
+        const selected = await openAllPicked(
+          [...files.files, ...folder.files],
+          {
+            keep: new Set(packs.map((p) => p.source.path.split('/').at(-1))),
+          },
+        );
         const text = await createSceneBundle(
           project,
           async (pack, { signal }) => {
