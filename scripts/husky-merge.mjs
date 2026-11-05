@@ -45,14 +45,23 @@ const STATIC = Object.freeze({
   'src/ui/styles/curated.css': 'src/ui/styles/curated.css',
 });
 
+/** Dynamic imports that only Husky Eye View's globe reaches; never published. */
+const GLOBE_ONLY = new Set(['src/curated/userOverlay.js']);
+
 /**
- * Every module the page loads, repo-relative: static imports and workers
- * (`new URL('./x.js', import.meta.url)`) followed from `entry`. Dynamic
- * imports are left out — the only ones are Husky Eye View's globe, which the
- * app never uses. Throws on a bare specifier (it would need a bundler).
+ * Every module the page loads, repo-relative: static imports, workers
+ * (`new URL('./x.js', import.meta.url)`) and relative dynamic imports such as
+ * the archive readers, followed from `entry`. Bare dynamic imports (the globe's
+ * `import('cesium')`) and GLOBE_ONLY are left out, since the app never loads
+ * them. Throws on a bare static specifier (it would need a bundler).
  */
 export function moduleGraph(entry = ENTRY, root = ROOT) {
   const seen = new Set();
+  const resolve = (rel, spec) =>
+    path
+      .relative(root, path.resolve(root, path.dirname(rel), spec))
+      .split(path.sep)
+      .join('/');
   const walk = (rel) => {
     if (seen.has(rel)) return;
     seen.add(rel);
@@ -66,12 +75,11 @@ export function moduleGraph(entry = ENTRY, root = ROOT) {
     for (const spec of specs) {
       if (!spec.startsWith('.'))
         throw new Error(`${rel} imports "${spec}", which needs a bundler.`);
-      walk(
-        path
-          .relative(root, path.resolve(root, path.dirname(rel), spec))
-          .split(path.sep)
-          .join('/'),
-      );
+      walk(resolve(rel, spec));
+    }
+    for (const m of text.matchAll(/\bimport\(\s*['"](\.[^'"]+)['"]\s*\)/g)) {
+      const target = resolve(rel, m[1]);
+      if (!GLOBE_ONLY.has(target)) walk(target);
     }
   };
   walk(entry);
