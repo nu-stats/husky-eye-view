@@ -27,6 +27,19 @@ test('MergeCraft loads its modules unbundled: no bare imports, the worker includ
   assert.ok(!graph.some((rel) => /userOverlay|cesium/i.test(rel)));
 });
 
+test('MergeCraft publishes the archive readers its file boxes load on demand', () => {
+  const graph = moduleGraph();
+  for (const rel of [
+    'src/ui/openCompressed.js',
+    'src/data/unpack/openArchive.js',
+    'src/data/unpack/unpack.js',
+    'src/data/unpack/bunzip.js',
+    'src/data/unpack/unxz.js',
+    'src/data/unpack/unzstd.js',
+  ])
+    assert.ok(graph.includes(rel), rel);
+});
+
 test('MergeCraft publishes every data folder the engine reads', () => {
   const used = new Set();
   for (const rel of moduleGraph())
