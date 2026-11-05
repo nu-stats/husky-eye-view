@@ -1018,5 +1018,8 @@
   "src/ui/menuVisibility.js",
   "src/ui/menuVisibility.test.mjs",
   "src/ui/calmChrome.js",
-  "src/ui/calmChrome.test.mjs"
+  "src/ui/calmChrome.test.mjs",
+  "src/data/unpack/openArchive.test.mjs",
+  "src/data/unpack/unpack.test.mjs",
+  "src/data/unpack/unxz-unzstd.test.mjs"
 ]

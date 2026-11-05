@@ -373,6 +373,8 @@ With Stata 18 or 19 installed on the same computer, **Analysis → Stata** runs 
 
 In any of the four boxes, **Layer → Upload an Excel workbook or CSV…** analyzes your own file (the first sheet with data; its first row the column names). A column of census GEOIDs (states, counties or tracts; leading zeros Excel dropped and separate STATE / COUNTY / TRACT code columns work) joins it to the map, so the areas in view or one state can be chosen, results and brushing appear on the map, and Moran's I works; a file without one is analyzed as it is. Uploads are kept in `Documents/HuskyEyeView-Analyses/uploads/`, and Curated Flights' *Your data* takes workbooks too.
 
+Compressed files open too, in this box and every other file box (My files, Merge & Export, Curated Flights' *Your data*, scene import): `.zip`, `.gz`, `.bz2`, `.xz`, `.zst`, `.tar` and `.tar.gz`/`.tgz`, `.tar.bz2`, `.tar.xz`, `.tar.zst`. A `.csv.gz` opens as its CSV; when an archive holds several files a small window asks which one to use (My files can take them all); a zipped shapefile opens as a shapefile, as before. They are unpacked in the browser, checksums checked ([`src/data/unpack/`](src/data/unpack/README.md)).
+
 Every Stata, R, SPSS and Excel session also saves its data as **`data.xlsx`**: the data, then each variable's label and source.
 
 Every run is kept in `Documents/HuskyEyeView-Analyses/<date>_<areas>/`: `data.csv`, `data.dta`, the do-file, the log, graphs as PNG and `results.xlsx` for models. `HEV_STATA_PATH` points at Stata if it is installed somewhere unusual; `HEV_ANALYSIS_DIR` moves the sessions folder.

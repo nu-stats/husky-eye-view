@@ -14,7 +14,13 @@
  * few areas, a dot per area for many). Files never leave the computer
  * unless sent to an analysis box, which runs on this computer's own server.
  */
-import { EXPORT_FORMATS, LEVEL_NOUN, READ_FORMATS } from './mergeData.js';
+import {
+  EXPORT_FORMATS,
+  LEVEL_NOUN,
+  MAX_MERGE_FILE_BYTES,
+  READ_FORMATS,
+} from './mergeData.js';
+import { openPicked, withCompressed } from '../ui/openCompressed.js';
 import {
   deleteSavedFile,
   listSavedFiles,
@@ -249,7 +255,7 @@ export class MergePanel {
     // Your file.
     this.fileInput = element('input', {
       type: 'file',
-      accept: READ_FORMATS,
+      accept: withCompressed(READ_FORMATS),
       hidden: true,
       ariaLabel: 'Choose your file',
     });
@@ -343,7 +349,7 @@ export class MergePanel {
     // Option 2: merge.
     this.secondInput = element('input', {
       type: 'file',
-      accept: READ_FORMATS,
+      accept: withCompressed(READ_FORMATS),
       hidden: true,
       ariaLabel: 'Choose a second file',
     });
@@ -666,7 +672,19 @@ export class MergePanel {
 
   // ---------- your file ----------
 
-  async chooseFile(file, which) {
+  async chooseFile(picked, which) {
+    if (!picked) return { ok: false, error: 'No file chosen.' };
+    // A compressed file (.csv.gz, .dta.zst, a zip of CSVs) is opened first;
+    // a zipped shapefile stays whole.
+    let file;
+    try {
+      [file] = await openPicked(picked, {
+        accept: READ_FORMATS,
+        maxBytes: MAX_MERGE_FILE_BYTES,
+      });
+    } catch (error) {
+      return this.fail(error.message);
+    }
     if (!file) return { ok: false, error: 'No file chosen.' };
     const bytes = new Uint8Array(await file.arrayBuffer());
     return this.readBytes(file.name, bytes, which, { keep: this.keep.checked });

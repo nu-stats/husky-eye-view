@@ -1,5 +1,15 @@
 # Changelog
 
+- Compressed files open in every file box (My files, the Stata, R, SPSS and
+  Excel boxes and their scripts, Merge & Export, Curated Flights' Your data,
+  scene import and scene data packs): .zip, .gz, .bz2, .xz, .zst, .tar and
+  .tar.gz/.tgz, .tar.bz2, .tar.xz, .tar.zst. A .csv.gz opens as its CSV; an
+  archive with several files asks which one to use (My files can take them
+  all); a zipped shapefile, KMZ or Excel file is read as before. The
+  unpacker (src/data/unpack/) comes from Husky Explorer, checks every
+  checksum and refuses damaged, password-protected, 7-Zip and RAR files
+  with a plain message.
+
 - Time Lens: choose both layers. The bar has two pickers, Outside / Inside
   (Left / Right in SWIPE), each offering every comparable layer by period:
   1900–1940 (HOLC redlining, enumeration districts 1900–1930), 2000–2015

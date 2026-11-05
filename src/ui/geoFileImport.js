@@ -45,6 +45,9 @@ export function initGeoFileImport({
   // Husky Eye View: a row's Analyze button hands its file on (My files ▸
   // Merge & Export). No button without it.
   onAnalyze = null,
+  // Husky Eye View: `open(file)` gives the files to load for one chosen file
+  // (the files inside a compressed one). The file itself without it.
+  open = async (file) => [file],
 }) {
   const button = doc?.getElementById('geo-import-button');
   const input = doc?.getElementById('geo-import-input');
@@ -308,85 +311,103 @@ export function initGeoFileImport({
   async function importBatch(list, generation, intent) {
     const outcomes = [];
     if (destroyed || !list.length) return outcomes;
-    for (const file of list) {
+    batch: for (const picked of list) {
       if (destroyed) break;
-      const fileName = String(file?.name || 'file');
-      if (imports.length >= MAX_IMPORTED_FILES) {
-        outcomes.push({
-          name: fileName,
-          ok: false,
-          error: t('At most {count} files at once — remove one first.', {
-            count: formatNumber(MAX_IMPORTED_FILES),
-          }),
-        });
-        continue;
-      }
-      setHint(t('Reading {name}…', { name: fileName }));
-      const color = COLORS[colorAt % COLORS.length];
-      let loaded;
+      // Husky Eye View: a compressed file is opened first (.csv.gz, a zip of
+      // CSVs, a .tar.xz); a zipped shapefile stays whole.
+      let files;
       try {
-        loaded = await load(file, { viewer, color, signal: lifetime.signal });
+        setHint(t('Reading {name}…', { name: String(picked?.name || 'file') }));
+        files = await open(picked);
       } catch (error) {
         outcomes.push({
-          name: fileName,
+          name: String(picked?.name || 'file'),
           ok: false,
-          error:
-            error instanceof GeoImportError || error?.name === 'GeoImportError'
-              ? t(error.template || error.message, error.values)
-              : t('That file could not be read.'),
+          error: error?.message || t('That file could not be read.'),
         });
         continue;
       }
-      if (destroyed) {
-        loaded.revoke?.();
-        break;
+      for (const file of files) {
+        if (destroyed) break batch;
+        const fileName = String(file?.name || 'file');
+        if (imports.length >= MAX_IMPORTED_FILES) {
+          outcomes.push({
+            name: fileName,
+            ok: false,
+            error: t('At most {count} files at once — remove one first.', {
+              count: formatNumber(MAX_IMPORTED_FILES),
+            }),
+          });
+          continue;
+        }
+        setHint(t('Reading {name}…', { name: fileName }));
+        const color = COLORS[colorAt % COLORS.length];
+        let loaded;
+        try {
+          loaded = await load(file, { viewer, color, signal: lifetime.signal });
+        } catch (error) {
+          outcomes.push({
+            name: fileName,
+            ok: false,
+            error:
+              error instanceof GeoImportError ||
+              error?.name === 'GeoImportError'
+                ? t(error.template || error.message, error.values)
+                : t('That file could not be read.'),
+          });
+          continue;
+        }
+        if (destroyed) {
+          loaded.revoke?.();
+          break batch;
+        }
+        colorAt += 1;
+        seq += 1;
+        const item = {
+          id: `import-${seq}`,
+          name: loaded.name || fileName,
+          format: loaded.format,
+          ownStyles: loaded.format === 'kml' || loaded.format === 'kmz',
+          entityCount: loaded.entityCount,
+          removed: loaded.removed || 0,
+          color,
+          visible: true,
+          dataSource: loaded.dataSource,
+          revoke: loaded.revoke,
+          refreshGround: loaded.refreshGround,
+          // The file as chosen, for Analyze.
+          file,
+          sceneKey: loaded.sceneKey,
+        };
+        await viewer.dataSources.add(item.dataSource);
+        if (destroyed) {
+          viewer.dataSources.remove?.(item.dataSource, true);
+          item.revoke?.();
+          break batch;
+        }
+        loaded.mount?.();
+        // A MapCraft scene sent again takes the earlier one's place.
+        if (item.sceneKey)
+          for (const old of imports.filter((i) => i.sceneKey === item.sceneKey))
+            remove(old.id);
+        imports.push(item);
+        renderList();
+        render();
+        outcomes.push({
+          name: fileName,
+          ok: true,
+          id: item.id,
+          removed: item.removed,
+        });
+        // Fly to the first file of a batch that lands, so a drop shows its
+        // result, unless something else took the camera meanwhile.
+        if (
+          outcomes.filter((o) => o.ok).length === 1 &&
+          intent === cameraIntent &&
+          autoFlyStillOwns(generation)
+        )
+          fly(item);
       }
-      colorAt += 1;
-      seq += 1;
-      const item = {
-        id: `import-${seq}`,
-        name: loaded.name || fileName,
-        format: loaded.format,
-        ownStyles: loaded.format === 'kml' || loaded.format === 'kmz',
-        entityCount: loaded.entityCount,
-        removed: loaded.removed || 0,
-        color,
-        visible: true,
-        dataSource: loaded.dataSource,
-        revoke: loaded.revoke,
-        refreshGround: loaded.refreshGround,
-        // The file as chosen, for Analyze.
-        file,
-        sceneKey: loaded.sceneKey,
-      };
-      await viewer.dataSources.add(item.dataSource);
-      if (destroyed) {
-        viewer.dataSources.remove?.(item.dataSource, true);
-        item.revoke?.();
-        break;
-      }
-      loaded.mount?.();
-      // A MapCraft scene sent again takes the earlier one's place.
-      if (item.sceneKey)
-        for (const old of imports.filter((i) => i.sceneKey === item.sceneKey))
-          remove(old.id);
-      imports.push(item);
-      renderList();
-      render();
-      outcomes.push({
-        name: fileName,
-        ok: true,
-        id: item.id,
-        removed: item.removed,
-      });
-      // Fly to the first file of a batch that lands, so a drop shows its
-      // result, unless something else took the camera meanwhile.
-      if (
-        outcomes.filter((o) => o.ok).length === 1 &&
-        intent === cameraIntent &&
-        autoFlyStillOwns(generation)
-      )
-        fly(item);
     }
     if (!destroyed) setHint(summarize(outcomes));
     return outcomes;

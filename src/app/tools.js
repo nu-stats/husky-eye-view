@@ -6,6 +6,7 @@ import {
   MY_FILES_ACCEPT,
   analyzeMyFile,
   loadMyFile,
+  openMyFile,
 } from '../ui/myFileTables.js';
 import { initGevVoiceCommands } from '../voice/gevRealtime.js';
 import { installScopeMask, destroyScopeMask } from '../scopeMask.js';
@@ -65,6 +66,7 @@ export function createApplicationTools({
     ground: operations.surface?.groundFloor,
     subscribeMapSource: (listener) => mapStackController?.subscribe?.(listener),
     load: loadMyFile,
+    open: openMyFile,
     accept: MY_FILES_ACCEPT,
     onAnalyze: analyzeMyFile,
   });
