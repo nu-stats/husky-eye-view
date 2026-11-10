@@ -68,6 +68,12 @@ export const ACS_MEASURES = {
         all,
       ),
   },
+  hs: {
+    table: 'B15003',
+    label: 'High school diploma or equivalent only (% of adults 25+)',
+    cells: ['E001', 'E017', 'E018'],
+    value: ([all, diploma, ged]) => share(diploma + ged, all),
+  },
   rent: {
     table: 'B25003',
     label: 'Renter-occupied homes (% of occupied housing units)',
