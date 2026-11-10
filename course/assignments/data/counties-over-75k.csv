@@ -1,4 +1,4 @@
-geoid,county,state,pop_2000,fb_count_2000,fb_pct_2000,pov_pct_2000,unemp_pct_2000,life_exp_2000,pop_2006_10,fb_count_2006_10,fb_pct_2006_10,pov_pct_2006_10,unemp_pct_2006_10,life_exp_2006_10,pop_2020_24,fb_count_2020_24,fb_pct_2020_24,pov_pct_2020_24,unemp_pct_2020_24,life_exp_2019
+county_code,county,state,population_2000,foreign_born_count_2000,foreign_born_percent_2000,poverty_percent_2000,unemployment_percent_2000,life_expectancy_2000,population_2006_10,foreign_born_count_2006_10,foreign_born_percent_2006_10,poverty_percent_2006_10,unemployment_percent_2006_10,life_expectancy_2006_10,population_2020_24,foreign_born_count_2020_24,foreign_born_percent_2020_24,poverty_percent_2020_24,unemployment_percent_2020_24,life_expectancy_2019
 01003,Baldwin County,Alabama,140415,2957,2.1,10.15,4.28,76.3,175791,6415,3.6,12.21,6.56,76.9,246989,10220,4.1,10.09,3.03,77.8
 01015,Calhoun County,Alabama,112249,1907,1.7,16.11,6.59,72.8,117149,2968,2.5,19.46,11.68,73.1,116090,3377,2.9,17.89,5.97,73.1
 01043,Cullman County,Alabama,77483,1330,1.7,13,4.13,74.1,79941,2093,2.6,16.74,7.77,74.2,90566,2044,2.3,15.31,3.77,74

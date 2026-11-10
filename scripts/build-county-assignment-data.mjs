@@ -74,14 +74,14 @@ writeFileSync(
 
 const quote = (s) => (/[",]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
 const one = (x) => Number(x.toFixed(1));
-const header = ['geoid', 'county', 'state'];
+const header = ['county_code', 'county', 'state']; // county_code: 2-digit state + 3-digit county (FIPS)
 const periods = [
   ['2000', c2000, 'pop2000', 'fb2000'],
   ['2006_10', c2010, 'pop2006_10', 'fb2006_10'],
   ['2020_24', c2024, 'pop2020_24', 'fb2020_24'],
 ];
 for (const [p] of periods) {
-  header.push(`pop_${p}`, `fb_count_${p}`, `fb_pct_${p}`, `pov_pct_${p}`, `unemp_pct_${p}`, p === '2020_24' ? 'life_exp_2019' : `life_exp_${p}`);
+  header.push(`population_${p}`, `foreign_born_count_${p}`, `foreign_born_percent_${p}`, `poverty_percent_${p}`, `unemployment_percent_${p}`, p === '2020_24' ? 'life_expectancy_2019' : `life_expectancy_${p}`);
 }
 const lines = [header.join(',')];
 for (const r of counties) {

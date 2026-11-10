@@ -30,8 +30,9 @@ file below.
 [`data/counties-over-75k.csv`](data/counties-over-75k.csv) has one row per
 county, for the 647 counties with more than 75,000 residents in **all three
 periods** (so the same counties can be compared over time). For each period it
-gives the total population, the foreign-born count and share, the poverty rate,
-the unemployment rate and life expectancy.
+has these columns, with the period added at the end of the name (for example
+`population_2000`): `population`, `foreign_born_count`, `foreign_born_percent`,
+`poverty_percent`, `unemployment_percent` and `life_expectancy`.
 
 Together these counties hold about 93% of the U.S. foreign-born population in
 each period (93.7% in 2000, 93.2% in 2006–10 and 2020–24). Connecticut is not in
@@ -42,20 +43,21 @@ so they cannot be matched across periods.
 
 **Choose three variables** from this menu. Use the same three in every period.
 
-| Code | Variable | 2000 | 2006–10 | 2020–24 | Source table |
+| Variable name | What it measures | 2000 | 2006–10 | 2020–24 | Where it comes from |
 | --- | --- | --- | --- | --- | --- |
-| `pop` | Total population | Yes | Yes | Yes | SF3 P001; ACS B01003 |
-| `fb` | Foreign-born residents (% of all residents) | Yes | Yes | Yes | SF3 PCT019; ACS B05006 / B01003 |
-| `pov` | Below the poverty level (% of people) | Yes | Yes | Yes | SF3 P087; ACS B17001 |
-| `unemp` | Unemployment rate (% of civilian labor force) | Yes | Yes | Yes | SF3 P043; ACS B23001 (2006–10), B23025 (2020–24) |
-| `le` | Life expectancy at birth, total population (years) | 2000 | 2006–10 mean | 2019 | County life expectancy estimates, 2000–2019 |
+| `population` | Total number of residents in the county | Yes | Yes | Yes | Census 2000; American Community Survey |
+| `foreign_born_percent` | Foreign-born residents, as a percent of all residents | Yes | Yes | Yes | Census 2000; American Community Survey |
+| `poverty_percent` | People below the poverty level, as a percent of people for whom poverty is determined | Yes | Yes | Yes | Census 2000; American Community Survey |
+| `unemployment_percent` | Unemployed people, as a percent of the civilian labor force | Yes | Yes | Yes | Census 2000; American Community Survey |
+| `life_expectancy` | Life expectancy at birth, total population (years) | 2000 | 2006–10 mean | 2019 | County life expectancy estimates, 2000–2019 |
 
 Notes:
-- Population is a count, so use it as a descriptor, not as a percentage.
+- `population` is a count, so use it as a descriptor, not as a percentage.
 - Use the **whole-county** value of each variable, not the value for your group.
-- The unemployment rate means the same thing in all three periods, but the ACS
-  tables differ (B23001 in 2006–10, B23025 in 2020–24). Say so in your references.
-- Life expectancy (`le`) is for the **total population** only, not by race or
+- The unemployment percent means the same thing in all three periods, but the
+  Census Bureau measured it from different tables in 2006–10 and 2020–24.
+  Mention this in your references.
+- `life_expectancy` is for the **total population** only, not by race or
   ethnicity, and it is a county-level measure. The series ends in 2019, so the
   periods are matched as closely as the data allow: the 2000 estimate, the mean
   of the 2006 to 2010 estimates, and the 2019 estimate (the last year available)
@@ -66,14 +68,14 @@ Notes:
 ## Data
 
 **Weights:** the number of your group's residents in each county, for each
-period. Use the foreign-born counts by place of birth for your group's country
-(SF3 PCT019 for 2000, ACS B05006 for the two ACS periods).
+period. Use the number of foreign-born residents born in your group's country
+(Census 2000 for 2000; the American Community Survey for the two later periods).
 
 **County values:** take the three variables you chose from the course file.
 
 **National values:** for each variable you choose, use the national value from
-the matching period's table (the U.S. total row). The course will provide these
-in the workbook.
+the matching period (the U.S. figure for that period). The course will provide
+these in the workbook.
 
 Practice set: [`data/weighted-averages-example.xlsx`](data/weighted-averages-example.xlsx).
 It has ten counties and worked formulas. Your numbers go in the same layout,
@@ -112,7 +114,7 @@ one block per period.
 - Double-spaced, 12-point font, 1-inch margins, minimum 4 pages of text.
 - Placeholders such as [Figure 1 about here] are fine while drafting. Insert
   the figures last, once the narrative is written.
-- Cite the Census tables for each period in APA style on a separate references page.
+- Cite the data source for each period in APA style on a separate references page.
 
 ## Hand in
 

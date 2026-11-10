@@ -39,7 +39,9 @@ mean and with national values.
   `scripts/fetch-sf3-2000-places.mjs --county` (2000),
   `scripts/fetch-acs-2010-places.mjs --county` (2006–10), and the ACS 2020–2024
   county values already in the project. Poverty is the share below the poverty
-  level; unemployment uses B23001 for 2006–10 and B23025 for 2020–24.
+  level; the Census Bureau measured unemployment from different tables in
+  2006–10 and 2020–24 (the fetch scripts name the exact tables). The assignment
+  uses plain variable names only.
 - Life expectancy is for the total population, from the project's county life
   expectancy layer (2000–2019). Because it ends in 2019, the three periods are
   the 2000 estimate, the mean of 2006–2010, and 2019. The last period is not
