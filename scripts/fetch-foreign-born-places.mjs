@@ -16,12 +16,21 @@
  *   node scripts/fetch-foreign-born-places.mjs
  */
 import { dirname } from 'node:path';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { Readable } from 'node:stream';
 import { inflateRawSync } from 'node:zlib';
 
 const OUTPUT = 'data/source/census/foreign-born-places.json';
+// For the places in the community-context assignment (places-over-75k.json) the whole
+// foreign-born table is kept too: the count for every country of birth, in each period.
+const GROUP_OUTPUT = 'data/source/census/foreign-born-place-groups.json';
+const WANT = new Set(JSON.parse(readFileSync('data/source/census/places-over-75k.json', 'utf8')).places.map((p) => p.geoid));
+const CELLS = { fb2000: 126, fb2006_10: 161, fb2020_24: 178 };
+const groups = {};
+const keep = (id, key, values) => {
+  if (WANT.has(id)) (groups[id] ||= {})[key] = values;
+};
 const TMP = 'data/source/census/fbplaces-raw';
 const SF3 = 'https://www2.census.gov/census_2000/datasets/Summary_File_3';
 const ACS10 = 'https://www2.census.gov/programs-surveys/acs/summary_file/2010/data/5_year_seq_by_state';
@@ -119,7 +128,10 @@ async function read2000([fips, st, name]) {
   for (const line of text(s22).split('\n')) {
     const f = line.split(',');
     const geoid = places.get(f[4]);
-    if (geoid) out[geoid] = Number(f[PCT019_FIELD]);
+    if (geoid) {
+      out[geoid] = Number(f[PCT019_FIELD]);
+      keep(geoid, 'fb2000', f.slice(PCT019_FIELD, PCT019_FIELD + CELLS.fb2000).map(Number));
+    }
   }
   return out;
 }
@@ -141,7 +153,10 @@ async function read2010([, st, name]) {
   for (const line of text(est).split('\n')) {
     const f = line.split(',');
     const geoid = places.get(f[5]);
-    if (geoid) out[geoid] = Number(f[B05006_FIELD]);
+    if (geoid) {
+      out[geoid] = Number(f[B05006_FIELD]);
+      keep(geoid, 'fb2006_10', f.slice(B05006_FIELD, B05006_FIELD + CELLS.fb2006_10).map(Number));
+    }
   }
   return out;
 }
@@ -154,17 +169,22 @@ async function read2024() {
   const lines = createInterface({ input: Readable.fromWeb(response.body) });
   let header = null;
   let column = -1;
+  let cols = [];
   const out = {};
   for await (const line of lines) {
     if (!header) {
       header = line.split('|');
       column = header.indexOf('B05006_E001');
       if (column < 0) throw new Error('B05006_E001 not in the 2024 file');
+      cols = Array.from({ length: CELLS.fb2020_24 }, (_, i) => header.indexOf(`B05006_E${String(i + 1).padStart(3, '0')}`));
+      if (cols.includes(-1)) throw new Error('a B05006 estimate column is missing from the 2024 file');
       continue;
     }
     if (!line.startsWith('1600000US')) continue;
     const values = line.split('|');
-    out[line.slice(9, 16)] = Number(values[column]);
+    const id = line.slice(9, 16);
+    out[id] = Number(values[column]);
+    if (WANT.has(id)) keep(id, 'fb2020_24', cols.map((c) => Number(values[c])));
   }
   return out;
 }
@@ -194,6 +214,8 @@ async function main() {
   rmSync(TMP, { recursive: true, force: true });
   mkdirSync('data/source/census', { recursive: true });
   writeFileSync(OUTPUT, JSON.stringify({ place }));
+  writeFileSync(GROUP_OUTPUT, JSON.stringify({ place: groups }));
+  console.log(`${GROUP_OUTPUT}: ${Object.keys(groups).length} places`);
   console.log(`${OUTPUT}: ${Object.keys(place).length} places`);
   if (failures.length) console.log('Failures:\n' + failures.join('\n'));
 }
