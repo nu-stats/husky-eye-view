@@ -35,10 +35,15 @@ mean and with national values.
   foreign-born residents live in suburbs and small places.
 - Connecticut is left out of the county file: its counties were replaced by
   planning regions in the 2020–2024 data.
-- The county file is built by `scripts/fetch-sf3-2000-places.mjs --county` (2000),
+- The county file is built by `scripts/build-county-assignment-data.mjs` from
+  `scripts/fetch-sf3-2000-places.mjs --county` (2000),
   `scripts/fetch-acs-2010-places.mjs --county` (2006–10), and the ACS 2020–2024
   county values already in the project. Poverty is the share below the poverty
   level; unemployment uses B23001 for 2006–10 and B23025 for 2020–24.
+- Life expectancy is for the total population, from the project's county life
+  expectancy layer (2000–2019). Because it ends in 2019, the three periods are
+  the 2000 estimate, the mean of 2006–2010, and 2019. The last period is not
+  the same span as the ACS periods, and the assignment tells students so.
 - Check the example workbook's numbers against the county file before class, and
   replace the national values with the U.S. rows of each period's tables.
 - The community-context assignment is adapted from an existing course brief.

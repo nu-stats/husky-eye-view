@@ -30,8 +30,8 @@ file below.
 [`data/counties-over-75k.csv`](data/counties-over-75k.csv) has one row per
 county, for the 647 counties with more than 75,000 residents in **all three
 periods** (so the same counties can be compared over time). For each period it
-gives the total population, the foreign-born count and share, the poverty rate
-and the unemployment rate.
+gives the total population, the foreign-born count and share, the poverty rate,
+the unemployment rate and life expectancy.
 
 Together these counties hold about 93% of the U.S. foreign-born population in
 each period (93.7% in 2000, 93.2% in 2006–10 and 2020–24). Connecticut is not in
@@ -48,14 +48,20 @@ so they cannot be matched across periods.
 | `fb` | Foreign-born residents (% of all residents) | Yes | Yes | Yes | SF3 PCT019; ACS B05006 / B01003 |
 | `pov` | Below the poverty level (% of people) | Yes | Yes | Yes | SF3 P087; ACS B17001 |
 | `unemp` | Unemployment rate (% of civilian labor force) | Yes | Yes | Yes | SF3 P043; ACS B23001 (2006–10), B23025 (2020–24) |
+| `le` | Life expectancy at birth, total population (years) | 2000 | 2006–10 mean | 2019 | County life expectancy estimates, 2000–2019 |
 
 Notes:
 - Population is a count, so use it as a descriptor, not as a percentage.
 - Use the **whole-county** value of each variable, not the value for your group.
 - The unemployment rate means the same thing in all three periods, but the ACS
   tables differ (B23001 in 2006–10, B23025 in 2020–24). Say so in your references.
-- Life expectancy is not in this menu. It is available for counties but ends in
-  2019, so it cannot be compared across all three periods.
+- Life expectancy (`le`) is for the **total population** only, not by race or
+  ethnicity, and it is a county-level measure. The series ends in 2019, so the
+  periods are matched as closely as the data allow: the 2000 estimate, the mean
+  of the 2006 to 2010 estimates, and the 2019 estimate (the last year available)
+  for the 2020–2024 period. If you choose it, say in the text that the last
+  period is 2019, and do not describe the change from 2006–10 as covering the
+  same span as the other variables.
 
 ## Data
 
