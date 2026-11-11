@@ -21,6 +21,8 @@
  *   node scripts/fetch-acs-social.mjs
  *   node scripts/fetch-foreign-born.mjs                (state totals by country, for the "US" row)
  *   node scripts/fetch-foreign-born-places.mjs
+ *   node scripts/fetch-ucr-city-crime.mjs <folder>     (FBI city tables; then parse-ucr-city-crime.R and
+ *                                                      match-city-crime.mjs, which writes city-crime.json)
  *
  *   node scripts/build-city-assignment-data.mjs <folder for the group tables>
  */
@@ -69,6 +71,14 @@ const header = ['city_code', 'city', 'state'];
 for (const [p] of periods) {
   header.push(`population_${p}`, `foreign_born_count_${p}`, `foreign_born_percent_${p}`, `poverty_percent_${p}`, `unemployment_percent_${p}`);
 }
+// crime rates per 100,000 residents (FBI city tables; see scripts/match-city-crime.mjs), blank when not available
+const crimeRates = read('city-crime.json');
+const crimeCols = [];
+for (const p of ['2000', '2006_10', '2020_24']) {
+  for (const k of ['overall', 'violent', 'property']) crimeCols.push(`${k}_crime_rate_${p}`);
+}
+crimeCols.push('crime_years_2006_10', 'crime_years_2020_24');
+header.push(...crimeCols);
 const lines = [header.join(',')];
 const missing = [];
 for (const id of cities) {
@@ -81,6 +91,7 @@ for (const id of cities) {
     if (s?.pop == null || fb == null || s.pov == null || s.unemp == null) missing.push(`${id}:${p}`);
     row.push(s?.pop, fb, one((100 * fb) / s?.pop), s?.pov, s?.unemp);
   }
+  for (const k of crimeCols) row.push(crimeRates[id]?.[k] ?? '');
   lines.push(row.join(','));
 }
 writeFileSync('course/assignments/data/cities-over-75k.csv', lines.join('\n') + '\n');

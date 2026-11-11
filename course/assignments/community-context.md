@@ -31,8 +31,11 @@ cities to use (50 in the workbook), drawn from the course file below.
 the 343 cities with more than 75,000 residents in **all three periods** (so the
 same cities can be compared over time). For each period it has these columns,
 with the period added at the end of the name (for example `population_2000`):
-`population`, `foreign_born_count`, `foreign_born_percent`, `poverty_percent`
-and `unemployment_percent`.
+`population`, `foreign_born_count`, `foreign_born_percent`, `poverty_percent`,
+`unemployment_percent`, `overall_crime_rate`, `violent_crime_rate` and
+`property_crime_rate`. The two columns `crime_years_2006_10` and
+`crime_years_2020_24` say how many years of crime data each city had in the two
+pooled periods. A blank means the city has no value.
 
 Together these cities hold about half of the U.S. foreign-born population (51.1%
 in 2000, 46.8% in 2006–10 and 43.5% in 2020–24). The rest live in smaller cities,
@@ -42,6 +45,9 @@ everywhere your group lives.
 ## Variable menu
 
 **Choose three variables** from this menu. Use the same three in every period.
+For Part 2 of the profile, choose three of the first four. For Part 3, which
+looks at crime in the same cities, choose the three crime rates and repeat the
+same steps.
 
 | Variable name | What it measures | 2000 | 2006–10 | 2020–24 | Where it comes from |
 | --- | --- | --- | --- | --- | --- |
@@ -49,6 +55,9 @@ everywhere your group lives.
 | `foreign_born_percent` | Foreign-born residents, as a percent of all residents | Yes | Yes | Yes | Census 2000; American Community Survey |
 | `poverty_percent` | People below the poverty level, as a percent of people for whom poverty is determined | Yes | Yes | Yes | Census 2000; American Community Survey |
 | `unemployment_percent` | Unemployed people, as a percent of the civilian labor force | Yes | Yes | Yes | Census 2000; American Community Survey |
+| `overall_crime_rate` | Reported violent and property crimes together, per 100,000 residents | 2000 | pooled 2006–10 | pooled 2020–24 | FBI Uniform Crime Reporting |
+| `violent_crime_rate` | Reported murder, rape, robbery and aggravated assault, per 100,000 residents | 2000 | pooled 2006–10 | pooled 2020–24 | FBI Uniform Crime Reporting |
+| `property_crime_rate` | Reported burglary, larceny-theft and motor vehicle theft, per 100,000 residents | 2000 | pooled 2006–10 | pooled 2020–24 | FBI Uniform Crime Reporting |
 
 Notes:
 - `population` is a count, so use it as a descriptor, not as a percentage.
@@ -58,6 +67,19 @@ Notes:
   Mention this in your references.
 - Life expectancy is not in this menu. It is only published for counties and
   tracts, not for cities, and it ends in 2019.
+- The crime rates count crimes reported to the police, per 100,000 residents of
+  the area the police department covers. 2000 is a single year. For 2006–2010 and
+  2020–2024 the years are **pooled**: the rate for the period is the
+  population-weighted average of the yearly rates (the same as all offenses
+  divided by all residents across the years, times 100,000), over the years the
+  city reported. Arson is not counted.
+- Some cities have no crime value for a period, because the police department did
+  not report, reported only some offenses, or is not listed. Chicago, for example,
+  reported no rape counts before 2013, so its violent and overall rates are blank
+  for 2000 and 2006–10. Illinois and Kansas reported little in 2000, and many
+  cities reported fewer years in 2021 when the FBI changed its reporting system.
+  Cities with no value are left out of that variable's averages, and the
+  workbook shows how many cities were used.
 
 ## Data
 
@@ -72,11 +94,19 @@ the matching period (the U.S. figure for that period). The course will provide
 these in the workbook.
 
 Your workbook: [`data/community-context-workbook.xlsx`](data/community-context-workbook.xlsx).
-Choose your group on the first sheet and it lists the 50 cities where most of
-your group lives, with the weights, the city values and the weighted averages
-for Tasks 1 to 4. (You can also find the cities by hand by sorting the Cities
-sheet.) A coverage table shows what share of your group's U.S. residents live
-in those 50 cities.
+It has four sheets:
+
+- **Start here:** choose your group and your three variables, and read the steps.
+- **Top 50:** the group's name, the 50 cities where most of your group lives, the
+  size of your group in each city at the three time points, and the values of
+  your three variables at each time point.
+- **Data:** everything behind the other sheets: every city, the measures at the
+  three time points, total population, and the size of every group. You can also
+  find the cities by hand by sorting this sheet.
+- **Weighted averages:** the calculation step by step (the sum of the weights,
+  the sum of weight times value, and the division), so you can check where each
+  number comes from and repeat the calculation yourself. A coverage table shows
+  what share of your group's U.S. residents live in those 50 cities.
 
 The workbook offers 59 groups: the countries and regions of birth that had more
 than 75,000 members in the United States in 2000 and that the Census Bureau

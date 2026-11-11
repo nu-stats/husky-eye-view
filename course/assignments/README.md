@@ -47,6 +47,19 @@ mean and with national values.
   poverty level; the Census Bureau measured unemployment from different tables
   in 2006–10 and 2020–24 (the fetch scripts name the exact tables). The
   assignment uses plain variable names only.
+- Crime rates (overall, violent, property, per 100,000 residents) come from the
+  FBI's "Offenses Known to Law Enforcement by City" tables: `scripts/fetch-ucr-city-crime.mjs`
+  downloads them (2000, 2006–2010 and 2020–2024), `scripts/parse-ucr-city-crime.R`
+  reads the Excel files, and `scripts/match-city-crime.mjs` matches the FBI's city
+  names to the assignment's cities and computes the rates. The pooled periods use
+  the population-weighted average of the yearly rates. Coverage: 303, 332 and 339 of
+  the 343 cities have an overall rate for 2000, 2006–10 and 2020–24. Gaps are real:
+  Illinois and Kansas barely reported in 2000, Chicago reported no rape counts
+  before 2013 (so its violent and overall rates are blank), a few cities are not in
+  the tables, and 2021 has the fewest agencies because of the FBI's reporting
+  change. Las Vegas and Savannah are not matched because their police departments
+  also cover areas outside the city. The workbook leaves blanks out of the averages
+  and shows the number of cities used.
 - The student workbook is built by `scripts/build-assignment-workbook.ps1` and the
   worked example by `scripts/build-example-workbook.ps1` (both need Excel on
   Windows; the example's data come from `scripts/build-example-workbook-data.mjs`).
