@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Immigration and Crime: Community Context</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Immigration and Crime: Community Context</h1>
+  <p class="muted">Where does your group live? Census data for Assignment A. It does the same as the course workbook, one tab for each sheet.</p>
+
+  <nav class="tabs noprint" role="tablist">
+    <button type="button" role="tab" data-tab="start" aria-selected="true">Start here</button>
+    <button type="button" role="tab" data-tab="how" aria-selected="false">Video and instructions</button>
+    <button type="button" role="tab" data-tab="top" aria-selected="false">Top 50</button>
+    <button type="button" role="tab" data-tab="data" aria-selected="false">Data</button>
+    <button type="button" role="tab" data-tab="weighted" aria-selected="false">Weighted averages</button>
+    <button type="button" role="tab" data-tab="test" aria-selected="false">Test this site</button>
+    <button type="button" id="instrbtn" class="instrbtn">Instructor: open or lock parts</button>
+  </nav>
+
+  <!-- ===== Video and instructions (opens once the email is saved) ===== -->
+  <section class="tab" id="tab-how" hidden>
+    <div class="panel" id="howneed">Type your Northeastern email on the <b>Start here</b> tab and press Save. The video and the instructions open then.</div>
+    <div id="howhave" hidden>
+      <p class="noprint"><a href="part2-handouts.pdf" download>Download the Part 2 handouts (PDF)</a>: the assignment and the data instructions, to print or save.</p>
+      <h2>Watch this first (2 minutes)</h2>
+      <video id="overview" controls preload="metadata" playsinline width="900" poster="">
+        <source src="media/overview.mp4" type="video/mp4">
+        <track kind="captions" src="media/overview.vtt" srclang="en" label="English" default>
+        Your browser cannot play this video. Read the instructions below instead.
+      </video>
+      <p class="muted">The same ground as the instructions below: the two parts, the tabs, and the learning checks. Captions are on the CC button.</p>
+      <div id="handouts"></div>
+      <hr>
+      <div id="instructions"></div>
+      <p><button type="button" id="howdone">I have watched the video and read this. Go to Start here</button></p>
+    </div>
+  </section>
+
+  <!-- ===== Start here ===== -->
+  <section class="tab" id="tab-start">
+    <h2>Before you start: choose your group and three indicators</h2>
+    <div class="choose">
+      <label for="email">Your Northeastern email</label>
+      <div><input type="text" id="email" inputmode="email" autocomplete="off" style="width:100%"><button type="button" id="emailsave" style="margin-top:6px">Save</button> <span id="emailmsg" class="muted"></span></div>
+      <label for="group">Group (country of birth)</label>
+      <select id="group"><option value="">Loading...</option></select>
+      <label for="rank">Rank the cities by</label>
+      <select id="rank"></select>
+      <label for="part">Part of the profile</label>
+      <select id="part"><option value="2">Part 2: living conditions (you choose three indicators)</option><option value="3">Part 3: crime (the three crime rates)</option></select>
+      <label for="v1">Given 1</label><select id="v1"></select>
+      <label for="v2">Given 2</label><select id="v2"></select>
+      <label for="v3">Indicator 1</label><select id="v3"></select>
+      <label for="v4">Indicator 2</label><select id="v4"></select>
+      <label for="v5">Indicator 3</label><select id="v5"></select>
+    </div>
+    <p class="muted">Use your own email. It stays in your browser and is not sent anywhere. It makes your questions and look-ups your own, and it goes into the completion code you hand in, which your instructor checks against who submitted it.</p>
+    <p id="problem" class="err"></p>
+    <!-- Instructor controls: hidden from students; opened with the "Instructor" link at the bottom of this tab -->
+    <div id="instr" class="panel" hidden>
+      <h3>Instructor: open or lock each part</h3>
+      <p class="muted">Changes apply to every student. Pages students already have open pick them up within about two minutes. Times are Boston time.</p>
+      <div class="instr-parts">
+        <div class="instr-part" data-part="2"></div>
+        <div class="instr-part" data-part="3"></div>
+      </div>
+      <p><label for="ghkey">Your saving key</label> <input type="password" id="ghkey" autocomplete="off" style="width:22em"> <label><input type="checkbox" id="ghremember"> remember on this computer</label></p>
+      <p><button type="button" id="schedsave">Save for all students</button> <button type="button" id="instrclose">Close</button> <span id="schedmsg" aria-live="polite"></span></p>
+      <details><summary>How to get your saving key (once)</summary>
+        <ol>
+          <li>Signed in to GitHub as <b>nu-stats</b>, open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>.</li>
+          <li>Name it (for example "Community Context") and choose an end date (for example the end of the term).</li>
+          <li>Repository access: <b>Only select repositories</b>, then <b>community-context</b>.</li>
+          <li>Permissions: <b>Contents</b>, <b>Read and write</b>. Nothing else.</li>
+          <li><b>Generate token</b>, copy it, paste it above, and tick "remember" on your own computer.</li>
+        </ol>
+        <p class="muted">The key stays in this browser and is sent only to GitHub, to save the open/lock settings. It can change only this site.</p>
+      </details>
+    </div>
+    <p><label><input type="checkbox" id="real" checked> Show median_household_income in 2024 dollars</label><br><span class="muted">Income is published in the dollars of each period (1999, 2010 and 2024). With this box ticked, 2000 and 2006-2010 are restated in 2024 dollars using the consumer price index, for the cities and for the national value, so the three periods can be compared. Untick it to see the published dollars.</span></p>
+
+    <h2>Task 1. Choose three indicators</h2>
+    <p>Two indicators are given: <code>population</code> (a count) and <code>foreign_born_percent</code>. Choose three more above, from poverty_percent, unemployment_percent, median_household_income, bachelors_percent, renter_percent, black_percent and hispanic_percent. You use the same indicators in every period. All five are shown for the 50 cities; the weighted averages are for the three you chose.</p>
+    <div id="crimenote" class="panel" hidden><b>Crime rates (Part 3).</b> overall_crime_rate, violent_crime_rate and property_crime_rate are reported crimes per 100,000 residents, from the FBI Uniform Crime Reporting city tables. 2000 is one year; 2006-2010 and 2020-2024 pool the yearly rates (total offenses divided by total population, times 100,000). Arson is not counted. Some cities have no value for a period (the city did not report, reported incomplete data, or is not in the table; for example Chicago has no rape counts before 2013, so its violent and overall rates are blank for 2000 and 2006-2010). A blank is shown as blank and that city is left out of that rate's calculation: the sum of the weights counts only cities with a value, the plain average uses only those cities, and the step-by-step block shows the number of cities with a value. Fewer cities means your weighted average describes fewer of the 50 cities.</div>
+
+    <h2>Task 2. Find the cities where most of your group lives</h2>
+    <p>Open the <b>Top 50</b> tab. It shows the group name and the 50 cities with the most people born in your group, ranked by the period you chose, with the size of your group in each of the three periods. To do it by hand: on the <b>Data</b> tab, click the group_size column for that period to sort largest to smallest. The first 50 rows are your cities.</p>
+    <h2>Task 3. Collect the indicators for each city and period</h2>
+    <p>The Top 50 tab also shows, for each city, the five indicators (the two given and your three) in all three periods. These are whole-city values.</p>
+    <h2>Task 4. Weighted averages</h2>
+    <p>The <b>Weighted averages</b> tab shows, for each variable and each period, the calculation step by step: the sum of the weights, the sum of weight times value, the weighted average, the plain average of the 50 cities, the national value, and the weighted average minus the plain average.</p>
+    <p class="formula">weighted average = SUM(weight x value) / SUM(weight), where the weight is the number of people in your group in that city.</p>
+    <p>The national values are filled in (you can change them). The last table shows how much of your group lives in the 50 cities.</p>
+    <p>Tasks 5 and 6 (figures and the written profile) are done outside this site: copy the results into your figures and text.</p>
+
+    <h2>Notes</h2>
+    <p class="muted">Cities: the 343 incorporated places with more than 75,000 residents in 2000, 2006-2010 and 2020-2024. Groups: the 59 countries and regions of birth with more than 75,000 members in the United States in 2000 that the Census Bureau reports the same way in all three periods. Sources: Census 2000 Summary File 3; American Community Survey 5-year estimates, 2006-2010 and 2020-2024. If two cities have exactly the same group size, the one with the lower city_code is ranked first.</p>
+    <p class="muted">Indicator definitions: poverty_percent is the percent of people below the poverty level; unemployment_percent is the percent of the civilian labor force; median_household_income is in 2024 dollars when the box on Start here is ticked (2000 and 2006-2010 restated with the annual consumer price index, CPI-U), and in the dollars of each period (1999, 2010, 2024) when it is not; bachelors_percent is the percent of adults 25 and over with a bachelor's degree or higher; renter_percent is the percent of occupied homes that are rented; black_percent is Black or African American alone (not Hispanic); hispanic_percent is Hispanic or Latino of any race. Each is the same Census table in all three periods. The weighted average of median_household_income is an average of city medians, not a median.</p>
+    <p class="noprint" style="margin-top:28px;text-align:right"><a href="#instructor" id="instrlink" class="muted">Instructor</a></p>
+  </section>
+
+  <!-- ===== Top 50 ===== -->
+  <section class="tab" id="tab-top" hidden>
+    <div class="need">Choose your group and your three indicators on the <b>Start here</b> tab first.</div>
+    <div class="have" hidden>
+      <h2 id="title-top"></h2>
+      <p>Group size is the number of people in the city born in your group's country. The indicators are whole-city values (not values for your group). A blank means the Census Bureau has no value for that city.</p>
+      <p class="crimegap muted" hidden>A blank in a crime-rate column means that city has no value for that period (see the note on Start here). It is left out of that rate's calculation.</p>
+      <p class="noprint"><button id="csv" type="button">Download this table as CSV</button></p>
+      <div class="tablewrap"><table id="top"></table></div>
+    </div>
+  </section>
+
+  <!-- ===== Data ===== -->
+  <section class="tab" id="tab-data" hidden>
+    <h2>Data: every city</h2>
+    <p>All 343 cities, with all the indicators at the three time points. Click a column heading to sort (click again to reverse). The group_size columns are for the group you chose; they stay empty until you choose one. Sorting here does not change the Top 50 list.</p>
+    <div class="tablewrap tall"><table id="data" class="sortable"></table></div>
+  </section>
+
+  <!-- ===== Weighted averages ===== -->
+  <section class="tab" id="tab-weighted" hidden>
+    <div class="need">Choose your group and your three indicators on the <b>Start here</b> tab first.</div>
+    <div class="have" hidden>
+      <h2 id="title-weighted"></h2>
+      <div id="gates" class="panel"></div>
+      <div id="resultsblock" hidden>
+      <p class="muted">A weighted average counts each city in proportion to how many people in your group live there. The plain average counts every city the same.</p>
+
+      <h3>Step 1. National values and your weighted averages</h3>
+      <p>National (U.S.) values come from Census Bureau tables for the 50 states and DC, with the same definitions as the city values. They are filled in for every indicator and you can change them. Use them in your paper as the national comparison. Beside them are your weighted averages: the value in the city of the average member of your group.</p>
+      <div class="sidebyside">
+        <div><h4>National values</h4><div class="tablewrap"><table id="national" class="calc"></table></div></div>
+        <div><h4>Your weighted averages</h4><div class="tablewrap"><table id="results" class="calc"></table></div></div>
+      </div>
+      <h3>Make a figure</h3>
+      <div class="panel" id="figpanel">
+        <p><label>Indicator <select id="figvar"></select></label></p>
+        <p><label><input type="checkbox" id="fignat" checked> Compare with the national values</label></p>
+        <p><label>Download <select id="figkind"><option value="both">Chart and table</option><option value="chart">Chart (PNG image)</option><option value="table">Table (CSV)</option></select></label></p>
+        <p><label>Title <input type="text" id="figtitle" style="width:100%"></label></p>
+        <p><button type="button" id="figgo">Download</button></p>
+      </div>
+      <p><a href="#calcsummary" id="calclink" aria-expanded="false" aria-controls="calcsummary">Calculations summary</a> <span class="muted">(every value used to calculate these)</span></p>
+      <div id="calcsummary" hidden>
+        <p class="crimegap muted" hidden>A blank in a crime-rate column means that city has no value for that period (see the note on Start here). It is left out of that rate's calculation.</p>
+        <p class="formula">weighted average = (sum of group size x value) / (sum of group size)</p>
+        <p class="muted">A city with no value for a variable is left out of that variable's calculation (its weight is not counted either).</p>
+        <div id="calcs"></div>
+        <h3>Check it yourself</h3>
+        <p>Every number comes from the Top 50 tab: the group sizes (the weights) and your variables. To calculate a weighted average yourself:</p>
+        <ol class="steps">
+          <li>Multiply each city's group size by its value, city by city.</li>
+          <li>Add up those products (the "Sum of (group size x value)" row).</li>
+          <li>Add up the group sizes (the "Sum of the group sizes" row).</li>
+          <li>Divide the sum from step 2 by the sum from step 3.</li>
+        </ol>
+      </div>
+
+      <h3>Step 3. How much of your group lives in these 50 cities?</h3>
+      <div class="tablewrap" style="max-width:760px"><table id="coverage" class="calc"></table></div>
+      <p class="muted">A low share means the results describe the large cities where your group lives, not everywhere the group lives.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Test this site ===== -->
+  <section class="tab" id="tab-test" hidden>
+    <h2>Test this site</h2>
+    <p>Use the site the way you would for the assignment, with the real Census data and a group you know something about. Go through the tabs in order: choose your group and three indicators on Start here, read the Top 50 and Data tabs, then the Weighted averages tab. Write down anything that confused you, then answer the questions below. Do not ask anyone for help while you work; note what you did instead. Nothing here is graded.</p>
+
+    <h3>Your answers</h3>
+    <div class="choose" style="max-width:none;grid-template-columns:1fr" id="feedback">
+      <label>Group you tested<input type="text" data-q="Group tested" style="width:100%"></label>
+      <label>Device and browser<input type="text" data-q="Device and browser" style="width:100%"></label>
+      <label>1. What was the first thing you did not understand?<textarea data-q="First thing not understood"></textarea></label>
+      <label>2. Was there a word or label you had to guess at? Which one?<textarea data-q="Word or label guessed at"></textarea></label>
+      <label>3. After choosing your group, did you know what to do next, or did you look for instructions?<textarea data-q="What to do next"></textarea></label>
+      <label>4. Which step took the longest, and why?<textarea data-q="Longest step"></textarea></label>
+      <label>5. Did anything look wrong, or not match the assignment text?<textarea data-q="Looked wrong"></textarea></label>
+      <label>6. What one change would make this easier to use?<textarea data-q="One change"></textarea></label>
+    </div>
+    <p class="noprint"><button type="button" id="savenotes">Download my answers (text file)</button></p>
+    <p class="muted">The answers stay in your browser. Nothing is sent anywhere. Download the file and send it to your instructor.</p>
+  </section>
+
+</main>
+<script src="app.js"></script>
+<script src="gates.js"></script>
+<script src="instructor.js"></script>
+</body>
+</html>

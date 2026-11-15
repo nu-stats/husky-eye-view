@@ -1,0 +1,105 @@
+WEBVTT
+
+1
+00:00:00.250 --> 00:00:04.845
+Say you want to know what the city is like for
+the typical member of an immigrant group.
+
+2
+00:00:05.494 --> 00:00:09.298
+You collect one number for each city, like the
+poverty rate.
+
+3
+00:00:09.348 --> 00:00:13.601
+The easy move is to add them up and divide by
+the number of cities.
+
+4
+00:00:14.251 --> 00:00:16.153
+That is the plain average.
+
+5
+00:00:16.203 --> 00:00:18.406
+It treats every city the same.
+
+6
+00:00:19.056 --> 00:00:22.078
+The plain average of these three rates is 20%.
+
+7
+00:00:22.128 --> 00:00:26.285
+But eight out of every ten people in this
+group live in city C.
+
+8
+00:00:26.935 --> 00:00:31.276
+A typical member does not live in a city at
+20%.
+
+9
+00:00:31.326 --> 00:00:33.746
+They live in a city at 30%.
+
+10
+00:00:34.396 --> 00:00:36.329
+The fix is a weighted average.
+
+11
+00:00:36.379 --> 00:00:40.759
+Give each city a weight equal to how many
+group members live there.
+
+12
+00:00:41.409 --> 00:00:46.097
+Multiply each city's rate by its weight.
+
+13
+00:00:46.147 --> 00:00:53.086
+Add those up: 1,000, plus 2,000, plus 24,000,
+makes 27,000.
+
+14
+00:00:53.736 --> 00:00:57.331
+Add up the weights: 1,000.
+
+15
+00:00:57.981 --> 00:01:03.617
+Divide: 27,000 over 1,000.
+
+16
+00:01:03.667 --> 00:01:04.492
+27%.
+
+17
+00:01:05.142 --> 00:01:09.801
+That is the whole idea. The weighted average
+describes the average member.
+
+18
+00:01:09.851 --> 00:01:12.664
+The plain average describes the average city.
+
+19
+00:01:12.714 --> 00:01:16.292
+When the group is spread unevenly, they can be
+far apart.
+
+20
+00:01:16.942 --> 00:01:23.054
+On your page, each number is built exactly
+this way: two rows, and one division.
+
+21
+00:01:23.704 --> 00:01:29.281
+Your page has fifty cities, not three, so its
+numbers are bigger, but the rows are the same.
+
+22
+00:01:29.331 --> 00:01:33.745
+Find them and check them, and you will know
+where each number comes from.
+
+23
+00:01:34.396 --> 00:01:36.258
+Now try the questions.
