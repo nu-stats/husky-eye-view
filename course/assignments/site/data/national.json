@@ -1,0 +1,29 @@
+{
+ "2000": {
+  "poverty_percent": 12.4,
+  "unemployment_percent": 5.8,
+  "median_household_income": 41994,
+  "bachelors_percent": 24.4,
+  "renter_percent": 33.8,
+  "black_percent": 12,
+  "hispanic_percent": 12.5
+ },
+ "2006_10": {
+  "poverty_percent": 13.8,
+  "unemployment_percent": 7.9,
+  "median_household_income": 51914,
+  "bachelors_percent": 27.9,
+  "renter_percent": 33.4,
+  "black_percent": 12.2,
+  "hispanic_percent": 15.7
+ },
+ "2020_24": {
+  "poverty_percent": 12.5,
+  "unemployment_percent": 5.2,
+  "median_household_income": 80734,
+  "bachelors_percent": 35.7,
+  "renter_percent": 34.8,
+  "black_percent": 11.9,
+  "hispanic_percent": 19.3
+ }
+}

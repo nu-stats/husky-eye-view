@@ -1,0 +1,126 @@
+/* Look follows Husky Eye View: dark background, glass panels, Northeastern red accent. */
+:root {
+  --bg: #0a0a0f; --glass: rgba(12, 12, 20, 0.72); --panel: #12121c;
+  --border: rgba(255, 255, 255, 0.08); --border-hover: rgba(255, 255, 255, 0.18);
+  --text: #e8eaed; --text2: rgba(232, 234, 237, 0.76); --dim: rgba(232, 234, 237, 0.64);
+  --accent: #c8102e; --input: rgba(255, 217, 122, 0.12); --input-border: rgba(255, 217, 122, 0.55);
+  --radius: 16px; --btn: 10px;
+  --font: 'Real Head Pro', 'FF Real Head Pro', 'ff-real-headline-pro', 'Lato', 'Segoe UI', sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { font: 16px/1.5 var(--font); color: var(--text); margin: 0; background: radial-gradient(ellipse at 50% -10%, #1a1a2a 0%, var(--bg) 60%) fixed; min-height: 100vh; }
+main { max-width: 1160px; margin: 0 auto; padding: 18px 16px 40px; }
+h1 { font-size: 1.5rem; margin: 6px 0 2px; font-weight: 700; letter-spacing: .01em; }
+h2 { font-size: 1.1rem; margin: 26px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); font-weight: 700; }
+h3 { font-size: 1rem; margin: 22px 0 6px; }
+p { margin: 6px 0; color: var(--text2); }
+b, code { color: var(--text); }
+code { background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 5px; font-size: .9em; }
+.muted { color: var(--dim); }
+
+/* tabs */
+nav.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 4px; padding: 6px; background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius); backdrop-filter: blur(12px); }
+nav.tabs button { background: rgba(255,255,255,.04); color: var(--text2); border: 1px solid transparent; border-radius: var(--btn); padding: 8px 18px; font-weight: 600; }
+nav.tabs button:hover { background: rgba(255,255,255,.09); color: var(--text); filter: none; }
+nav.tabs button[aria-selected=true] { background: var(--accent); color: #fff; box-shadow: 0 0 18px rgba(200,16,46,.35); }
+section.tab[hidden], .have[hidden], .need[hidden] { display: none; }
+
+/* panels and controls */
+.choose, .need, .panel, .formula { background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius); backdrop-filter: blur(12px); }
+.choose { display: grid; grid-template-columns: max-content 1fr; gap: 10px 14px; align-items: center; padding: 16px; max-width: 660px; }
+.need, .panel { padding: 14px 16px; margin-top: 16px; }
+.formula { padding: 10px 14px; border-left: 3px solid var(--accent); color: var(--text); }
+select, input[type=number], table input[type=text] { font: inherit; color: var(--text); padding: 6px 10px; border: 1px solid var(--input-border); border-radius: var(--btn); background: var(--input); }
+select { width: 100%; }
+input[type=text], textarea { font: inherit; color: var(--text); padding: 6px 10px; border: 1px solid var(--border-hover); border-radius: var(--btn); background: rgba(255,255,255,.05); }
+textarea { width: 100%; min-height: 4.5em; margin-top: 4px; display: block; }
+#feedback label { color: var(--text2); }
+a { color: #8fd0ff; }
+input[type=checkbox] { margin-right: 6px; }
+select option { background: var(--panel); color: var(--text); }
+table input[type=text] { width: 9.5em; text-align: right; }
+select:focus, input:focus, button:focus-visible { outline: 2px solid rgba(255,255,255,.55); outline-offset: 1px; }
+button { font: inherit; padding: 8px 16px; border: 1px solid transparent; background: var(--accent); color: #fff; border-radius: var(--btn); cursor: pointer; font-weight: 600; transition: filter 150ms; }
+button:hover { filter: brightness(1.15); }
+
+/* tables */
+.tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--glass); }
+.tablewrap.tall { max-height: 70vh; overflow-y: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 5px 10px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+th { background: var(--panel); color: var(--text); position: sticky; top: 0; z-index: 1; }
+td.l, th.l { text-align: left; }
+table.sortable th { cursor: pointer; }
+table.sortable th:hover { background: #1d1d2c; }
+tbody tr:nth-child(even) { background: rgba(255,255,255,.025); }
+tbody tr:hover { background: rgba(255,255,255,.06); }
+table.calc { width: auto; min-width: 560px; }
+tr.key td { font-weight: 700; color: #fff; background: rgba(200,16,46,.16); }
+.err { color: #ffb0b0; font-weight: 600; }
+ol.steps li { margin: 4px 0; color: var(--text2); }
+
+@media (max-width: 600px) { .choose { grid-template-columns: 1fr; } }
+@media print {
+  body { background: #fff; color: #000; } nav.tabs, .noprint { display: none; }
+  p, b, code { color: #000; } th { background: #eee; color: #000; }
+}
+
+/* knowledge-check gates */
+#gates { margin: 12px 0 18px; }
+#gates h3 { margin-top: 18px; }
+.opts { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.opts label { color: var(--text2); }
+.question { border-top: 1px solid var(--border); padding: 10px 0; }
+.good { color: #8fe7a0; font-weight: 600; }
+.bad { color: #ffb0b0; font-weight: 600; }
+.verdict { margin-left: 8px; }
+.lookup { color: #ffd98a; font-style: italic; }
+.videoslot { display: block; width: 100%; max-width: 640px; aspect-ratio: 16 / 9; border: 2px dashed var(--border-hover); border-radius: 12px; padding: 24px; text-align: center; color: var(--text2); background: rgba(255,255,255,.03); }
+.code { font-size: 1.6rem; letter-spacing: .08em; }
+.recordline { word-break: break-word; }
+details { margin: 8px 0 14px; }
+#gates input[type=text] { width: 12em; font: inherit; color: var(--text); padding: 6px 10px; border: 1px solid var(--input-border); border-radius: var(--btn); background: var(--input); }
+#email { font: inherit; color: var(--text); padding: 6px 10px; border: 1px solid var(--input-border); border-radius: var(--btn); background: var(--input); }
+
+/* Video and instructions tab */
+#overview { width: 100%; max-width: 900px; border: 1px solid var(--border); border-radius: var(--radius); background: #000; display: block; }
+#instructions { max-width: 78ch; }
+#instructions h2 { margin-top: 28px; }
+#instructions h3 { margin-top: 26px; }
+#instructions h4 { margin-top: 20px; color: var(--text); }
+#instructions p, #instructions li { line-height: 1.55; }
+#instructions ul, #instructions ol { padding-left: 1.3em; }
+#instructions li { margin: 4px 0; }
+#instructions hr { border: 0; border-top: 1px solid var(--border); margin: 26px 0; }
+#instructions .tablewrap { max-width: 100%; }
+#handouts { max-width: 78ch; }
+#handouts h2 { margin-top: 28px; }
+#handouts h3 { margin-top: 26px; }
+#handouts h4 { margin-top: 20px; color: var(--text); }
+#handouts p, #handouts li { line-height: 1.55; }
+#handouts ul, #handouts ol { padding-left: 1.3em; }
+#handouts li { margin: 4px 0; }
+#handouts hr { border: 0; border-top: 1px solid var(--border); margin: 26px 0; }
+#handouts .tablewrap { max-width: 100%; }
+#handouts blockquote, #instructions blockquote { margin: 10px 0; padding: 6px 14px; border-left: 3px solid var(--border); }
+#instructions a, #handouts a { color: var(--accent); }
+.videoslot.vid { padding: 0; border: 1px solid var(--border); background: #000; }
+.instr-parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+.instr-part { border-top: 1px solid var(--border); padding-top: 6px; }
+#instr input[type=datetime-local] { font: inherit; color: var(--text); padding: 6px 10px; border: 1px solid var(--input-border); border-radius: var(--btn); background: var(--input); color-scheme: dark; }
+.tabs .instrbtn { margin-left: auto; }
+
+/* Weighted averages tab: tables and the figure panel only */
+#tab-weighted #figpanel { display: flex; flex-direction: column; gap: 14px; max-width: 760px; padding: 18px 20px; margin: 10px 0 26px; }
+#tab-weighted #figpanel p { margin: 0; }
+#tab-weighted #figpanel label { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+#tab-weighted #figpanel label select { flex: 0 1 18em; }
+#tab-weighted #figpanel #fignat { margin: 0; }
+#tab-weighted #figpanel #figtitle { flex: 1; min-width: 0; }
+/* National values and your weighted averages sit side by side, same table style */
+.sidebyside { display: flex; flex-wrap: nowrap; gap: 0; align-items: flex-start; overflow-x: auto; }
+.sidebyside h4 { margin: 0 0 6px; }
+.sidebyside table.calc { min-width: 0; }
+.sidebyside .tablewrap { max-width: none; }
+#calcs table.calc td.l { white-space: normal; }
